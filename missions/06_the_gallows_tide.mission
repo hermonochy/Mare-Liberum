@@ -1,10 +1,16 @@
 mission "The Gallows Tide"
     name "The Gallows Tide"
-    description "Break Captain Vane's prison flotilla by sinking three pirate ships and freeing the captured crews."
+    description "Find Vane's prison flotilla south of Tortuga, sink its three guard ships, and return the freed crews safely to Tortuga."
+    destination "Tortuga"
     source "Tortuga"
     reward 620
     objective kills 3
+    battlefield "The Gallows Tide" 1500 830
+    enemy "The Gallows Tide"
+    enemy "The Chainbreaker"
+    enemy "The Black Shackle"
     speaker offer "Marta, the Tavern Keeper"
+    speaker visit "Marta, the Tavern Keeper"
     speaker complete "Marta, the Tavern Keeper"
     to offer
         has "The Price of Silence: done"
@@ -12,7 +18,7 @@ mission "The Gallows Tide"
         conversation
             `The Broken Mast is crowded, but the room falls quiet when Marta climbs onto a bench. She spreads a chart across the table. Three black marks sit along the shoals south of Tortuga.`
             `"Vane's men have taken sailors from six ships. They keep them aboard the prison flotilla and force them to work the pumps and guns. The Gallows Tide is its name, though there are other vessels guarding it."`
-            `"Break the flotilla. Sink three of his ships and the surviving prisoners can take the boats and make for the islands."`
+            `"The flotilla is marked on this chart, south of Tortuga. Sink its three guard ships and the surviving prisoners can take the boats. Then return to Tortuga so we can give the freed crews a safe harbour."`
             choice
                 `"I'll break his prison fleet."`
                     goto accept_job
@@ -35,6 +41,9 @@ mission "The Gallows Tide"
                 close
     on accept
         log "Hunting Vane's prison flotilla. Sink three pirate ships; their prisoners will try to escape in the confusion."
+    on visit
+        conversation
+            `You bring your ship back into Tortuga. The freed sailors are already coming ashore in small boats, and Marta is waiting at the Broken Mast to hear how the prison flotilla was broken.`
     on complete
         conversation
             `A signal rocket rises from the shoals. One by one, small boats pull away from the wrecks and steer for Tortuga. The rescued sailors cheer when they see your black ribbon.`

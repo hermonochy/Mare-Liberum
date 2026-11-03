@@ -1,0 +1,6 @@
+Tidebound: Caribbean Pirates
+Version 10 - Mission Clarity and Scripted Battle Fleets
+
+This is the complete project source, including the campaign, treasure hunting,
+repeatable day work, shipyards, personal fleets, combat, and sailing systems.
+See README.md and UPDATE_NOTES.md for installation and update details.

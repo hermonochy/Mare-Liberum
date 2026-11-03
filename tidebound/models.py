@@ -1,0 +1,92 @@
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Port:
+    name: str
+    x: float
+    y: float
+    shore_x: float
+    shore_y: float
+    exit_heading: float
+    description: str
+
+@dataclass
+class PirateShip:
+    name: str
+    x: float
+    y: float
+    heading: float
+    hull: int = 6
+    max_hull: int = 6
+    vx: float = 0.0
+    vy: float = 0.0
+    cooldown: float = 1.0
+    side_choice: int = 1
+    dead: bool = False
+    wander: float = 0.0
+    mission_id: str = ""
+    objective_target: bool = False
+
+@dataclass
+class FleetShip:
+    name: str
+    ship_type: str
+    x: float
+    y: float
+    heading: float
+    hull: int
+    max_hull: int
+    vx: float = 0.0
+    vy: float = 0.0
+    cooldown: float = 1.0
+    anchor_x: float = 0.0
+    anchor_y: float = 0.0
+
+@dataclass
+class Cannonball:
+    x: float
+    y: float
+    vx: float
+    vy: float
+    life: float
+    owner: str
+
+@dataclass
+class TreasureSite:
+    treasure_id: str
+    island_name: str
+    polygon: list
+    chest_x: float
+    chest_y: float
+    bottle_x: float
+    bottle_y: float
+    map_title: str
+    clue: str
+    riddle: str
+    answers: list
+    correct_answer: int
+    reward: int
+    relic: str
+    map_found: bool = False
+    revealed: bool = False
+    dug: bool = False
+    trees: list = field(default_factory=list)
+
+
+@dataclass
+class DayJob:
+    job_id: str
+    kind: str
+    title: str
+    source: str
+    destination: str
+    reward: int
+    speaker: str
+    offer_text: str
+    payload: str
+    objective: str
+    target_x: float = None
+    target_y: float = None
+    stage: str = "offered"
+    rescued: bool = False

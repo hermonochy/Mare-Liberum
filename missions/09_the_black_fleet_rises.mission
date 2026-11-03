@@ -1,17 +1,23 @@
 mission "The Black Fleet Rises"
     name "The Black Fleet Rises"
-    description "Intercept three of Vane's raiders before they can join the fleet gathering at Dead Man's Cay."
+    description "Sail to the Outer Cays, sink three of Vane's scouts, then return to Port Royal to report to Commodore Bonny."
+    destination "Port Royal"
     source "Port Royal"
     reward 720
     objective kills 3
+    battlefield "The Outer Cays" 865 1930
+    enemy "The Ragged Crown"
+    enemy "The Salt Widow"
+    enemy "The Crimson Gull"
     speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
     speaker complete "Commodore Anne Bonny"
     to offer
         has "The Compass of Dead Man's Cay: done"
     on offer
         conversation
             `A woman in a weather-beaten red coat stands on the end of the quay. Her crew are loading powder into a pair of armed sloops. She introduces herself as Commodore Anne Bonny, elected commander of the free captains.`
-            `"Nell found the lagoon. Vane's scouts are already carrying word to his fleet. We cannot let them reach Dead Man's Cay. Three raiders are cruising between the outer cays. Find them and send them to the bottom."`
+            `"Nell found the lagoon. Vane's scouts are already carrying word to his fleet. The three raiders are marked on this chart in the Outer Cays. Find them and send them to the bottom, then return here to Port Royal. I want your report before we sail for the lagoon."`
             choice
                 `"I'll hunt the scouts. They won't reach the lagoon."`
                     goto accept_job
@@ -34,6 +40,9 @@ mission "The Black Fleet Rises"
                 close
     on accept
         log "Accepted Commodore Bonny's request. Sink three of Vane's raiders before they can report to the fleet."
+    on visit
+        conversation
+            `You return to Port Royal with the scouts scattered. Commodore Bonny is waiting on the quay; she wants your report before the free captains make their final move.`
     on complete
         conversation
             `A succession of smoke columns marks the places where the raiders went down. Back at Port Royal, Bonny receives the news without smiling.`

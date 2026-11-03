@@ -1,17 +1,24 @@
 mission "The Last Broadside"
     name "The Last Broadside"
-    description "Break the escort guarding Vane's flagship by sinking four pirate ships in the waters around Dead Man's Cay."
+    description "Sail to Dead Man's Cay, sink the four ships guarding Vane's flagship, then return to Tortuga to join the free captains."
+    destination "Tortuga"
     source "Port Royal"
     reward 1100
     objective kills 4
+    battlefield "Dead Man's Cay" 850 1885
+    enemy "The King's Ruin Guard"
+    enemy "The Iron Duchess"
+    enemy "The Gallows Jack"
+    enemy "The Vulture"
     speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
     speaker complete "Commodore Anne Bonny"
     to offer
         has "The Black Fleet Rises: done"
     on offer
         conversation
             `Port Royal is awake before dawn. Lanterns burn along the quay, and the harbour is full of ships flying every colour except Vane's black. Bonny waits beside a chart covered in chalk marks.`
-            `"The fleet is at Dead Man's Cay. Vane's flagship is called the King's Ruin. Four escorts guard the mouth of the lagoon. We will draw them out and break their line. Once the escorts are gone, the other captains can close the entrance."`
+            `"The fleet is at Dead Man's Cay. Vane's flagship is called the King's Ruin. Four named escorts guard the mouth of the lagoon; their positions are marked on this chart. Sink them, then return to Tortuga. The free captains will be waiting there."`
             choice
                 `"I'll take the outer line and break the escorts."`
                     goto accept_job
@@ -34,6 +41,9 @@ mission "The Last Broadside"
                 close
     on accept
         log "The final assault has begun. Sink four pirate ships guarding the King's Ruin at Dead Man's Cay."
+    on visit
+        conversation
+            `You return to Tortuga as the free captains gather along the quay. The lagoon is open, Vane's escort is scattered, and Commodore Bonny is waiting to discuss what comes next.`
     on complete
         conversation
             `The last escort breaks apart in a cloud of smoke and splintered timbers. Across the water, the free captains close around the lagoon. A deep boom rolls over the sea as Vane's flagship fires its first broadside, then turns away into the haze.`

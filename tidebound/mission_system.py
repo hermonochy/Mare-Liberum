@@ -48,6 +48,10 @@ class Mission:
     requires_done: list
     objective_type: str
     objective_count: int
+    battlefield: str
+    battlefield_x: float
+    battlefield_y: float
+    enemy_names: list
     speaker: str
     section_speakers: dict
     sections: dict
@@ -86,6 +90,10 @@ class MissionParser:
         requirements = []
         objective_type = "port"
         objective_count = 0
+        battlefield = ""
+        battlefield_x = None
+        battlefield_y = None
+        enemy_names = []
         speaker = "Harbourmaster"
         section_speakers = {}
         sections = {}
@@ -116,6 +124,16 @@ class MissionParser:
                 parts = text.split()
                 objective_type = parts[1].lower()
                 objective_count = int(parts[2]) if len(parts) > 2 else 0
+            elif text.startswith("battlefield "):
+                quoted_values = re.findall(r'"([^"]*)"', text)
+                battlefield = quoted_values[0] if quoted_values else ""
+                coordinate_text = text.rsplit('"', 1)[-1].strip()
+                coordinates = coordinate_text.split()
+                if len(coordinates) >= 2:
+                    battlefield_x = float(coordinates[0])
+                    battlefield_y = float(coordinates[1])
+            elif text.startswith("enemy "):
+                enemy_names.append(self.quoted(text))
             elif text == "to offer":
                 while self.index < len(self.lines) and self.lines[self.index][0] > 4:
                     condition_indent, condition = self.lines[self.index]
@@ -140,6 +158,10 @@ class MissionParser:
             requires_done=requirements,
             objective_type=objective_type,
             objective_count=objective_count,
+            battlefield=battlefield,
+            battlefield_x=battlefield_x,
+            battlefield_y=battlefield_y,
+            enemy_names=enemy_names,
             speaker=speaker,
             section_speakers=section_speakers,
             sections=sections,

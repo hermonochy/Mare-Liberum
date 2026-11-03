@@ -1,4 +1,4 @@
-# Tidebound: Caribbean Pirates
+# Tidebound: Caribbean Pirates — Mission Clarity Update
 
 A top-down Caribbean pirate sailing game built with Python and Pygame. All scenery, ships, ports, and interface graphics are drawn in code; no external art or sound files are required.
 
@@ -15,13 +15,13 @@ python main.py
 - `O`: deploy or stow the oars; rowers provide steady forward power in a headwind
 - `A` / `D` or `Left` / `Right`: steer with the rudder
 - `E`: dock at a nearby port or cast off
-- `Q`: speak with the harbourmaster while docked
+- `Q`: speak with the harbourmaster while docked; browse story missions or ordinary day work
 - `B`: open the shipyard while docked
 - `F`: order the fleet to fight and hunt nearby pirates
 - `H`: order the fleet to hold fire while keeping formation
 - `G`: order the fleet to gather in a close formation around your flagship
 - `V`: order the fleet to follow in its regular formation
-- `R`: recover a nearby bottle or search a mapped beach
+- `R`: recover a nearby bottle, search a mapped beach, or rescue a nearby stranded crew
 - `T`: open the treasure charts
 - `Z`: fire the port-side broadside
 - `X`: fire the starboard-side broadside
@@ -72,6 +72,26 @@ Missions are stored in `missions/*.mission`, separate from the game code. The in
 
 At a port, press `Q`, ask for work, listen to the story, and choose whether to accept or decline. Declined offers remain available. Completing a mission unlocks the next chapter when its prerequisites are satisfied.
 
+
+
+## Clear mission objectives and scripted battle fleets
+
+Every active campaign mission now has a clear route instruction in the HUD and captain's log. The mini-map draws a gold route from your ship to the current objective, and the destination port or battlefield has a gold marker on the world chart. Combat target ships are marked in orange on the mini-map and outlined in the world. The HUD always tells you whether to sail to a battle area, how many named targets remain, or return to a port for your debrief.
+
+Combat missions spawn their own named fleets when accepted. These ships appear at their authored battlefield coordinates, pursue the player, and count toward the mission objective. Ordinary roaming pirates do not count as story targets. When the last target is sunk, the objective changes to a return voyage; make fast at the named port to hear the debrief, receive the reward, and see a clear **VOYAGE COMPLETE** banner.
+
+The four battle routes now have explicit intermediate sea areas and return legs: Havana → Cutlass Shoals → Havana; Tortuga → the prison flotilla south of Tortuga → Tortuga; Port Royal → the Outer Cays → Port Royal; and Port Royal → Dead Man's Cay → Tortuga. These return ports also line up with the source port of the next story chapter.
+
+Combat mission files can define target fleets with `battlefield "Area Name" x y` and one `enemy "Ship Name"` line per target, alongside `objective kills N`. The named enemy entries should match the objective count.
+
+## Repeatable day work
+
+Every port has a small notice board of ordinary work, separate from the eleven authored campaign missions. While docked, press `Q` and choose **Look for ordinary day work**. Offers are generated from four low-risk job types: carrying modest loads of goods, delivering sealed letters, taking a passenger to another harbour, and finding a stranded longboat crew. Each offer names its destination, explains the job in a short conversation, and gives you an explicit choice to accept or decline. Declining leaves the offer on that port's board.
+
+You can carry one day job at a time as well as one story mission. Cargo, letters, and passengers are delivered by docking at the named destination. A rescue job places a small longboat marker on the sea chart; sail close and press `R` to bring the stranded crew aboard, then deliver them to the named port. These jobs never ask you to sink ships. Rewards are deliberately modest — generally a few dozen to around one hundred pieces of eight — and each completed job is replaced by a fresh offer the next time you check that port's board. The captain's log and HUD show your current day-work objective.
+
+The repeatable job generator lives in `tidebound/mixins/day_jobs.py`; its runtime state is represented by the `DayJob` data class in `tidebound/models.py`. It is independent of the campaign mission parser, so routine work can be expanded without changing authored story missions.
+
 ## Treasure hunting
 
 Three drifting green-glass bottles can be recovered while sailing with `R`. Each contains a separate treasure chart with a sea clue and a beach riddle. Press `T` to study charts you have recovered. The charts lead to three hidden cays: Gannet Cay, Widow's Key, and Dead Man's Cay. Hidden islands appear as you approach them (or sooner when you have their chart), and then become solid land with beaches and palm trees. Come close to the marked beach and press `R` to examine the buried chest. Choose the right answer to the island's riddle to open it. A wrong answer is harmless; study the chart and try again. Each chest pays out gold and a unique keepsake.
@@ -84,10 +104,27 @@ Treasure controls:
 
 ## Project layout
 
-- `main.py`: game loop, sailing physics, camera, world, ports, combat, shipyards, fleet AI, treasure hunting, pirate reinforcements, and interface
-- `mission_system.py`: mission parser and dialogue node definitions
-- `missions/`: eleven connected, editable story missions
-- `requirements.txt`: Pygame dependency
+The game is split into focused modules so features can be extended independently:
+
+- `main.py`: small launcher only.
+- `tidebound/game.py`: assembles the game class and owns initial game state.
+- `tidebound/config.py`: world, ship and livery configuration.
+- `tidebound/models.py`: data classes for ports, ships, cannonballs and treasure sites.
+- `tidebound/geometry.py`: movement, collision, text wrapping and propulsion helpers.
+- `tidebound/dialogue.py`: interactive conversation runner.
+- `tidebound/mission_system.py`: parser for the Endless Sky-inspired mission language.
+- `tidebound/mixins/treasure.py`: map bottles, hidden islands, riddles and rewards.
+- `tidebound/mixins/missions.py`: authored campaign progression, harbour conversations and docking.
+- `tidebound/mixins/day_jobs.py`: repeatable cargo, letter, passenger and rescue work.
+- `tidebound/mixins/shipyard_fleet.py`: ship purchases, refits, escorts and fleet orders.
+- `tidebound/mixins/controls.py`: keyboard, mouse, pan and zoom input.
+- `tidebound/mixins/vessels.py`: sailing physics, pirate AI, broadsides and projectiles.
+- `tidebound/mixins/camera.py`: camera transforms, zoom anchoring and follow mode.
+- `tidebound/mixins/rendering.py`: ocean, islands, ships, HUD, dialogue and menus.
+- `missions/`: eleven editable campaign mission files.
+- `requirements.txt`: Pygame dependency.
+
+Run the game from this project directory with `python main.py`. Keep the `missions` folder beside `main.py`; the game locates it automatically.
 
 ## Campaign chapters
 

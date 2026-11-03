@@ -1,0 +1,27 @@
+Tidebound Caribbean Pirates - modular source tree
+
+main.py
+requirements.txt
+README.md
+missions/
+tidebound/
+  __init__.py
+  common.py
+  config.py
+  dialogue.py
+  game.py
+  geometry.py
+  mission_system.py  (supports authored battlefield fleets)
+  models.py  (includes mission-target and DayJob data models)
+  mixins/
+    __init__.py
+    camera.py
+    controls.py
+    missions.py
+    day_jobs.py
+    rendering.py
+    shipyard_fleet.py
+    treasure.py
+    vessels.py
+
+Start from this folder: python main.py
