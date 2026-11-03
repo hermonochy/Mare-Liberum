@@ -1,0 +1,46 @@
+mission "The Compass of Dead Man's Cay"
+    name "The Compass of Dead Man's Cay"
+    description "Bring Rafael's brass compass to Nell in Port Royal and uncover the location of Vane's secret anchorage."
+    source "Havana"
+    destination "Port Royal"
+    reward 580
+    speaker offer "Don Rafael, Captain of the Watch"
+    speaker visit "Nell the Chandlery Keeper"
+    speaker complete "Nell the Chandlery Keeper"
+    to offer
+        has "The Shipwright's Secret: done"
+    on offer
+        conversation
+            `Rafael waits by the eastern gate with a small leather case. "The compass inside belonged to a patrol captain who disappeared near Dead Man's Cay. The governor claimed his ship was lost in a storm. Tomas's plans suggest it was carrying supplies to Vane."`
+            `"Take it to Nell in Port Royal. She knows the old pilot marks and can read the scratches around the compass dial."`
+            choice
+                `"I'll find Nell and learn where the compass points."`
+                    goto accept_job
+                `"Why not send one of your own officers?"`
+                    goto question
+                `"I have had enough of secret charts."`
+                    goto decline_job
+            label question
+                `Rafael's expression darkens. "Because half my officers report to the governor. I trust you because you have already put your ship between these islands and Vane's guns."`
+                choice
+                    `"I'll carry it. Keep your own men close."`
+                        goto accept_job
+                    `"Then find someone else."`
+                        goto decline_job
+            label accept_job
+                `He gives you the case. "Do not open it at sea. The needle has been tampered with before, and I would rather not lose the only copy of the marks."`
+                accept
+            label decline_job
+                `Rafael closes the case. "Very well. I will keep the compass hidden until another chance presents itself."`
+                close
+    on accept
+        log "Taking Rafael's brass compass to Nell in Port Royal. Its marks may reveal Vane's hidden anchorage."
+    on visit
+        conversation
+            `Nell holds the compass close to the lamp. Around the rim are tiny cuts, almost invisible beneath the green corrosion. She turns the case twice and then lays a chart beside it.`
+            `"Dead Man's Cay. The compass does not point north; it points to the entrance of a hidden lagoon. Vane has been using it to gather his ships beyond the reefs."`
+    on complete
+        conversation
+            `Nell marks the lagoon on your chart. "There is no fort there, only a narrow entrance and enough water for a fleet. If Vane gathers all his ships, he will sail from there and take every harbour on this coast."`
+            `She looks toward the harbour mouth. "Port Royal's captains are ready to stand together. We need to break his scouts before the main fleet can assemble."`
+        log "Located Vane's hidden anchorage at Dead Man's Cay. The pirate fleet is gathering there."

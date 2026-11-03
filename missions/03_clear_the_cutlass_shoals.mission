@@ -1,0 +1,40 @@
+mission "Clear the Cutlass Shoals"
+    name "Clear the Cutlass Shoals"
+    description "Sink two pirate ships hunting merchantmen around the Cutlass Shoals."
+    source "Havana"
+    reward 480
+    objective kills 2
+    speaker offer "Don Rafael, Captain of the Watch"
+    speaker complete "Don Rafael, Captain of the Watch"
+    to offer
+        has "Black Sails at Dawn: done"
+    on offer
+        conversation
+            `A naval officer in a faded blue coat waits beside the harbour guns. He introduces himself as Don Rafael, commander of the watch. A chart on the table shows the Cutlass Shoals, with two fresh black crosses marking recent attacks.`
+            `"Vane's ships have scattered, but two of his captains are still preying on merchantmen. The Red Gull and the Sea Viper. Sink them, and the coast can breathe again. The harbour will pay for every pirate flag you send to the bottom."`
+            choice
+                `"I'll hunt them down. Ready the guns."`
+                    goto accept_job
+                `"What can you tell me about their ships?"`
+                    goto details
+                `"I've done enough fighting for one lifetime."`
+                    goto decline_job
+            label details
+                `Rafael taps the chart. "The Red Gull favours the western shoals. The Sea Viper prowls east of the reefs. They fight with broadsides, so don't give them your flank unless your own guns are loaded. Close the range, turn your side to them, and let fly."`
+                choice
+                    `"I'll send both to the bottom."`
+                        goto accept_job
+                    `"Not my fight."`
+                        goto decline_job
+            label accept_job
+                `Rafael hands you a small brass token. "Show this to the quartermaster when the work is done. May the saints keep your powder dry."`
+                accept
+            label decline_job
+                `Rafael nods without argument. "Then I'll find another captain. Keep your eyes on the horizon."`
+                close
+    on accept
+        log "Accepted the hunt for the Red Gull and the Sea Viper. Sink two pirate ships around the Cutlass Shoals."
+    on complete
+        conversation
+            `A harbour gun fires a salute as word spreads that both pirate ships have gone down. Don Rafael meets you on the quay with a heavy purse. "The merchants can sail again. Havana is in your debt, captain. Your name will travel farther than these islands."`
+        log "Sank two pirate ships around the Cutlass Shoals and cleared the merchant route."

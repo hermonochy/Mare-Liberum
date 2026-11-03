@@ -1,0 +1,44 @@
+mission "A Map in the Bottle"
+    name "A Map in the Bottle"
+    description "Find the missing cartographer and recover a chart to a safe passage through the reefs."
+    source "Port Royal"
+    destination "Tortuga"
+    reward 22000
+    speaker offer "Harbourmaster Briggs"
+    speaker visit "Keeper Marta"
+    speaker complete "Keeper Marta"
+    on offer
+        conversation
+            `A broad-shouldered harbourmaster waves you over from beneath the shade of the customs awning. His coat is salt-stained, his boots are muddy, and a brass spyglass hangs from his belt.`
+            `"You look like a captain who knows one end of a cutlass from the other. Name's Briggs. A cartographer called Isabel Crowe sailed for Tortuga with a chart hidden in a bottle. She's overdue, and that chart marks a safe passage through the Devil's Teeth."`
+            choice
+                `"Why would anyone want this chart?"`
+                    goto details
+                `"I'll find Isabel and bring that chart back."`
+                    goto accept_job
+                `"Find another captain. I'm not taking the work."`
+                    goto decline_job
+            label details
+                `Briggs lowers his voice. "Wreckers have been luring merchantmen onto the reefs. With that channel marked, they could take a dozen prizes in a month. Find the girl, find the bottle, and keep it out of their hands."`
+                choice
+                    `"All right. I'll sail for Tortuga."`
+                        goto accept_job
+                    `"Sounds like a fine way to feed the sharks. No."`
+                        goto decline_job
+            label accept_job
+                `Briggs slides a sealed note across the desk. "Show this to the keeper at Tortuga. Isabel trusted her. Bring the chart back to the island, captain, and I'll see you paid."`
+                accept
+            label decline_job
+                `Briggs shrugs and turns back to his ledger. "The sea's full of captains, then. The offer stands until another fool takes it."`
+                close
+    on accept
+        log "Agreed to find Isabel Crowe at Tortuga and recover the reef passage chart."
+    on visit
+        conversation
+            `The keeper at Tortuga reads Briggs's note twice. Then she reaches beneath the counter and produces a green glass bottle, sealed with red wax. "Isabel made it here," she says. "She hid the chart before the wreckers came. Take it. And tell Briggs she was last seen heading for the cays to the west."`
+            `The keeper gives you a long look. "There is more than wreckers moving out there. Ships with black sails. Keep your powder dry."`
+    on complete
+        conversation
+            `The keeper unrolls Isabel's chart on the tavern table. A narrow blue line winds between the reefs and into the open sea. "This passage will save a dozen merchantmen," she says. "You have done a good turn for these islands, captain."`
+            `She slips a purse across the table. "Keep your powder dry. Captain Vane's black sails have been seen farther east. I expect we'll have need of you again."`
+        log "Recovered Isabel Crowe's reef chart at Tortuga and learned that Captain Vane's raiders are gathering."

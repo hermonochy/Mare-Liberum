@@ -1,0 +1,48 @@
+mission "The Governor's Ledger"
+    name "The Governor's Ledger"
+    description "Carry a stolen page from Havana to Port Royal and expose the governor's secret dealings with Captain Vane."
+    source "Havana"
+    destination "Port Royal"
+    reward 420
+    speaker offer "Don Rafael, Captain of the Watch"
+    speaker visit "Nell the Chandlery Keeper"
+    speaker complete "Nell the Chandlery Keeper"
+    to offer
+        has "Clear the Cutlass Shoals: done"
+    on offer
+        conversation
+            `Don Rafael waits beside the harbour guns after sunset. The lantern light catches the silver braid on his coat, but his face is drawn and tired.`
+            `"You have done more for this coast than the governor's whole fleet. There is something I need you to see. A clerk stole a page from the governor's private ledger. It records payments to Captain Vane, made before the attacks began."`
+            `"The clerk is hiding in Port Royal. Her name is Nell. Take this seal to her. She will know you come from me."`
+            choice
+                `"Why would the governor pay a pirate?"`
+                    goto truth
+                `"Give me the seal. I'll find this clerk."`
+                    goto accept_job
+                `"I won't meddle in a governor's affairs."`
+                    goto decline_job
+            label truth
+                `Rafael looks toward the governor's palace. "Vane was given patrol routes, convoy dates, and the names of ships carrying silver. The governor calls it intelligence work. I call it treason."`
+                choice
+                    `"I'll get the ledger page to Port Royal."`
+                        goto accept_job
+                    `"That sounds like a quick way to hang. No."`
+                        goto decline_job
+            label accept_job
+                `Rafael presses a small brass seal into your palm. "Find Nell at the chandlery near the western quay. Bring back the truth, not another rumour."`
+                accept
+            label decline_job
+                `Rafael puts the seal away. "I cannot blame you. Some truths cost more than gold."`
+                close
+    on accept
+        log "Don Rafael has sent you to Port Royal to find Nell and obtain a page from the governor's ledger."
+    on visit
+        conversation
+            `The chandlery smells of tar, rope, and hot wax. A woman with a pistol tucked into her apron studies Rafael's seal before she lets you inside.`
+            `"Nell, if you please. That ledger page is real. I copied it before the governor's men burned the book. Vane was paid to leave certain ships alone and sink the rest."`
+            `She folds a water-stained page into oilskin. "Take this to Marta at Tortuga. She knows how to make a secret travel farther than a cannon shot."`
+    on complete
+        conversation
+            `Nell watches you hide the page beneath your coat. "There. Now the governor cannot pretend the ink is a sailor's invention. Marta at Tortuga will know what to do with it."`
+            `She gives you a small purse. "And captain? Do not trust any ship flying clean colours. Some of the dirtiest work is done under a royal flag."`
+        log "Found the ledger evidence in Port Royal. The governor has been secretly supplying Captain Vane."

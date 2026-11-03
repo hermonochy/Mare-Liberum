@@ -1,0 +1,43 @@
+mission "The Gallows Tide"
+    name "The Gallows Tide"
+    description "Break Captain Vane's prison flotilla by sinking three pirate ships and freeing the captured crews."
+    source "Tortuga"
+    reward 620
+    objective kills 3
+    speaker offer "Marta, the Tavern Keeper"
+    speaker complete "Marta, the Tavern Keeper"
+    to offer
+        has "The Price of Silence: done"
+    on offer
+        conversation
+            `The Broken Mast is crowded, but the room falls quiet when Marta climbs onto a bench. She spreads a chart across the table. Three black marks sit along the shoals south of Tortuga.`
+            `"Vane's men have taken sailors from six ships. They keep them aboard the prison flotilla and force them to work the pumps and guns. The Gallows Tide is its name, though there are other vessels guarding it."`
+            `"Break the flotilla. Sink three of his ships and the surviving prisoners can take the boats and make for the islands."`
+            choice
+                `"I'll break his prison fleet."`
+                    goto accept_job
+                `"What if the prisoners are aboard the ships I sink?"`
+                    goto details
+                `"I'm not risking my crew for strangers."`
+                    goto decline_job
+            label details
+                `Marta points to the chart. "The prison ship keeps its boats trailing astern. The guards are the ones who fight. Give them a chance to strike their colours, but do not let them regroup. The prisoners know how to swim, and we will have boats waiting."`
+                choice
+                    `"Then I'll give them their chance. Ready the boats."`
+                        goto accept_job
+                    `"It's too dangerous. I refuse."`
+                        goto decline_job
+            label accept_job
+                `Marta places a black ribbon on the chart. "Fly this from your mast. Any prisoner who sees it will know help has come."`
+                accept
+            label decline_job
+                `Marta folds the chart. "I will find another captain. I only hope there is still time."`
+                close
+    on accept
+        log "Hunting Vane's prison flotilla. Sink three pirate ships; their prisoners will try to escape in the confusion."
+    on complete
+        conversation
+            `A signal rocket rises from the shoals. One by one, small boats pull away from the wrecks and steer for Tortuga. The rescued sailors cheer when they see your black ribbon.`
+            `Marta meets you on the quay. "You did it. Some have lost everything, but they are alive. One of them is a shipwright named Tomas. He says Vane is refitting a heavy warship in Havana, and he knows the secret route into the harbour."`
+            `"Find Tomas at the quay. He will tell you what he knows."`
+        log "Destroyed the prison flotilla and freed its captives. Shipwright Tomas knows a secret route into Havana."

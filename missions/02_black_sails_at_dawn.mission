@@ -1,0 +1,45 @@
+mission "Black Sails at Dawn"
+    name "Black Sails at Dawn"
+    description "Carry Tortuga's warning to Havana before a pirate squadron reaches the harbour."
+    source "Tortuga"
+    destination "Havana"
+    reward 350
+    speaker offer "Marta, the Tavern Keeper"
+    speaker visit "Havana Harbour Commander"
+    speaker complete "Havana Harbour Commander"
+    to offer
+        has "A Map in the Bottle: done"
+    on offer
+        conversation
+            `Marta bars the tavern door behind you. The room smells of rum, wet rope, and woodsmoke. She unrolls a scrap of sailcloth marked with three black crosses.`
+            `"Those are the colours of Captain Vane. His ships have been gathering in the cays, and a lookout saw them steering for Havana. The governor there thinks the old walls will keep him safe. They won't, not without warning."`
+            choice
+                `"I'll take the warning to Havana."`
+                    goto accept_job
+                `"How many ships has Vane gathered?"`
+                    goto details
+                `"I'm no messenger. Count me out."`
+                    goto decline_job
+            label details
+                `"Three that we know of," Marta says. "A brig, a sloop, and a little gunboat that bites like a shark. Vane wants the harbour's silver fleet. Reach Havana before dawn and they'll have time to close the chain across the channel."`
+                choice
+                    `"Then I'll make all sail for Havana."`
+                        goto accept_job
+                    `"I won't risk my ship for the governor."`
+                        goto decline_job
+            label accept_job
+                `Marta presses a wax-sealed letter into your hand. "Give this to the harbour commander. Don't stop for cards, drink, or trouble. Especially trouble."`
+                accept
+            label decline_job
+                `Marta folds the marked sailcloth and slips it beneath the counter. "Then may the wind be kinder to Havana than Vane will be."`
+                close
+    on accept
+        log "Accepted Marta's warning run. Deliver her sealed letter to Havana."
+    on visit
+        conversation
+            `The harbour commander breaks Marta's seal. His expression hardens. "All hands to the guns! Raise the harbour chain and clear the channel!"`
+            `Bells begin clanging along the seawall. Far beyond the reefs, black sails appear against the red morning sky, but the harbour is ready. Vane's squadron veers away under a hail of warning shot.`
+    on complete
+        conversation
+            `The commander clasps your forearm. "You got here in time. Havana owes you more than a purse of gold." He glances toward the eastern sea. "Vane's scouts are still out there. We need a captain willing to hunt them down before they return."`
+        log "Havana was warned before Vane's squadron arrived. The harbour is safe for now."

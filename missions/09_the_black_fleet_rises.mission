@@ -1,0 +1,42 @@
+mission "The Black Fleet Rises"
+    name "The Black Fleet Rises"
+    description "Intercept three of Vane's raiders before they can join the fleet gathering at Dead Man's Cay."
+    source "Port Royal"
+    reward 720
+    objective kills 3
+    speaker offer "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Compass of Dead Man's Cay: done"
+    on offer
+        conversation
+            `A woman in a weather-beaten red coat stands on the end of the quay. Her crew are loading powder into a pair of armed sloops. She introduces herself as Commodore Anne Bonny, elected commander of the free captains.`
+            `"Nell found the lagoon. Vane's scouts are already carrying word to his fleet. We cannot let them reach Dead Man's Cay. Three raiders are cruising between the outer cays. Find them and send them to the bottom."`
+            choice
+                `"I'll hunt the scouts. They won't reach the lagoon."`
+                    goto accept_job
+                `"What happens when the main fleet sails?"`
+                    goto details
+                `"I did not sign on to fight a war."`
+                    goto decline_job
+            label details
+                `Bonny folds her arms. "Then we meet them together. Every captain who joins us will take a station at the entrance to the lagoon. But if Vane's scouts bring him word that we are coming, he will choose the time and place of the battle. I would rather choose it myself."`
+                choice
+                    `"I'll buy us that time. Three ships, no more."`
+                        goto accept_job
+                    `"I will keep my ship out of it."`
+                        goto decline_job
+            label accept_job
+                `Bonny offers her forearm. "Good. Keep your distance until their broadsides are spent, then turn across their bows. Make every shot count."`
+                accept
+            label decline_job
+                `Bonny nods. "No captain should be forced into another's war. But Vane will not ask before he comes for you."`
+                close
+    on accept
+        log "Accepted Commodore Bonny's request. Sink three of Vane's raiders before they can report to the fleet."
+    on complete
+        conversation
+            `A succession of smoke columns marks the places where the raiders went down. Back at Port Royal, Bonny receives the news without smiling.`
+            `"That buys us a little time. Vane has a heavy ship at the centre of his fleet, and every gun in these waters seems to be pointed at it. We need to take away its escorts before we can face it."`
+            `She taps the chart. "When you are ready, we will strike at the lagoon itself."`
+        log "Vane's scouts have been scattered. Commodore Bonny is preparing the final assault on Dead Man's Cay."

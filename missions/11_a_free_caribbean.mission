@@ -1,0 +1,49 @@
+mission "A Free Caribbean"
+    name "A Free Caribbean"
+    description "Sail to Tortuga and help the free captains agree on a new code for the islands."
+    source "Tortuga"
+    destination "Port Royal"
+    reward 1500
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Marta, the Tavern Keeper"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Last Broadside: done"
+    on offer
+        conversation
+            `Tortuga's harbour is crowded with ships. Their crews fill the quay, the taverns, and every patch of shade beneath the palms. Commodore Bonny stands on a table in the Broken Mast, trying to make herself heard.`
+            `"Vane's fleet is broken, but a free sea is not the same as a peaceful one. Some captains want to take the governor's place. Others want every ship to sail alone. Marta has written a code that might keep us from becoming the very thing we fought."`
+            choice
+                `"I'll help carry the code to Port Royal. Let the captains sign it."`
+                    goto accept_job
+                `"What does the code demand of us?"`
+                    goto details
+                `"I am a sailor, not a lawmaker."`
+                    goto decline_job
+            label details
+                `Marta steps forward with a sheet of sailcloth. "No selling prisoners. No burning fishing villages. No taking a ship that has struck its colours. Every port may govern itself, but no captain may claim the sea as his own."`
+                `Bonny adds, "It is not perfect. It is a promise, and promises are worth something when enough people keep them."`
+                choice
+                    `"Then I will carry it. Let Port Royal be the first to sign."`
+                        goto accept_job
+                    `"I will make no such promise."`
+                        goto decline_job
+            label accept_job
+                `Bonny gives you the rolled charter. "Take it to Port Royal. Let the people there decide whether they want to live by it. And captain, thank you. You helped give them the choice."`
+                accept
+            label decline_job
+                `Bonny shrugs, though disappointment shows in her eyes. "The sea will keep turning whether we write a code or not. Fair winds."`
+                close
+    on accept
+        log "Carrying the free captains' charter from Tortuga to Port Royal. The war may be over, but the future is still unwritten."
+    on visit
+        conversation
+            `The people of Port Royal gather along the quay as you bring the charter ashore. Nell reads it aloud, and the crowd grows quiet at the promise that no crew will be sold and no ship forced to serve a tyrant.`
+            `One by one, captains press their marks into the wax. Even the old harbourmaster signs, then pretends he has something in his eye.`
+    on complete
+        conversation
+            `Bonny arrives a day later aboard her battered sloop. She stands at the end of the pier and looks out over the harbour, where the flags of a dozen crews now fly side by side.`
+            `"Vane may still be out there somewhere," she says. "There will always be another storm, another governor, another man who thinks the sea belongs to him. But today, these islands have chosen their own course."`
+            `She raises a tankard. "To the free captains, to the crews who came home, and to the captain who carried the charter. May your sails stay full and your enemies stay astern."`
+            `The harbour erupts in cheers. For the first time since you left Port Royal, the horizon looks like an invitation instead of a warning.`
+        log "Delivered the charter and helped establish the Free Captains' Code. The first chapter of the Caribbean campaign is complete."

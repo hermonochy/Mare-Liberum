@@ -1,0 +1,42 @@
+mission "The Last Broadside"
+    name "The Last Broadside"
+    description "Break the escort guarding Vane's flagship by sinking four pirate ships in the waters around Dead Man's Cay."
+    source "Port Royal"
+    reward 1100
+    objective kills 4
+    speaker offer "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Black Fleet Rises: done"
+    on offer
+        conversation
+            `Port Royal is awake before dawn. Lanterns burn along the quay, and the harbour is full of ships flying every colour except Vane's black. Bonny waits beside a chart covered in chalk marks.`
+            `"The fleet is at Dead Man's Cay. Vane's flagship is called the King's Ruin. Four escorts guard the mouth of the lagoon. We will draw them out and break their line. Once the escorts are gone, the other captains can close the entrance."`
+            choice
+                `"I'll take the outer line and break the escorts."`
+                    goto accept_job
+                `"What do we know about the King's Ruin?"`
+                    goto details
+                `"I will not sail into a trap."`
+                    goto decline_job
+            label details
+                `Bonny points to a sketch of a tall, dark-hulled ship. "Three decks of guns, a reinforced bow, and more sail than sense. Do not try to outgun it alone. We need its escorts scattered first. Keep your ship moving, use the wind, and bring your broadsides to bear only when you have a clean shot."`
+                choice
+                    `"Then I'll clear the escorts. For the free captains!"`
+                        goto accept_job
+                    `"I will leave this to the fleet."`
+                        goto decline_job
+            label accept_job
+                `Bonny raises her pistol toward the sunrise. "Make sail, captain. Today we take the sea back."`
+                accept
+            label decline_job
+                `Bonny lowers her pistol. "Then stay clear of the lagoon. There may not be room for a neutral ship once the guns begin."`
+                close
+    on accept
+        log "The final assault has begun. Sink four pirate ships guarding the King's Ruin at Dead Man's Cay."
+    on complete
+        conversation
+            `The last escort breaks apart in a cloud of smoke and splintered timbers. Across the water, the free captains close around the lagoon. A deep boom rolls over the sea as Vane's flagship fires its first broadside, then turns away into the haze.`
+            `Bonny watches the black sails disappear beyond the reef. "He has lost his screen and his safe anchorage. He will run for open water now, and every port will be watching for him."`
+            `She gives you a hard, proud smile. "The captains are gathering at Tortuga. Come there when the guns are silent. We will decide what kind of freedom we have won."`
+        log "Destroyed the escort guarding the King's Ruin. Vane's flagship has fled, and the free captains are gathering at Tortuga."

@@ -1,0 +1,57 @@
+mission "The Price of Silence"
+    name "The Price of Silence"
+    description "Deliver Nell's ledger page to Marta at Tortuga and decide how the evidence should be used."
+    source "Port Royal"
+    destination "Tortuga"
+    reward 460
+    speaker offer "Nell the Chandlery Keeper"
+    speaker visit "Marta, the Tavern Keeper"
+    speaker complete "Marta, the Tavern Keeper"
+    to offer
+        has "The Governor's Ledger: done"
+    on offer
+        conversation
+            `Nell waits beneath the chandlery awning with a parcel wrapped in oilskin. She keeps glancing toward the customs house, where two soldiers are pretending not to watch her.`
+            `"The page proves the governor paid Vane, but a page can be lost, stolen, or called a forgery. Marta at Tortuga knows captains who will swear to the missing convoys. Get it to her before the governor's men find me."`
+            choice
+                `"I'll take it straight to Marta."`
+                    goto accept_job
+                `"Should I show it to the Spanish commander?"`
+                    goto question
+                `"I won't carry treason papers."`
+                    goto decline_job
+            label question
+                `Nell gives a bitter laugh. "The commander answers to the governor. If he is honest, he is outnumbered. If he is not, you will be handing the evidence to the man who paid for the attacks."`
+                choice
+                    `"Then Tortuga it is. I'll protect the page."`
+                        goto accept_job
+                    `"No. Find another courier."`
+                        goto decline_job
+            label accept_job
+                `Nell ties the parcel beneath your coat. "Marta will be at the Broken Mast. Tell her the tide has turned."`
+                accept
+            label decline_job
+                `Nell steps back into the shadows. "I hope the governor never asks what you heard here, captain."`
+                close
+    on accept
+        log "Carrying the ledger page to Marta at Tortuga. Nell's warning suggests the governor's own men cannot be trusted."
+    on visit
+        conversation
+            `Marta reads the page by candlelight. The names and sums make her jaw tighten. She sets a bottle on the table but does not drink.`
+            `"Vane did not build his fleet with plunder alone. Someone in Havana has been feeding him ships, powder, and safe harbour. This page is the first proof we can put in front of the free captains."`
+    on complete
+        conversation
+            `Marta locks the ledger page in an iron box. "We will copy it and send the names to every honest captain from here to the Main."`
+            `She leans closer. "But Vane has begun hanging crews who refuse to join him. His flotilla keeps prisoners on a ship called the Gallows Tide. We need those people freed before he uses them to crew his next attack."`
+            choice
+                `"I'll put a stop to the Gallows Tide."`
+                    goto promise
+                `"We should gather more allies first."`
+                    goto allies
+            label promise
+                `Marta nods once. "Then make ready. The sea will remember this night."`
+                close
+            label allies
+                `"There is no more time to wait," Marta says. "The prisoners will be moved at dawn."`
+                close
+        log "Delivered the governor's ledger evidence to Marta. The next task is to break Vane's prison flotilla."
