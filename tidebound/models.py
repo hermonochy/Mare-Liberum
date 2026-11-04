@@ -10,6 +10,7 @@ class Port:
     shore_y: float
     exit_heading: float
     description: str
+    region: str = "Old Caribbean"
 
 @dataclass
 class PirateShip:
@@ -27,6 +28,7 @@ class PirateShip:
     wander: float = 0.0
     mission_id: str = ""
     objective_target: bool = False
+    ship_type: str = "Sloop"
 
 @dataclass
 class FleetShip:
@@ -42,6 +44,23 @@ class FleetShip:
     cooldown: float = 1.0
     anchor_x: float = 0.0
     anchor_y: float = 0.0
+
+
+@dataclass
+class TrafficShip:
+    name: str
+    role: str
+    ship_type: str
+    x: float
+    y: float
+    heading: float
+    destination: str
+    hull: int = 5
+    max_hull: int = 5
+    vx: float = 0.0
+    vy: float = 0.0
+    wander: float = 0.0
+    collision_bump_cooldown: float = 0.0
 
 @dataclass
 class Cannonball:

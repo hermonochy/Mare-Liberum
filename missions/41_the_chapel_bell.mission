@@ -1,0 +1,27 @@
+mission "The Chapel Bell"
+    category "side"
+    name "The Chapel Bell"
+    description "Carry a repaired bell clapper from Isla Verde to the chapel at Saint Brigid."
+    source "Isla Verde"
+    destination "Saint Brigid"
+    reward 260
+    speaker offer "Sister Ana"
+    speaker visit "Brother Tomas"
+    speaker complete "Brother Tomas"
+    on offer
+        conversation
+            `Sister Ana stands beside a small crate wrapped in sailcloth. The iron clapper inside has been polished bright, but its leather binding is still damp with oil.`
+            `"The chapel bell at Saint Brigid has been silent for a month. A storm broke its clapper, and the smith here has finally finished the repair. The fishermen say they will not put out before they hear it ring again. Would you carry it for us? It is awkward, not dangerous."`
+            choice
+                `"I'll see it delivered safely."`
+                    accept
+                `"Find another ship for the errand."`
+                    close
+    on accept
+        log "Accepted The Chapel Bell. Carry the repaired clapper from Isla Verde to Saint Brigid."
+    on visit
+        conversation
+            `Brother Tomas lifts the clapper from its crate and smiles as if you have brought him a lost friend. "We can ring the bell before the next tide. The fishing crews will be glad."`
+    on complete
+        conversation
+            `The bell sounds across Saint Brigid, clear and strong. A few fishers on the quay stop their work and raise their caps. Brother Tomas pays you from the chapel's small store.`

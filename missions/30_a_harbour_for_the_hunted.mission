@@ -1,0 +1,45 @@
+mission "A Harbour for the Hunted"
+    name "A Harbour for the Hunted"
+    description "Take the pledge to Saint's Refuge and speak with the refuge council."
+    source "Redoubt"
+    destination "Saint's Refuge"
+    reward 740
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Guns of Redoubt: done"
+    on offer
+        conversation
+            `The people of Saint's Refuge have sheltered deserters from the Meridian Company and need a guarantee they will not be handed back.`
+            `Several deserters are skilled gunners who know the Meridian Star. They will join the free captains if the refuge council protects their families.`
+            `The council asks you to carry a written pledge from Redoubt and meet the deserters before Company patrols return.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The council asks you to carry a written pledge from Redoubt and meet the deserters before Company patrols return.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The militia at Redoubt signs the pledge. “A sailor who lays down his arms should have a chance to live by them again.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A Harbour for the Hunted. Take the pledge to Saint's Refuge and speak with the refuge council."
+    on visit
+        conversation
+            `The deserters share the flagship's watch schedule. Ashcombe will move at night and use the storm line to hide his approach.`
+    on complete
+        conversation
+            `Their information points to a battle east of Last Light.`
+        log "Completed A Harbour for the Hunted. Received 740 gold. Their information points to a battle east of Last Light."

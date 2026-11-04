@@ -1,0 +1,45 @@
+mission "The Last Repair"
+    name "The Last Repair"
+    description "Find the shipwright at Mermaid's Rest and bring his repair ledger to the fleet."
+    source "Stormhaven"
+    destination "Mermaid's Rest"
+    reward 930
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Stormhaven Engagement: done"
+    on offer
+        conversation
+            `The free captains need the Meridian Star's repair records to learn how much damage the flagship can survive.`
+            `A shipwright who fled the yard is hiding at Mermaid's Rest. He has a copy of the damage ledger and knows which timbers were replaced in haste.`
+            `The records will tell you whether the flagship can withstand another full broadside or whether one careful strike could end the chase.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The records will tell you whether the flagship can withstand another full broadside or whether one careful strike could end the chase.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Fen gives you the shipwright's description. “He is no fighter, captain. Bring him back alive and let him do his talking ashore.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Last Repair. Find the shipwright at Mermaid's Rest and bring his repair ledger to the fleet."
+    on visit
+        conversation
+            `The shipwright reveals that the Meridian Star's stern gallery was patched with green timber. It will split if hit repeatedly from the quarter.`
+    on complete
+        conversation
+            `Bonny asks you to lead the final pursuit toward Last Light.`
+        log "Completed The Last Repair. Received 930 gold. Bonny asks you to lead the final pursuit toward Last Light."

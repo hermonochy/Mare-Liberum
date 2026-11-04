@@ -1,0 +1,26 @@
+mission "The Whaler's Log"
+    category "side"
+    name "The Whaler's Log"
+    description "Carry a whaling captain's recovered logbook to his family at Cormorant Quay."
+    source "Mermaid's Rest"
+    destination "Cormorant Quay"
+    reward 460
+    speaker offer "Captain Nils Harker"
+    speaker visit "Lena Harker"
+    speaker complete "Lena Harker"
+    on offer
+        conversation
+            `A broad, quiet whaling captain sets a salt-stained logbook on the table. "My ship is laid up. A split seam and a surgeon's orders. I need this book taken to my sister Lena at Cormorant Quay. It has the last notes my wife made before she died. I would rather it travel in a careful cabin than in a mail sack."`
+            choice
+                `"I'll see that it reaches her."`
+                    accept
+                `"I am sorry, but I cannot take it."`
+                    close
+    on accept
+        log "Accepted The Whaler's Log. Carry Captain Harker's logbook to Lena Harker at Cormorant Quay."
+    on visit
+        conversation
+            `Lena opens the book and recognises the handwriting at once. She holds it against her chest for a moment before she speaks. "Thank you. He could have sent a hundred letters and none would have meant as much as this."`
+    on complete
+        conversation
+            `Lena pays you from the money her brother left for the passage. She refuses to let you leave without a hot meal and a jar of preserved fruit.`

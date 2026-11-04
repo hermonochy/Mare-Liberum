@@ -1,0 +1,45 @@
+mission "A House Above the Reefs"
+    name "A House Above the Reefs"
+    description "Carry the convoy manifests to Clerk Mateo at Puerto Cielo and help him secure the archive."
+    source "Mariner's Rest"
+    destination "Puerto Cielo"
+    reward 570
+    speaker offer "Captain Ines Calderon"
+    speaker visit "Captain Ines Calderon"
+    speaker complete "Captain Ines Calderon"
+    to offer
+        has "The Cormorant Convoy: done"
+    on offer
+        conversation
+            `The convoy manifests identify a Company storehouse above the reefs at Puerto Cielo.`
+            `The harbour clerk has been ordered to destroy the old shipping records. He has sent a private request for help before the papers are burned.`
+            `The storehouse is guarded, but the original orders are hidden in the customs archive rather than the warehouse.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The storehouse is guarded, but the original orders are hidden in the customs archive rather than the warehouse.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The freed captains hand over their manifests. One asks you to remember that the cargo was ordinary food and medicine, not a king's treasure.`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A House Above the Reefs. Carry the convoy manifests to Clerk Mateo at Puerto Cielo and help him secure the archive."
+    on visit
+        conversation
+            `Mateo finds orders for a chain boom across Cormorant Quay and a gun battery at the river mouth. The Company intends to stop every independent ship entering the region.`
+    on complete
+        conversation
+            `A local shipwright says the boom can be disabled if the gunboats guarding it are removed.`
+        log "Completed A House Above the Reefs. Received 570 gold. A local shipwright says the boom can be disabled if the gunboats guarding it are removed."

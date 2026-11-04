@@ -2,10 +2,10 @@ mission "The Last Broadside"
     name "The Last Broadside"
     description "Sail to Dead Man's Cay, sink the four ships guarding Vane's flagship, then return to Tortuga to join the free captains."
     destination "Tortuga"
-    source "Port Royal"
+    source "Port Azure"
     reward 1100
     objective kills 4
-    battlefield "Dead Man's Cay" 850 1885
+    battlefield "Dead Man's Cay" 2220 2390
     enemy "The King's Ruin Guard"
     enemy "The Iron Duchess"
     enemy "The Gallows Jack"
@@ -17,7 +17,7 @@ mission "The Last Broadside"
         has "The Black Fleet Rises: done"
     on offer
         conversation
-            `Port Royal is awake before dawn. Lanterns burn along the quay, and the harbour is full of ships flying every colour except Vane's black. Bonny waits beside a chart covered in chalk marks.`
+            `Port Azure is awake before dawn. Lanterns burn along the quay, and the harbour is full of ships flying every colour except Vane's black. Bonny waits beside a chart covered in chalk marks.`
             `"The fleet is at Dead Man's Cay. Vane's flagship is called the King's Ruin. Four named escorts guard the mouth of the lagoon; their positions are marked on this chart. Sink them, then return to Tortuga. The free captains will be waiting there."`
             choice
                 `"I'll take the outer line and break the escorts."`

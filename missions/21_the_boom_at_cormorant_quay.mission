@@ -1,0 +1,51 @@
+mission "The Boom at Cormorant Quay"
+    name "The Boom at Cormorant Quay"
+    description "Break the four gunboats at the Western Boom and return to Cormorant Quay for the shipwright's report."
+    source "Puerto Cielo"
+    destination "Cormorant Quay"
+    reward 760
+    objective kills 4
+    battlefield "The Western Boom" 10500 6000
+    enemy "The Western Boom Guard 1"
+    enemy "The Western Boom Guard 2"
+    enemy "The Western Boom Guard 3"
+    enemy "The Western Boom Guard 4"
+    speaker offer "Captain Ines Calderon"
+    speaker visit "Captain Ines Calderon"
+    speaker complete "Captain Ines Calderon"
+    to offer
+        has "A House Above the Reefs: done"
+    on offer
+        conversation
+            `The Company has stretched a chain boom across the western channel and stationed four gunboats to guard it.`
+            `If the boom is raised, the free captains can reach the river ports. If it remains closed, Ashcombe can starve the Leeward Expanse into obedience.`
+            `The gunboats have been reinforced with swivel guns. Your escorts may help hold their attention, but the objective ships must all be sunk.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The gunboats have been reinforced with swivel guns. Your escorts may help hold their attention, but the objective ships must all be sunk.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Mateo gives you the tide table. “The chain is heaviest at the centre. Clear the guards and I will have the harbour crews raise it before dawn.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Boom at Cormorant Quay. Break the four gunboats at the Western Boom and return to Cormorant Quay for the shipwright's report."
+    on visit
+        conversation
+            `The boom is lifted. A captured signal officer reveals that Ashcombe has moved his headquarters to Nueva Esperanza on the Spanish Main.`
+    on complete
+        conversation
+            `The free captains now have a route into the Company's richest waters.`
+        log "Completed The Boom at Cormorant Quay. Received 760 gold. The free captains now have a route into the Company's richest waters."

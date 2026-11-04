@@ -1,0 +1,50 @@
+mission "The Cormorant Convoy"
+    name "The Cormorant Convoy"
+    description "Sail to Cormorant Bank, sink the three gunboats, then return to Mariner's Rest to meet the freed convoy masters."
+    source "San Telmo"
+    destination "Mariner's Rest"
+    reward 680
+    objective kills 3
+    battlefield "Cormorant Bank" 9800 6600
+    enemy "Cormorant Bank Guard 1"
+    enemy "Cormorant Bank Guard 2"
+    enemy "Cormorant Bank Guard 3"
+    speaker offer "Captain Ines Calderon"
+    speaker visit "Captain Ines Calderon"
+    speaker complete "Captain Ines Calderon"
+    to offer
+        has "The Soundings of San Telmo: done"
+    on offer
+        conversation
+            `Three Company gunboats are escorting a captured convoy through Cormorant Bank.`
+            `The convoy carries grain, medicine, and sailcloth for smaller islands. The Company plans to auction the cargo after declaring the ships abandoned.`
+            `The gunboats are larger than the cutters in the Windward Reach. They sail in a loose line and protect one another with overlapping broadsides.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The gunboats are larger than the cutters in the Windward Reach. They sail in a loose line and protect one another with overlapping broadsides.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Calderon marks the bank on your chart. “The channel is broad enough to manoeuvre, but do not let them cross your stern together.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Cormorant Convoy. Sail to Cormorant Bank, sink the three gunboats, then return to Mariner's Rest to meet the freed convoy masters."
+    on visit
+        conversation
+            `The convoy masters thank you and offer their cargo records. The manifests show that Company agents have been moving powder and chain to Puerto Cielo.`
+    on complete
+        conversation
+            `The next target is a fortified storehouse in the high harbour of Puerto Cielo.`
+        log "Completed The Cormorant Convoy. Received 680 gold. The next target is a fortified storehouse in the high harbour of Puerto Cielo."

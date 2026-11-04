@@ -1,0 +1,45 @@
+mission "The Pilot's Ledger"
+    name "The Pilot's Ledger"
+    description "Carry the ledger to Elian Rusk at Port Azure. Keep it below deck and out of the inspectors' sight."
+    source "Lantern Bay"
+    destination "Port Azure"
+    reward 430
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "Lanterns Under Black Sails: done"
+    on offer
+        conversation
+            `A rescued pilot has a ledger listing Company ships, cargoes, and secret rendezvous points.`
+            `The ledger is written in shorthand. Only a retired clerk at Port Azure can read it, and Company agents are watching the coast.`
+            `The names include ordinary merchants as well as privateers. Someone is financing the operation through respectable trading houses.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The names include ordinary merchants as well as privateers. Someone is financing the operation through respectable trading houses.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The harbourmaster presses the ledger into your hands. “A quiet delivery, captain. The fewer people who know what you carry, the better.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Pilot's Ledger. Carry the ledger to Elian Rusk at Port Azure. Keep it below deck and out of the inspectors' sight."
+    on visit
+        conversation
+            `Elian deciphers the entries. One name appears again and again: Commodore Silas Ashcombe, the Company officer recruiting Vane's former crew.`
+    on complete
+        conversation
+            `The Company is not merely taxing ports. It is building a private navy under Ashcombe.`
+        log "Completed The Pilot's Ledger. Received 430 gold. The Company is not merely taxing ports. It is building a private navy under Ashcombe."

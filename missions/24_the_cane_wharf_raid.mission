@@ -1,0 +1,50 @@
+mission "The Cane Wharf Raid"
+    name "The Cane Wharf Raid"
+    description "Sink the three Company transports at Sugarhook Roads, then return to Sugarhook and meet the island council."
+    source "Crown's Fall"
+    destination "Sugarhook"
+    reward 820
+    objective kills 3
+    battlefield "Sugarhook Roads" 15700 1750
+    enemy "Sugarhook Roads Guard 1"
+    enemy "Sugarhook Roads Guard 2"
+    enemy "Sugarhook Roads Guard 3"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Notary of Crown's Fall: done"
+    on offer
+        conversation
+            `Three Company vessels are loading chained labourers and seized cargo at Sugarhook Roads.`
+            `The governor claims the workers are debtors. The manifests show that many were taken from fishing villages that refused to pay the new harbour taxes.`
+            `The ships are guarded by hired marines. Stop the transfer before they clear the roads.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The ships are guarded by hired marines. Stop the transfer before they clear the roads.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Notary Bell sends a copy of the charter with you. “A paper trail is useful, captain, but sometimes a ship must be stopped before its cargo disappears.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Cane Wharf Raid. Sink the three Company transports at Sugarhook Roads, then return to Sugarhook and meet the island council."
+    on visit
+        conversation
+            `The transports are destroyed and the prisoners are brought ashore. The island council gives you the names of the shipyard foremen at Port de Lune.`
+    on complete
+        conversation
+            `The Company has been converting merchant hulls into warships in secret.`
+        log "Completed The Cane Wharf Raid. Received 820 gold. The Company has been converting merchant hulls into warships in secret."

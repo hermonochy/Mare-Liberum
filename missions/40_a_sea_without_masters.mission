@@ -1,0 +1,45 @@
+mission "A Sea Without Masters"
+    name "A Sea Without Masters"
+    description "Take the articles to Port Royal and attend the final council."
+    source "Havana"
+    destination "Port Royal"
+    reward 2200
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "Ashcombe's Last Wager: done"
+    on offer
+        conversation
+            `With Ashcombe defeated, the free captains must decide what becomes of the Company ports and its captured crews.`
+            `Some island councils want the Company dissolved. Others want its warehouses returned to the people who built them. Bonny insists no new governor should inherit the same power under a different flag.`
+            `The final journey is not a battle. Carry the signed harbour articles to Port Royal, where the captains and island councils will establish a shared sea charter.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The final journey is not a battle. Carry the signed harbour articles to Port Royal, where the captains and island councils will establish a shared sea charter.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The Havana harbourmaster gives you the signed articles. “You have brought us a quieter sort of victory, captain. Let it last longer than the last one.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A Sea Without Masters. Take the articles to Port Royal and attend the final council."
+    on visit
+        conversation
+            `The free captains and island councils sign the new articles. The Meridian Company is dissolved, its ports restored, and its crews given the choice to return home or sail under fair contracts.`
+    on complete
+        conversation
+            `The sea remains wide and dangerous, but no single company or governor can claim it. Your chart now shows twenty-three harbours and five regions open to exploration.`
+        log "Completed A Sea Without Masters. Received 2200 gold. The sea remains wide and dangerous, but no single company or governor can claim it. Your chart now shows twenty-three harbours and five regions open to exploration."

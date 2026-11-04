@@ -1,0 +1,46 @@
+mission "A Chart Beyond the Trade Winds"
+    name "A Chart Beyond the Trade Winds"
+    description "Carry the chart to Isla Verde and find the pilot named Tomas Vale. He once mapped the Windward Reach for the Company."
+    source "Havana"
+    destination "Isla Verde"
+    lead "Anne Bonny draws you aside as the council disperses. “A surveyor in Havana has found a chart that should not exist. I would hear what he knows before the Company gets to him. Go when you have finished celebrating; it can wait until you have had a proper meal.”"
+    reward 360
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "A Free Caribbean: done"
+    on offer
+        conversation
+            `A stranger arrives with a salt-stained chart bearing the mark of a survey ship that vanished beyond the eastern trade winds.`
+            `Nell recognises the seal as belonging to the Meridian Company, a chartered concern buying harbours and hiring private warships. The chart points east to the Windward Reach, beyond the nearest familiar ports but still within a manageable passage.`
+            `The chart is not a treasure map. It is a survey of deep-water routes, anchorages, and fresh-water springs. Whoever owns it could move a fleet unseen.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The chart is not a treasure map. It is a survey of deep-water routes, anchorages, and fresh-water springs. Whoever owns it could move a fleet unseen.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Nell marks the first new harbour on your chart. “This is beyond the waters Vane usually sailed. Keep your eyes open; the old ports are only the beginning.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A Chart Beyond the Trade Winds. Carry the chart to Isla Verde and find the pilot named Tomas Vale. He once mapped the Windward Reach for the Company."
+    on visit
+        conversation
+            `At Isla Verde, Tomas Vale studies the chart and turns pale. The Company has begun marking islands for seizure, and the survey ship was ordered to chart every safe anchorage.`
+    on complete
+        conversation
+            `Tomas agrees to help, but warns that the Meridian Company is already moving into the Windward Reach.`
+        log "Completed A Chart Beyond the Trade Winds. Received 360 gold. Tomas agrees to help, but warns that the Meridian Company is already moving into the Windward Reach."

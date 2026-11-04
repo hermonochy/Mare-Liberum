@@ -1,7 +1,7 @@
 mission "Clear the Cutlass Shoals"
     name "Clear the Cutlass Shoals"
-    description "Sail from Havana to the Cutlass Shoals, sink the Red Gull and the Sea Viper, then return to Havana for your debrief."
-    destination "Havana"
+    description "Sail from Havana to the Cutlass Shoals, sink the Red Gull and the Sea Viper, then make for Tortuga to give your debrief."
+    destination "Tortuga"
     source "Havana"
     reward 480
     objective kills 2
@@ -16,7 +16,7 @@ mission "Clear the Cutlass Shoals"
     on offer
         conversation
             `A naval officer in a faded blue coat waits beside the harbour guns. He introduces himself as Don Rafael, commander of the watch. A chart on the table shows the Cutlass Shoals, with two fresh black crosses marking recent attacks.`
-            `"Vane's ships have scattered, but two of his captains are still preying on merchantmen. The Red Gull and the Sea Viper are cruising the Cutlass Shoals, marked on this chart. Sink them, then bring your report back here to Havana. The harbour will pay for every pirate flag you send to the bottom."`
+            `"Vane's ships have scattered, but two of his captains are still preying on merchantmen. The Red Gull and the Sea Viper are cruising the Cutlass Shoals, marked on this chart. Sink them, then bring your report to Tortuga. The harbour will pay for every pirate flag you send to the bottom."`
             choice
                 `"I'll hunt them down. Ready the guns."`
                     goto accept_job
@@ -41,8 +41,8 @@ mission "Clear the Cutlass Shoals"
         log "Accepted the hunt for the Red Gull and the Sea Viper. Sink two pirate ships around the Cutlass Shoals."
     on visit
         conversation
-            `You come alongside in Havana with the smoke of the battle still hanging over the shoals. The Red Gull and the Sea Viper are both gone, and Don Rafael is waiting at the quay to hear your report.`
+            `You come alongside in Tortuga with the smoke of the battle still hanging over the shoals. The Red Gull and the Sea Viper are both gone, and Don Rafael is waiting at the quay to hear your report.`
     on complete
         conversation
-            `A harbour gun fires a salute as word spreads that both pirate ships have gone down. Don Rafael meets you on the quay with a heavy purse. "The merchants can sail again. Havana is in your debt, captain. Your name will travel farther than these islands."`
+            `A harbour gun fires a salute as word spreads that both pirate ships have gone down. Don Rafael meets you on the quay with a heavy purse. "The merchants can sail again. Tortuga is in your debt, captain. Your name will travel farther than these islands."`
         log "Sank two pirate ships around the Cutlass Shoals and cleared the merchant route."

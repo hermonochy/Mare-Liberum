@@ -1,0 +1,45 @@
+mission "The Salt Tax"
+    name "The Salt Tax"
+    description "Take the tariff book to Sister Agnes at Saint Brigid. She keeps records of the old fishing rights and can prove the new tax was never agreed."
+    source "Isla Verde"
+    destination "Saint Brigid"
+    reward 390
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "A Chart Beyond the Trade Winds: done"
+    on offer
+        conversation
+            `The people of Isla Verde are being charged a new harbour tax by agents claiming to speak for the Meridian Company.`
+            `Tomas has copied the Company tariff book. It lists payments demanded from fishing boats, water sellers, and even the chapel that shelters shipwrecked sailors.`
+            `The Company insists the fees are lawful. The islanders say no one voted for them, and the governor who signed the charter has never visited the reach.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The Company insists the fees are lawful. The islanders say no one voted for them, and the governor who signed the charter has never visited the reach.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Tomas gives you a sealed copy of the tariff. “Ink can be more dangerous than powder when the wrong man reads it.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Salt Tax. Take the tariff book to Sister Agnes at Saint Brigid. She keeps records of the old fishing rights and can prove the new tax was never agreed."
+    on visit
+        conversation
+            `Sister Agnes compares the new tariff with the old harbour rolls. The taxes are unlawful, but the Company has already put armed collectors on the islands.`
+    on complete
+        conversation
+            `The chapel records give the free captains their first proof that the Meridian charter is a fraud.`
+        log "Completed The Salt Tax. Received 390 gold. The chapel records give the free captains their first proof that the Meridian charter is a fraud."

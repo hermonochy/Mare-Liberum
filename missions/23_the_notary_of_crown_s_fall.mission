@@ -1,0 +1,45 @@
+mission "The Notary of Crown's Fall"
+    name "The Notary of Crown's Fall"
+    description "Sail to Crown's Fall and collect the original charter from Notary Bell."
+    source "Nueva Esperanza"
+    destination "Crown's Fall"
+    reward 710
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "A Letter in the Main: done"
+    on offer
+        conversation
+            `The former notary at Crown's Fall holds the original charter that gave the Meridian Company its supposed authority.`
+            `He hid the document in a church archive after discovering that the royal seal on it was copied.`
+            `The Company knows he kept a copy and has offered a reward for his arrest. He will only show the evidence to a captain who arrives without a Company flag.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The Company knows he kept a copy and has offered a reward for his arrest. He will only show the evidence to a captain who arrives without a Company flag.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Judge Valera supplies a plain merchant pennant. “Let them think you are carrying salt. The truth will make enough noise when it is read aloud.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Notary of Crown's Fall. Sail to Crown's Fall and collect the original charter from Notary Bell."
+    on visit
+        conversation
+            `Bell produces the charter and a list of paid officials. The list includes the governor of Sugarhook, who has been supplying forced labour to the Company yards.`
+    on complete
+        conversation
+            `The next lead points to the plantations and cane wharves at Sugarhook.`
+        log "Completed The Notary of Crown's Fall. Received 710 gold. The next lead points to the plantations and cane wharves at Sugarhook."

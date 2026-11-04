@@ -116,6 +116,11 @@ class ShipyardFleetMixin:
             self.gold -= cost
             self.current_ship = key
             self.player_ship_name = f"The {key} {self.rng.choice(['Fortune', 'Revenge', 'Liberty', 'Tempest', 'Seahawk'])}"
+            for side in (-1, 1):
+                self.cannon_held[side] = False
+                self.cannon_first_volley_fired[side] = False
+                self.cannon_battery_timers[side] = []
+                self.cannon_battery_rates[side] = []
             self.player_max_hull = stats["hull"] + self.upgrades["hull"] * 25
             self.player_hull = self.player_max_hull
             self.ship_vx = 0.0
@@ -148,7 +153,15 @@ class ShipyardFleetMixin:
             self.fleet_serial += 1
             names = ["Jolly Raven", "Sea Witch", "Morning Star", "Copper Belle", "Dread Gull", "Merry Rogue"]
             name = f"{names[(serial - 1) % len(names)]} {serial}"
-            escort = FleetShip(name, key, self.ship_x - 95, self.ship_y + (serial % 2 * 110 - 55), self.ship_heading, stats["hull"], stats["hull"])
+            new_fleet_count = len(self.fleet) + 1
+            for index, existing in enumerate(self.fleet):
+                existing_x, existing_y = self.fleet_formation_target(index, new_fleet_count, "follow")
+                existing.x = existing_x
+                existing.y = existing_y
+                existing.vx = 0.0
+                existing.vy = 0.0
+            spawn_x, spawn_y = self.fleet_formation_target(new_fleet_count - 1, new_fleet_count, "follow")
+            escort = FleetShip(name, key, spawn_x, spawn_y, self.ship_heading, stats["hull"], stats["hull"])
             escort.anchor_x = escort.x
             escort.anchor_y = escort.y
             self.fleet.append(escort)
@@ -218,17 +231,18 @@ class ShipyardFleetMixin:
                 ring += 1
             capacity = 6 * ring
             angle = heading + (remaining / capacity) * math.tau
-            radius = 105.0 + (ring - 1) * 82.0
+            radius = 140.0 + (ring - 1) * 125.0
             return self.ship_x + math.cos(angle) * radius, self.ship_y + math.sin(angle) * radius
         columns = 4
         row = index // columns
         row_start = row * columns
         row_count = min(columns, count - row_start)
         column = index - row_start
-        lateral = (column - (row_count - 1) / 2.0) * 112.0
-        trailing = 145.0 + row * 118.0
-        target_x = self.ship_x - forward[0] * trailing + side[0] * lateral
-        target_y = self.ship_y - forward[1] * trailing + side[1] * lateral
+        lateral = (column - (row_count - 1) / 2.0) * 132.0
+        trailing = 170.0 + row * 136.0
+        direction = 1.0 if self.docked_port else -1.0
+        target_x = self.ship_x + forward[0] * trailing * direction + side[0] * lateral
+        target_y = self.ship_y + forward[1] * trailing * direction + side[1] * lateral
         return target_x, target_y
 
     def steer_escort_toward(self, escort, target_x, target_y, dt, turn_rate=54.0, thrust=58.0):

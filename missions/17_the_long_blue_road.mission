@@ -1,0 +1,45 @@
+mission "The Long Blue Road"
+    name "The Long Blue Road"
+    description "Carry the deserter and his statement to Magistrate Ortez at Blackwater Reach."
+    source "Pelican's Rest"
+    destination "Blackwater Reach"
+    reward 470
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "A Signal at Pelican Point: done"
+    on offer
+        conversation
+            `The deserter will only testify before a magistrate beyond the Company patrols.`
+            `Tomas recommends Blackwater Reach, a busy river port in the Leeward Expanse. Its magistrate once prosecuted illegal prize-taking and may still be trusted.`
+            `The voyage is long and crosses open water. There are no friendly islands between the Windward Reach and the Leeward Expanse; watch the weather and use the oars when the wind falls.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The voyage is long and crosses open water. There are no friendly islands between the Windward Reach and the Leeward Expanse; watch the weather and use the oars when the wind falls.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The paymaster boards with a sea chest and two witnesses. “I sold powder to men who called themselves merchants. I would rather face a court than see another village burned.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Long Blue Road. Carry the deserter and his statement to Magistrate Ortez at Blackwater Reach."
+    on visit
+        conversation
+            `Magistrate Ortez takes the statement under seal. He says the Company has bought forts along the Leeward Expanse and is preparing to control the western convoy routes.`
+    on complete
+        conversation
+            `Ortez asks you to meet his harbour pilot at San Telmo.`
+        log "Completed The Long Blue Road. Received 470 gold. Ortez asks you to meet his harbour pilot at San Telmo."

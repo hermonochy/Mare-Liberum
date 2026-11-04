@@ -1,0 +1,28 @@
+mission "The Sailmaker's Son"
+    category "side"
+    name "The Sailmaker's Son"
+    description "Find a runaway sailmaker's apprentice and bring him to Port Azure."
+    source "Tortuga"
+    destination "Port Azure"
+    reward 350
+    speaker offer "Madame Celine"
+    speaker visit "Master Rook"
+    speaker complete "Master Rook"
+    on offer
+        conversation
+            `A French sailmaker named Celine lays a child's wooden shuttle on the counter. "My apprentice has run off. He is not a child, mind, but he is young enough to think every hard word is a declaration of war."`
+            `"His uncle runs a loft in Port Azure. I think he went there, but he has no money for a passage and too much pride to ask. Take this shuttle. He will know it came from me. Tell him the loft door is still open."`
+            choice
+                `"I'll find him and pass on the message."`
+                    accept
+                `"Family quarrels are not my trade."`
+                    close
+    on accept
+        log "Accepted The Sailmaker's Son. Take Celine's shuttle and message to her apprentice's uncle at Port Azure."
+    on visit
+        conversation
+            `Master Rook recognises the shuttle immediately. "The stubborn pup has not shown his face, but he left a note here yesterday. He is in the harbour tavern, working up the nerve to go home."`
+            `Rook sends a runner to fetch him. The young apprentice arrives looking sheepish, and reads Celine's message twice.`
+    on complete
+        conversation
+            `The apprentice agrees to return to Tortuga after a little more training. Master Rook pays you for the passage and asks you to remind Celine that young men sometimes need to sail a little before they learn where home is.`

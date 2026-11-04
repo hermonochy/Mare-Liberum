@@ -1,0 +1,51 @@
+mission "The Guns of Redoubt"
+    name "The Guns of Redoubt"
+    description "Sink the four patrol ships at Redoubt Soundings, then return to Redoubt and help the militia restore the signal fort."
+    source "Stormhaven"
+    destination "Redoubt"
+    reward 1050
+    objective kills 4
+    battlefield "Redoubt Soundings" 15000 8200
+    enemy "Redoubt Soundings Guard 1"
+    enemy "Redoubt Soundings Guard 2"
+    enemy "Redoubt Soundings Guard 3"
+    enemy "Redoubt Soundings Guard 4"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Stormhaven Refuge: done"
+    on offer
+        conversation
+            `Four Company patrol ships guard the channel below Redoubt and relay signals from the captured fort.`
+            `The fort controls the safest passage through the Outer Antilles. If its signal station remains in Company hands, every refuge will be exposed.`
+            `The patrol ships sail in pairs. Draw one pair away from the channel before turning your broadside on the second.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The patrol ships sail in pairs. Draw one pair away from the channel before turning your broadside on the second.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Fen gives you a storm lantern. “When the lantern shines from the old tower again, every ship will know the Company has lost its eyes.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Guns of Redoubt. Sink the four patrol ships at Redoubt Soundings, then return to Redoubt and help the militia restore the signal fort."
+    on visit
+        conversation
+            `The signal fort is returned to the islanders. A captured officer says Ashcombe is assembling the Meridian Star and a fleet at Saint's Refuge.`
+    on complete
+        conversation
+            `The final Company anchorage lies near Last Light.`
+        log "Completed The Guns of Redoubt. Received 1050 gold. The final Company anchorage lies near Last Light."

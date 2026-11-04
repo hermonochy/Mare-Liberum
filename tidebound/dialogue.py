@@ -59,6 +59,14 @@ class Conversation:
             self.finish()
             self.game.open_mission_offer()
             return True
+        if node.command == "mission_offer":
+            self.finish()
+            self.game.show_mission_offer_by_id(node.value)
+            return True
+        if node.command == "intro_mission":
+            self.finish()
+            self.game.open_intro_mission_offer()
+            return True
         if node.command == "day_jobs":
             self.finish()
             self.game.open_day_job_board()

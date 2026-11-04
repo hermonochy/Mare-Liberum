@@ -2,27 +2,74 @@ from ..common import *
 
 
 class VesselsMixin:
-    def fire_broadside(self, side):
-        if self.docked_port or self.conversation or self.journal_open or self.shipyard_open:
-            return
-        if self.cannon_cooldowns[side] > 0:
-            return
+    def set_cannon_held(self, side, held):
+        if held:
+            if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open:
+                return
+            if not self.cannon_held[side]:
+                self.cannon_held[side] = True
+                if not self.cannon_first_volley_fired[side]:
+                    self.fire_broadside(side)
+                else:
+                    self.ensure_cannon_battery(side)
+                    timers = self.cannon_battery_timers[side]
+                    rates = self.cannon_battery_rates[side]
+                    for index, timer in enumerate(timers):
+                        if timer <= 0.0:
+                            timers[index] = rates[index] * self.rng.uniform(0.08, 0.58)
+        else:
+            self.cannon_held[side] = False
+
+    def ensure_cannon_battery(self, side):
+        stats = self.player_ship_stats()
+        gun_count = stats["guns"] + self.upgrades["cannons"]
+        timers = self.cannon_battery_timers[side]
+        rates = self.cannon_battery_rates[side]
+        base_reload = stats["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
+        while len(timers) < gun_count:
+            rate = base_reload * self.rng.uniform(0.84, 1.16)
+            rates.append(rate)
+            timers.append(self.rng.uniform(0.4, 1.2) * rate if self.cannon_first_volley_fired[side] else 0.0)
+        if len(timers) > gun_count:
+            del timers[gun_count:]
+            del rates[gun_count:]
+        return gun_count
+
+    def fire_single_cannon(self, side, gun_index, gun_count, show_effect=False):
         heading = math.radians(self.ship_heading)
         forward = (math.cos(heading), math.sin(heading))
         broadside_angle = heading + side * math.pi / 2
         broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
-        stats = self.player_ship_stats()
-        gun_count = stats["guns"] + self.upgrades["cannons"]
-        spacing = 14.0
+        spacing = 13.0
+        offset = (gun_index - (gun_count - 1) / 2) * spacing
+        x = self.ship_x + forward[0] * offset + broadside[0] * 19
+        y = self.ship_y + forward[1] * offset + broadside[1] * 19
+        vx = broadside[0] * 480 + self.ship_vx * 0.18
+        vy = broadside[1] * 480 + self.ship_vy * 0.18
+        self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "player"))
+        if show_effect:
+            self.toast_message("BOOM! Port broadside!" if side < 0 else "BOOM! Starboard broadside!", 1.2)
+
+    def fire_broadside(self, side):
+        if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open:
+            return
+        gun_count = self.ensure_cannon_battery(side)
         for index in range(gun_count):
-            offset = (index - (gun_count - 1) / 2) * spacing
-            x = self.ship_x + forward[0] * offset + broadside[0] * 18
-            y = self.ship_y + forward[1] * offset + broadside[1] * 18
-            vx = broadside[0] * 480 + self.ship_vx * 0.18
-            vy = broadside[1] * 480 + self.ship_vy * 0.18
-            self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "player"))
-        self.cannon_cooldowns[side] = stats["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
-        self.toast_message("BOOM! Port broadside!" if side < 0 else "BOOM! Starboard broadside!", 1.2)
+            self.fire_single_cannon(side, index, gun_count, show_effect=False)
+            self.cannon_battery_timers[side][index] = self.cannon_battery_rates[side][index] * self.rng.uniform(0.72, 1.28)
+        self.cannon_first_volley_fired[side] = True
+        self.toast_message("BOOM! The whole port battery fires!" if side < 0 else "BOOM! The whole starboard battery fires!", 1.3)
+
+    def update_player_cannons(self, dt):
+        for side in (-1, 1):
+            gun_count = self.ensure_cannon_battery(side)
+            timers = self.cannon_battery_timers[side]
+            rates = self.cannon_battery_rates[side]
+            for index in range(gun_count):
+                timers[index] = max(0.0, timers[index] - dt)
+                if self.cannon_held[side] and timers[index] <= 0.0:
+                    self.fire_single_cannon(side, index, gun_count)
+                    timers[index] = rates[index] * self.rng.uniform(0.88, 1.16)
 
     def update_player_sailing(self, dt):
         if self.docked_port:
@@ -70,8 +117,6 @@ class VesselsMixin:
             self.ship_vy *= factor
         self.ship_x += self.ship_vx * dt
         self.ship_y += self.ship_vy * dt
-        self.ship_x = clamp(self.ship_x, 24, WORLD_WIDTH - 24)
-        self.ship_y = clamp(self.ship_y, 24, WORLD_HEIGHT - 24)
         self.ship_x, self.ship_y, self.ship_vx, self.ship_vy, collided = resolve_land_collision(
             self.ship_x, self.ship_y, self.ship_vx, self.ship_vy, PLAYER_RADIUS, self.collision_land_polygons()
         )
@@ -88,50 +133,92 @@ class VesselsMixin:
                 nearest_distance = distance
                 self.near_port = port
 
+    def estimated_player_wealth(self):
+        flagship_value = SHIP_CLASSES.get(self.current_ship, {}).get("cost", 0)
+        escort_value = sum(SHIP_CLASSES.get(ship.ship_type, {}).get("cost", 0) for ship in self.fleet)
+        upgrade_value = sum(self.upgrades.values()) * 220
+        relic_value = len(self.relics) * 350
+        return int(self.gold + flagship_value + escort_value * 0.65 + upgrade_value + relic_value)
+
+    def pirate_reinforcement_interval(self):
+        wealth = self.estimated_player_wealth()
+        return max(32.0, 112.0 - min(80.0, max(0.0, wealth - 175.0) / 312.5))
+
+    def pirate_reinforcement_group_size(self):
+        wealth = self.estimated_player_wealth()
+        return 1 + int(wealth >= 7000) + int(wealth >= 18000)
+
     def spawn_pirate_reinforcement(self):
         names = [
             "The Salt Widow", "The Crimson Gull", "The Ragged Crown", "The Laughing Mary",
             "The Cutlass Rose", "The Storm Petrel", "The Black Marlin", "The Mercy's End",
         ]
-        position = None
-        for _ in range(240):
-            x = self.rng.uniform(150, WORLD_WIDTH - 150)
-            y = self.rng.uniform(150, WORLD_HEIGHT - 150)
-            if any(point_in_polygon((x, y), polygon) for polygon in self.collision_land_polygons()):
+        spawned = 0
+        group_size = self.pirate_reinforcement_group_size()
+        for group_index in range(group_size):
+            position = None
+            for _ in range(300):
+                angle = self.rng.uniform(0.0, math.tau)
+                distance = self.rng.uniform(1180.0, 2480.0)
+                x = self.ship_x + math.cos(angle) * distance
+                y = self.ship_y + math.sin(angle) * distance
+                if any(point_in_polygon((x, y), polygon) for polygon in self.collision_land_polygons()):
+                    continue
+                if math.hypot(x - self.ship_x, y - self.ship_y) < 850:
+                    continue
+                if any(math.hypot(x - port.x, y - port.y) < 300 for port in self.ports):
+                    continue
+                occupied = [pirate for pirate in self.pirates if not pirate.dead]
+                occupied.extend(self.fleet)
+                occupied.extend(getattr(self, "traffic_ships", []))
+                if any(math.hypot(x - ship.x, y - ship.y) < 155 for ship in occupied):
+                    continue
+                if math.hypot(x - self.ship_x, y - self.ship_y) < 720:
+                    continue
+                position = (x, y)
+                break
+            if position is None:
                 continue
-            if math.hypot(x - self.ship_x, y - self.ship_y) < 720:
-                continue
-            if any(math.hypot(x - port.x, y - port.y) < 260 for port in self.ports):
-                continue
-            position = (x, y)
-            break
-        if position is None:
-            return
-        x, y = position
-        heading = math.degrees(math.atan2(self.ship_y - y, self.ship_x - x))
-        name = names[(self.reinforcement_number - 1) % len(names)]
-        if self.reinforcement_number > len(names):
-            name = f"{name} {self.reinforcement_number}"
-        self.pirates.append(
-            PirateShip(name, x, y, heading, hull=6, max_hull=6, side_choice=self.rng.choice([-1, 1]), wander=self.rng.random() * 6.0)
-        )
-        self.reinforcement_number += 1
-        self.toast_message("A fresh pirate sail has appeared on the horizon!", 2.8)
+            x, y = position
+            heading = math.degrees(math.atan2(self.ship_y - y, self.ship_x - x))
+            serial = self.reinforcement_number
+            name = names[(serial - 1) % len(names)]
+            if serial > len(names):
+                name = f"{name} {serial}"
+            hull = self.rng.choice([5, 6, 6, 7])
+            self.pirates.append(
+                PirateShip(
+                    name,
+                    x,
+                    y,
+                    heading,
+                    hull=hull,
+                    max_hull=hull,
+                    side_choice=self.rng.choice([-1, 1]),
+                    wander=self.rng.random() * 6.0,
+                    ship_type=self.rng.choice(["Cutter", "Schooner", "Brigantine"]),
+                )
+            )
+            self.reinforcement_number += 1
+            spawned += 1
+        if spawned:
+            wealth = self.estimated_player_wealth()
+            self.toast_message(
+                f"{spawned} pirate sail{'s' if spawned != 1 else ''} spotted. Your growing fortune ({wealth:,} gold in assets) is attracting attention!",
+                3.8,
+            )
+        return spawned
 
     def update_pirates(self, dt):
         if self.docked_port or self.conversation or self.journal_open or self.shipyard_open:
             return
-        active_count = sum(not pirate.dead for pirate in self.pirates)
         active_mission = self.active_mission()
         combat_mission_active = bool(active_mission and active_mission.objective_type == "kills")
-        reinforcement_delay = 45.0
-        if not combat_mission_active and active_count < 2:
+        if not combat_mission_active:
             self.reinforcement_timer -= dt
-            if self.reinforcement_timer <= 0:
+            if self.reinforcement_timer <= 0.0:
                 self.spawn_pirate_reinforcement()
-                self.reinforcement_timer = reinforcement_delay
-        elif not combat_mission_active:
-            self.reinforcement_timer = reinforcement_delay
+                self.reinforcement_timer = self.pirate_reinforcement_interval()
         for pirate in self.pirates:
             if pirate.dead:
                 continue
@@ -209,7 +296,7 @@ class VesselsMixin:
             ball.x += ball.vx * dt
             ball.y += ball.vy * dt
             ball.life -= dt
-            if ball.life <= 0 or ball.x < 0 or ball.y < 0 or ball.x > WORLD_WIDTH or ball.y > WORLD_HEIGHT:
+            if ball.life <= 0:
                 continue
             if any(point_in_polygon((ball.x, ball.y), polygon) for polygon in self.collision_land_polygons()):
                 continue
@@ -228,6 +315,15 @@ class VesselsMixin:
                             self.toast_message(f"Hit {pirate.name}! Hull remaining: {pirate.hull}.", 1.3)
                         break
                 if hit:
+                    continue
+                traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and math.hypot(ball.x - ship.x, ball.y - ship.y) < 27), None)
+                if traffic_hit:
+                    traffic_hit.hull = max(0, traffic_hit.hull - 1)
+                    if traffic_hit.hull <= 0:
+                        self.traffic_ships.remove(traffic_hit)
+                        self.toast_message(f"Your cannonball sinks the {traffic_hit.role} ship {traffic_hit.name}.", 3.2)
+                    else:
+                        self.toast_message(f"A ball strikes {traffic_hit.name}!", 1.3)
                     continue
             elif not self.docked_port:
                 if math.hypot(ball.x - self.ship_x, ball.y - self.ship_y) < 23:
@@ -257,23 +353,30 @@ class VesselsMixin:
         self.ship_vy = 0.0
         self.ship_heading = port.exit_heading
         self.docked_port = port.name
+        self.last_docked_port = port.name
+        self.near_port = port
         self.player_hull = max(1, int(self.player_max_hull * 0.55))
         self.projectiles = [ball for ball in self.projectiles if ball.owner != "enemy"]
         self.add_journal(f"Your ship was dismasted and towed to {port.name}. Lost {penalty} gold in repairs.")
         self.toast_message(f"Your ship was nearly sunk. Repairs at {port.name} cost {penalty} gold.", 5.0)
 
     def update(self, dt):
+        if getattr(self, "menu_mode", None) or getattr(self, "save_dialog_open", False):
+            return
         self.world_time += dt
         self.toast_time = max(0.0, self.toast_time - dt)
         self.mission_result_timer = max(0.0, self.mission_result_timer - dt)
         self.wind_angle = 24.0 + math.sin(self.world_time * 0.035) * 11.0
         self.wind_strength = 0.92 + math.sin(self.world_time * 0.06) * 0.08
-        for side in self.cannon_cooldowns:
-            self.cannon_cooldowns[side] = max(0.0, self.cannon_cooldowns[side] - dt)
-        if self.conversation or self.journal_open or self.treasure_chart_open or self.shipyard_open:
+        if self.conversation or self.journal_open or self.treasure_chart_open or self.shipyard_open or self.job_board_open or self.world_map_open:
+            self.cannon_held[-1] = False
+            self.cannon_held[1] = False
             return
+        self.update_player_cannons(dt)
         self.update_player_sailing(dt)
         self.update_fleet(dt)
         self.update_treasure_discovery()
         self.update_pirates(dt)
+        self.update_traffic_ships(dt)
+        self.resolve_ship_collisions(dt)
         self.update_projectiles(dt)

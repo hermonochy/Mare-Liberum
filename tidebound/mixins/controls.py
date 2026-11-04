@@ -4,6 +4,26 @@ from ..common import *
 class ControlsMixin:
     def handle_keydown(self, event):
         key = event.key
+        if self.menu_mode or self.save_dialog_open:
+            self.handle_menu_key(key)
+            return
+        if self.job_board_open:
+            offers = self.day_job_offers.get(self.docked_port, [])
+            if key in (pygame.K_ESCAPE, pygame.K_q):
+                self.close_day_job_board()
+            elif key in (pygame.K_UP, pygame.K_w):
+                self.job_board_selected_index = (self.job_board_selected_index - 1) % max(1, len(offers))
+            elif key in (pygame.K_DOWN, pygame.K_s):
+                self.job_board_selected_index = (self.job_board_selected_index + 1) % max(1, len(offers))
+            elif key in (pygame.K_SPACE, pygame.K_e):
+                self.toggle_day_job_selection(self.job_board_selected_index)
+            elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self.accept_selected_day_jobs()
+            return
+        if self.world_map_open:
+            if key in (pygame.K_m, pygame.K_ESCAPE):
+                self.world_map_open = False
+            return
         if self.shipyard_open:
             if self.ship_rename_mode:
                 if key == pygame.K_ESCAPE:
@@ -54,10 +74,18 @@ class ControlsMixin:
             if key in (pygame.K_ESCAPE, pygame.K_t):
                 self.treasure_chart_open = False
             return
-        if key == pygame.K_ESCAPE:
-            self.running = False
+        if key in (pygame.K_ESCAPE, pygame.K_F9):
+            self.cannon_held[-1] = False
+            self.cannon_held[1] = False
+            self.menu_mode = "pause"
+            self.menu_selection = 0
+            self.menu_scroll = 0
+        elif key == pygame.K_F5:
+            self.begin_save_dialog(return_to_pause=False)
         elif key == pygame.K_F1:
             self.show_help = not self.show_help
+        elif key == pygame.K_m:
+            self.world_map_open = True
         elif key == pygame.K_j:
             self.journal_open = True
         elif key == pygame.K_t:
@@ -100,9 +128,9 @@ class ControlsMixin:
             else:
                 self.toast_message("No pier nearby. Find a harbour and come in slowly.", 2.5)
         elif key == pygame.K_z:
-            self.fire_broadside(-1)
+            self.set_cannon_held(-1, True)
         elif key == pygame.K_x:
-            self.fire_broadside(1)
+            self.set_cannon_held(1, True)
         elif key == pygame.K_f:
             self.set_fleet_order("fight")
         elif key == pygame.K_h:
@@ -113,26 +141,38 @@ class ControlsMixin:
             self.set_fleet_order("follow")
 
     def handle_event(self, event):
-        if event.type == pygame.TEXTINPUT and self.shipyard_open and self.ship_rename_mode:
+        if event.type == pygame.TEXTINPUT and self.save_dialog_open:
+            allowed = "".join(character for character in event.text if character.isprintable() and character not in "/\\:")
+            self.save_name_input = (self.save_name_input + allowed)[:36]
+        elif event.type == pygame.TEXTINPUT and self.shipyard_open and self.ship_rename_mode:
             allowed = "".join(character for character in event.text if character.isprintable())
             self.ship_name_input = (self.ship_name_input + allowed)[:24]
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and (self.menu_mode or self.save_dialog_open):
+            self.handle_menu_click(event.pos)
         elif event.type == pygame.KEYDOWN:
             self.handle_keydown(event)
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_z:
+                self.set_cannon_held(-1, False)
+            elif event.key == pygame.K_x:
+                self.set_cannon_held(1, False)
+        elif event.type == pygame.MOUSEBUTTONDOWN and self.job_board_open and event.button == 1:
+            self.handle_day_job_board_click(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2, 3):
-            if not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open:
+            if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open:
                 self.camera_dragging = True
                 self.camera_drag_last = event.pos
         elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2, 3):
             self.camera_dragging = False
         elif event.type == pygame.MOUSEMOTION and self.camera_dragging:
-            if not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open:
+            if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open:
                 dx = event.pos[0] - self.camera_drag_last[0]
                 dy = event.pos[1] - self.camera_drag_last[1]
                 self.camera_x -= dx / self.camera_zoom
                 self.camera_y -= dy / self.camera_zoom
                 self.camera_follow = False
                 self.camera_drag_last = event.pos
-        elif event.type == pygame.MOUSEWHEEL and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open:
+        elif event.type == pygame.MOUSEWHEEL and not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open:
             anchor = getattr(event, "mouse_pos", None)
             if anchor is None and hasattr(event, "mouse_x") and hasattr(event, "mouse_y"):
                 anchor = (event.mouse_x, event.mouse_y)

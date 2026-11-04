@@ -1,0 +1,49 @@
+mission "A Signal at Pelican Point"
+    name "A Signal at Pelican Point"
+    description "Break the two launches at Pelican Point, then sail to Pelican's Rest and escort the paymaster ashore."
+    source "Port Azure"
+    destination "Pelican's Rest"
+    reward 620
+    objective kills 2
+    battlefield "Pelican Point" 7150 2250
+    enemy "Pelican Point Guard 1"
+    enemy "Pelican Point Guard 2"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Pilot's Ledger: done"
+    on offer
+        conversation
+            `A fishing family has lit a distress beacon at Pelican Point. Company men are searching their village for a missing tariff book.`
+            `The family hid a Company paymaster who deserted after learning that the firm planned to seize the Windward harbours by force.`
+            `Two armed launches are circling the point. The family cannot leave until the launches are driven away.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `Two armed launches are circling the point. The family cannot leave until the launches are driven away.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Elian gives you a copy of the decoded ledger. “If Ashcombe is building a navy, he will need men, powder, and safe anchorages.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A Signal at Pelican Point. Break the two launches at Pelican Point, then sail to Pelican's Rest and escort the paymaster ashore."
+    on visit
+        conversation
+            `The family reaches the harbour with the deserter. He names the next Company supply depot at Blackwater Reach and offers to testify.`
+    on complete
+        conversation
+            `The paymaster confirms that Company ships carry sealed orders from a governor far to the south.`
+        log "Completed A Signal at Pelican Point. Received 620 gold. The paymaster confirms that Company ships carry sealed orders from a governor far to the south."

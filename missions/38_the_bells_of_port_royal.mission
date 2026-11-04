@@ -1,0 +1,45 @@
+mission "The Bells of Port Royal"
+    name "The Bells of Port Royal"
+    description "Return to Port Royal and report to the harbourmaster and Commodore Bonny."
+    source "Last Light"
+    destination "Port Royal"
+    reward 960
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Meridian Screen: done"
+    on offer
+        conversation
+            `Port Royal is preparing for the arrival of the Meridian Star and its captain.`
+            `The harbourmaster has ordered the old chain boom repaired, and every battery along the quay is being loaded. Bonny wants the free fleet to keep the harbour clear for the final engagement.`
+            `Carry the shipwright's report to the harbourmaster and help prepare the old port for a fleet action.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `Carry the shipwright's report to the harbourmaster and help prepare the old port for a fleet action.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Last Light rings its warning bell as you leave. The crews line the quay, knowing the next signal may be the sound of battle.`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Bells of Port Royal. Return to Port Royal and report to the harbourmaster and Commodore Bonny."
+    on visit
+        conversation
+            `Bonny has assembled every available captain. Ashcombe is expected at dawn, and the battle must be fought outside the harbour to spare the town.`
+    on complete
+        conversation
+            `The old Caribbean is ready to defend itself.`
+        log "Completed The Bells of Port Royal. Received 960 gold. The old Caribbean is ready to defend itself."

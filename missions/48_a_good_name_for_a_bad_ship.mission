@@ -1,0 +1,27 @@
+mission "A Good Name for a Bad Ship"
+    category "side"
+    name "A Good Name for a Bad Ship"
+    description "Carry the papers needed to register a refitted coaster at Port de Lune."
+    source "Crown's Fall"
+    destination "Port de Lune"
+    reward 390
+    speaker offer "Shipwright Benoit"
+    speaker visit "Clerk Mireille"
+    speaker complete "Clerk Mireille"
+    on offer
+        conversation
+            `Shipwright Benoit slides a bundle of papers across his bench. "This little coaster has been rebuilt from keel to mast, but the registry still calls her a wreck. Until that is corrected, the owner cannot insure her or hire a crew."`
+            `"The clerk at Port de Lune has the other half of the file. I could send a boy, but the boy would spend the fare on sweet cakes. Will you take it?"`
+            choice
+                `"I'll carry the papers. Every ship deserves a fair record."`
+                    accept
+                `"I do not fancy carrying paperwork across the sea."`
+                    close
+    on accept
+        log "Accepted A Good Name for a Bad Ship. Deliver Benoit's registration papers to Clerk Mireille in Port de Lune."
+    on visit
+        conversation
+            `Clerk Mireille compares the papers, checks a seal, and smiles. "There. The Sea Finch is a ship again, not a floating argument. Tell Benoit his work has been recognised."`
+    on complete
+        conversation
+            `The clerk pays you from the registration fee. "It is good to see a captain carry papers as carefully as cannon. Both have their uses."`

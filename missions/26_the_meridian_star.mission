@@ -1,0 +1,51 @@
+mission "The Meridian Star"
+    name "The Meridian Star"
+    description "Sink the four escorts at the Glasswater Trials, then return to Santa Isabela and report to Captain Calderon."
+    source "Port de Lune"
+    destination "Santa Isabela"
+    reward 980
+    objective kills 4
+    battlefield "The Glasswater Trials" 13700 3100
+    enemy "The Glasswater Trials Guard 1"
+    enemy "The Glasswater Trials Guard 2"
+    enemy "The Glasswater Trials Guard 3"
+    enemy "The Glasswater Trials Guard 4"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Shipwrights of Port de Lune: done"
+    on offer
+        conversation
+            `The Meridian Star is undergoing trials beyond Santa Isabela, protected by four Company escorts.`
+            `The new flagship is not yet finished, but its escorts carry the heavy guns and powder that will make it formidable.`
+            `The shipwrights' plans show a weak stern gallery. The Company escorts must be scattered before the flagship can be approached safely.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The shipwrights' plans show a weak stern gallery. The Company escorts must be scattered before the flagship can be approached safely.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Lenoir marks the trial waters and warns you not to chase the flagship into the shallows. “Make her turn, and you will see the weakness.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Meridian Star. Sink the four escorts at the Glasswater Trials, then return to Santa Isabela and report to Captain Calderon."
+    on visit
+        conversation
+            `The escorts are gone. Ashcombe has taken the Meridian Star east into the Outer Antilles, where the Company is buying a remote harbour.`
+    on complete
+        conversation
+            `The free captains prepare to follow him beyond the usual trade routes.`
+        log "Completed The Meridian Star. Received 980 gold. The free captains prepare to follow him beyond the usual trade routes."

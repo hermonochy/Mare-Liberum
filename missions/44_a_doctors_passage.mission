@@ -1,0 +1,27 @@
+mission "A Doctor's Passage"
+    category "side"
+    name "A Doctor's Passage"
+    description "Take a physician and his medical case from San Telmo to Stormhaven."
+    source "San Telmo"
+    destination "Stormhaven"
+    reward 420
+    speaker offer "Dr. Mateo Ruiz"
+    speaker visit "Harbourmaster Vale"
+    speaker complete "Harbourmaster Vale"
+    on offer
+        conversation
+            `A physician in a weather-darkened coat asks whether your cabin is dry. He carries a leather case and a rolled blanket.`
+            `"Stormhaven has had a fever in the lower quarter. Their usual doctor is laid up himself. I have been asked to help, but the passenger packets are full and the militia will not spare a launch. I can pay for a berth and keep out of your crew's way."`
+            choice
+                `"Come aboard, doctor. We will make room."`
+                    accept
+                `"I am not taking passengers today."`
+                    close
+    on accept
+        log "Accepted A Doctor's Passage. Take Dr. Mateo Ruiz from San Telmo to Stormhaven."
+    on visit
+        conversation
+            `Harbourmaster Vale sends two porters for the doctor's case. "You have brought the right man at the right time. The infirmary has been asking after him since dawn."`
+    on complete
+        conversation
+            `Dr. Ruiz leaves a sealed note and a modest purse with the harbourmaster. Before he goes, he turns back to you. "You did not merely carry a passenger. You carried a day's worth of hope. Fair winds."`

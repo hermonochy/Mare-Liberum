@@ -1,0 +1,27 @@
+mission "The Widow's Account"
+    category "side"
+    name "The Widow's Account"
+    description "Deliver a sealed account book to a merchant widow in Nueva Esperanza."
+    source "Port Royal"
+    destination "Nueva Esperanza"
+    reward 330
+    speaker offer "Mrs. Eliza Crow"
+    speaker visit "Doña Isabel Rojas"
+    speaker complete "Doña Isabel Rojas"
+    on offer
+        conversation
+            `A neatly dressed woman waits by the harbour office, holding a book wrapped in oilcloth. Her gloves are clean, but her eyes are tired.`
+            `"My husband kept accounts for a shipping house in Nueva Esperanza. He died before he could settle them, and the firm's agent has begun telling people that he left debts behind. This book will prove what he was owed. I cannot afford a fast packet, but I can pay a careful captain."`
+            choice
+                `"I'll carry the book. It deserves a fair hearing."`
+                    accept
+                `"I would rather not involve myself in merchant accounts."`
+                    close
+    on accept
+        log "Accepted The Widow's Account. Deliver Eliza Crow's account book to Doña Isabel Rojas in Nueva Esperanza."
+    on visit
+        conversation
+            `Doña Isabel reads the first pages in silence, then closes the book with a firm hand. "These figures are genuine. Your passenger—no, your sender—will have justice. Please tell Mrs. Crow that her husband's name is clear."`
+    on complete
+        conversation
+            `A clerk prepares a receipt and a small purse. Doña Isabel adds, "It is a poor thing that a widow must sail her husband's truth across half the sea. You have helped set it right."`

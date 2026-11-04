@@ -1,0 +1,27 @@
+mission "The Quiet Passenger"
+    category "side"
+    name "The Quiet Passenger"
+    description "Give a discreet passage to a retired teacher travelling to Saint's Refuge."
+    source "Santa Isabela"
+    destination "Saint's Refuge"
+    reward 540
+    speaker offer "Professor Alvaro Mendes"
+    speaker visit "Sister Maud"
+    speaker complete "Sister Maud"
+    on offer
+        conversation
+            `An elderly man with a neat grey beard asks for a passage. He has one small trunk, a walking stick, and no desire to explain himself to the customs officers.`
+            `"I taught navigation at the academy for thirty years. I have retired, and would prefer to spend what remains of my time somewhere quiet. Saint's Refuge has offered me a room. I can pay a fair fare, and I promise not to complain about the ship's cooking."`
+            choice
+                `"There is room aboard. Welcome, professor."`
+                    accept
+                `"I am not sailing that way."`
+                    close
+    on accept
+        log "Accepted The Quiet Passenger. Carry Professor Alvaro Mendes to Saint's Refuge."
+    on visit
+        conversation
+            `Sister Maud greets the professor by name and takes his trunk. "We have his room ready. The children have been waiting for someone to teach them their letters."`
+    on complete
+        conversation
+            `The professor pays his fare and leaves a folded chart in your cabin: a tidy set of notes on currents around the Outer Antilles. It is not treasure, but it may prove useful.`

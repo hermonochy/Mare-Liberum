@@ -1,0 +1,46 @@
+mission "The Western Return"
+    name "The Western Return"
+    description "Sail back to Port Royal and deliver the Outer Antilles reports to Commodore Bonny."
+    source "Stormhaven"
+    destination "Port Royal"
+    lead "The harbourmaster points to a fresh dispatch nailed beside the tide table. “Stormhaven has asked for you by name. Commodore Bonny is there with a damaged packet and news from the eastern routes. You have earned time ashore; go when you are ready.”"
+    reward 890
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Storm Line: done"
+    on offer
+        conversation
+            `The free captains have called a council at Port Royal to plan the pursuit of Ashcombe.`
+            `The Meridian Star sails west across open water. Its stores are low, but it remains faster and better armed than most ships in the islands.`
+            `Bring the patrol schedule and the deserters' testimony to Commodore Bonny. She will decide where the free fleet should intercept Ashcombe.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `Bring the patrol schedule and the deserters' testimony to Commodore Bonny. She will decide where the free fleet should intercept Ashcombe.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Last Light's harbourmaster watches your ship leave. “You have sailed beyond every chart I own, captain. Bring that knowledge home.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Western Return. Sail back to Port Royal and deliver the Outer Antilles reports to Commodore Bonny."
+    on visit
+        conversation
+            `Bonny gathers the captains. Ashcombe is heading toward the Leeward Expanse to meet a fleet of hired ships.`
+    on complete
+        conversation
+            `The pursuit will cross the open sea, away from the safety of the old ports.`
+        log "Completed The Western Return. Received 890 gold. The pursuit will cross the open sea, away from the safety of the old ports."

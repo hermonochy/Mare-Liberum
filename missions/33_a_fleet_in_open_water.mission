@@ -1,0 +1,52 @@
+mission "A Fleet in Open Water"
+    name "A Fleet in Open Water"
+    description "Sink the four blockade ships in the Blue Expanse, then sail to Blackwater Reach for the next signal."
+    source "Port Azure"
+    destination "Blackwater Reach"
+    lead "Anne Bonny folds the report and marks Port Azure on your chart. “I am sailing there to meet a convoy master who has seen an unusual concentration of armed ships beyond the trade lanes. Meet me at the harbour when you reach that quarter; we will compare what he has seen with our own reports.”"
+    reward 1150
+    objective kills 4
+    battlefield "The Blue Expanse" 6200 4200
+    enemy "The Blue Expanse Guard 1"
+    enemy "The Blue Expanse Guard 2"
+    enemy "The Blue Expanse Guard 3"
+    enemy "The Blue Expanse Guard 4"
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Western Return: done"
+    on offer
+        conversation
+            `At Port Azure, Commodore Bonny has received the convoy master’s report: four hired Company ships have formed a blockade in the Blue Expanse between the old Caribbean and the Leeward Reach.`
+            `They are not protecting a port. They are forcing the free captains into a narrow approach where the Meridian Star can strike from behind.`
+            `The battle is in open ocean, with no nearby island to shelter behind. Keep your escorts together and use the room to manoeuvre.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The battle is in open ocean, with no nearby island to shelter behind. Keep your escorts together and use the room to manoeuvre.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Bonny points to a broad empty patch of sea. “No reefs, no coves, no safe anchorage. Make the open water work for you.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A Fleet in Open Water. Sink the four blockade ships in the Blue Expanse, then sail to Blackwater Reach for the next signal."
+    on visit
+        conversation
+            `The blockade is broken. A captured signal book reveals that Ashcombe sent a false message toward Mariner's Rest to draw the free fleet away.`
+    on complete
+        conversation
+            `The signal book gives you the real heading of the Meridian Star.`
+        log "Completed A Fleet in Open Water. Received 1150 gold. The signal book gives you the real heading of the Meridian Star."

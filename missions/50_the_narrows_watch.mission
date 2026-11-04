@@ -1,0 +1,30 @@
+mission "The Narrows Watch"
+    category "side"
+    name "The Narrows Watch"
+    description "Drive off a single raider threatening the small coasters near Redoubt, then report to Mariner's Rest."
+    source "Redoubt"
+    destination "Mariner's Rest"
+    reward 520
+    objective kills 1
+    battlefield "The Gull Narrows" 16750 5900
+    enemy "The Black Needle"
+    speaker offer "Warden Sloane"
+    speaker visit "Harbourmaster Pell"
+    speaker complete "Harbourmaster Pell"
+    on offer
+        conversation
+            `Warden Sloane has a chart open on the table. A single black-sailed brig has been stopping small coasters in the Gull Narrows and taking their cargoes. The raider has not attacked the ports, only the working boats.`
+            `"I have no call for a fleet action," Sloane says. "One ship, one captain, one lesson. Drive her off, then report to Pell at Mariner's Rest. He has the names of the crews who were robbed."`
+            choice
+                `"I'll deal with one raider."`
+                    accept
+                `"The militia can find another captain."`
+                    close
+    on accept
+        log "Accepted The Narrows Watch. Sink The Black Needle in the Gull Narrows, then report to Mariner's Rest."
+    on visit
+        conversation
+            `Harbourmaster Pell hears the news and rings a small handbell. "That is one less black sail troubling the coasters. The crews will be glad to use the Narrows again."`
+    on complete
+        conversation
+            `Pell gives you the promised purse and a list of the recovered cargoes. "The owners will see their goods returned. A small service, perhaps, but these small boats are the life of the islands."`

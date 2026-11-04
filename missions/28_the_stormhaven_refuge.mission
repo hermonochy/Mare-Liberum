@@ -1,0 +1,45 @@
+mission "The Stormhaven Refuge"
+    name "The Stormhaven Refuge"
+    description "Deliver Ysabel's message to Harbourmaster Fen at Stormhaven."
+    source "Mermaid's Rest"
+    destination "Stormhaven"
+    reward 720
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Edge of the Chart: done"
+    on offer
+        conversation
+            `Stormhaven has become a refuge for crews driven from their homes by Company patrols.`
+            `The harbour is full of damaged fishing boats and families living under sailcloth. The harbourmaster needs spare rigging, medicine, and a message from Ysabel.`
+            `No battle is required. Bring the news that the free captains are coming and that the Company can be challenged.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `No battle is required. Bring the news that the free captains are coming and that the Company can be challenged.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Ysabel gives you a list of safe coves and asks you to tell the refugees that the free captains have not forgotten them.`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Stormhaven Refuge. Deliver Ysabel's message to Harbourmaster Fen at Stormhaven."
+    on visit
+        conversation
+            `Fen says the Company has seized the old signal fort at Redoubt and is using it to direct patrols across the Outer Antilles.`
+    on complete
+        conversation
+            `The fort can be retaken if the patrol ships around it are driven off.`
+        log "Completed The Stormhaven Refuge. Received 720 gold. The fort can be retaken if the patrol ships around it are driven off."

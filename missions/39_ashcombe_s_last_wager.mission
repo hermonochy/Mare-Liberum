@@ -1,0 +1,54 @@
+mission "Ashcombe's Last Wager"
+    name "Ashcombe's Last Wager"
+    description "Defeat the six Company warships at the Governor's Road, then return to Havana to learn whether Ashcombe escaped."
+    source "Port Azure"
+    destination "Havana"
+    lead "Anne Bonny passes you a folded note from Port Azure. “A former Company purser has come ashore there and asked for protection. He says he knows where Ashcombe keeps his last reserve. I will meet you at the harbour and hear him out. No need to run blind into danger; speak with him when you reach the harbour.”"
+    reward 1650
+    objective kills 6
+    battlefield "The Governor's Road" 2900 1850
+    enemy "The Governor's Road Guard 1"
+    enemy "The Governor's Road Guard 2"
+    enemy "The Governor's Road Guard 3"
+    enemy "The Governor's Road Guard 4"
+    enemy "The Governor's Road Guard 5"
+    enemy "The Governor's Road Guard 6"
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Bells of Port Royal: done"
+    on offer
+        conversation
+            `At Port Azure, the former Company purser gives Bonny the last of Ashcombe’s sailing orders. They reveal that six ships are preparing to seize Havana and hold the governor as a bargaining piece.`
+            `The Meridian Star is among them. The Company hopes its flagship will convince the harbour batteries to surrender without firing.`
+            `The fleet is larger than any you have faced. The free captains will engage the escorts while you seek an opening against the named ships.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The fleet is larger than any you have faced. The free captains will engage the escorts while you seek an opening against the named ships.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Bonny gives you command of the outer line. “Save the harbour, captain. He will not take Havana today.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted Ashcombe's Last Wager. Defeat the six Company warships at the Governor's Road, then return to Havana to learn whether Ashcombe escaped."
+    on visit
+        conversation
+            `The Company fleet is scattered, and the Meridian Star is badly damaged. Ashcombe abandons ship and escapes into the harbour among the smoke.`
+    on complete
+        conversation
+            `Havana has been saved, but the Company captain must answer for what he has done.`
+        log "Completed Ashcombe's Last Wager. Received 1650 gold. Havana has been saved, but the Company captain must answer for what he has done."

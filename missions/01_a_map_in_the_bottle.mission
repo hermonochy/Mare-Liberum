@@ -3,7 +3,9 @@ mission "A Map in the Bottle"
     description "Find the missing cartographer and recover a chart to a safe passage through the reefs."
     source "Port Royal"
     destination "Tortuga"
-    reward 220000
+    reward 220
+    to offer
+        has "An Old Captain's Farewell: done"
     speaker offer "Harbourmaster Briggs"
     speaker visit "Keeper Marta"
     speaker complete "Keeper Marta"

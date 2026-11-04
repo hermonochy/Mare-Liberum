@@ -56,6 +56,8 @@ class Mission:
     section_speakers: dict
     sections: dict
     path: Path
+    category: str = "main"
+    lead: str = ""
 
 
 class MissionParser:
@@ -95,6 +97,8 @@ class MissionParser:
         battlefield_y = None
         enemy_names = []
         speaker = "Harbourmaster"
+        category = "main"
+        lead = ""
         section_speakers = {}
         sections = {}
         self.index = 1
@@ -114,6 +118,10 @@ class MissionParser:
                 destination = self.quoted(text)
             elif text.startswith("reward "):
                 reward = int(text.split(None, 1)[1])
+            elif text.startswith("category "):
+                category = self.quoted(text).lower()
+            elif text.startswith("lead "):
+                lead = self.quoted(text)
             elif text.startswith("speaker "):
                 parts = text.split(None, 2)
                 if len(parts) == 3 and parts[1] in {"offer", "accept", "visit", "complete", "fail"}:
@@ -166,6 +174,8 @@ class MissionParser:
             section_speakers=section_speakers,
             sections=sections,
             path=self.path,
+            category=category,
+            lead=lead,
         )
 
     def parse_nodes(self, lines):

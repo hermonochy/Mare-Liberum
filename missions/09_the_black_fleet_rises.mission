@@ -1,11 +1,12 @@
 mission "The Black Fleet Rises"
     name "The Black Fleet Rises"
-    description "Sail to the Outer Cays, sink three of Vane's scouts, then return to Port Royal to report to Commodore Bonny."
-    destination "Port Royal"
-    source "Port Royal"
+    description "Sail to the Windward Cays, sink three of Vane's scouts, then reach Port Azure to report to Commodore Bonny."
+    destination "Port Azure"
+    lead "Nell turns the broken compass in her hand. “Commodore Bonny has gone to Isla Verde to gather the free captains and watch the Windward Cays. She asked me to send you if the compass ever pointed that way. You will find her near the eastern quay.”"
+    source "Isla Verde"
     reward 720
     objective kills 3
-    battlefield "The Outer Cays" 865 1930
+    battlefield "The Windward Cays" 7350 2050
     enemy "The Ragged Crown"
     enemy "The Salt Widow"
     enemy "The Crimson Gull"
@@ -17,7 +18,7 @@ mission "The Black Fleet Rises"
     on offer
         conversation
             `A woman in a weather-beaten red coat stands on the end of the quay. Her crew are loading powder into a pair of armed sloops. She introduces herself as Commodore Anne Bonny, elected commander of the free captains.`
-            `"Nell found the lagoon. Vane's scouts are already carrying word to his fleet. The three raiders are marked on this chart in the Outer Cays. Find them and send them to the bottom, then return here to Port Royal. I want your report before we sail for the lagoon."`
+            `"Nell found the lagoon. Vane's scouts are already carrying word to his fleet. The three raiders are marked on this chart in the Windward Cays. Find them and send them to the bottom, then return to Port Azure. I want your report before we sail for the lagoon."`
             choice
                 `"I'll hunt the scouts. They won't reach the lagoon."`
                     goto accept_job
@@ -42,10 +43,10 @@ mission "The Black Fleet Rises"
         log "Accepted Commodore Bonny's request. Sink three of Vane's raiders before they can report to the fleet."
     on visit
         conversation
-            `You return to Port Royal with the scouts scattered. Commodore Bonny is waiting on the quay; she wants your report before the free captains make their final move.`
+            `You reach Port Azure with the scouts scattered. Commodore Bonny is waiting on the quay; she wants your report before the free captains make their final move.`
     on complete
         conversation
-            `A succession of smoke columns marks the places where the raiders went down. Back at Port Royal, Bonny receives the news without smiling.`
+            `A succession of smoke columns marks the places where the raiders went down. At Port Azure, Bonny receives the news without smiling.`
             `"That buys us a little time. Vane has a heavy ship at the centre of his fleet, and every gun in these waters seems to be pointed at it. We need to take away its escorts before we can face it."`
             `She taps the chart. "When you are ready, we will strike at the lagoon itself."`
         log "Vane's scouts have been scattered. Commodore Bonny is preparing the final assault on Dead Man's Cay."

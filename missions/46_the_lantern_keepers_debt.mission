@@ -1,0 +1,27 @@
+mission "The Lantern Keeper's Debt"
+    category "side"
+    name "The Lantern Keeper's Debt"
+    description "Deliver a crate of lamp oil and glass wicks to the keeper at Last Light."
+    source "Lantern Bay"
+    destination "Last Light"
+    reward 500
+    speaker offer "Pilot Hester Wynn"
+    speaker visit "Keeper Oran"
+    speaker complete "Keeper Oran"
+    on offer
+        conversation
+            `Pilot Hester Wynn has a crate of lamp oil lashed beneath a tarpaulin. "The light at Last Light has been dim for a week. Their supply vessel turned back after a gale, and there are reefs on that coast that do not forgive a dark night."`
+            `"The keeper is an old friend. I can pay you for the passage, but I would rather pay twice than hear that another ship went on the rocks."`
+            choice
+                `"I'll make sure the light is supplied."`
+                    accept
+                `"I have no room for oil casks."`
+                    close
+    on accept
+        log "Accepted The Lantern Keeper's Debt. Deliver oil and wicks from Lantern Bay to Last Light."
+    on visit
+        conversation
+            `Keeper Oran checks the casks and immediately sets two men to carry them up the hill. "Tonight the light will burn properly. There are families sleeping in these waters, captain. You have done them a service."`
+    on complete
+        conversation
+            `The keeper pays you and gives you a small brass lamp as a keepsake. "It is not much of a prize, but it has kept many a sailor off the rocks."`

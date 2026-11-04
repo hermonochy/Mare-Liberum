@@ -1,0 +1,27 @@
+mission "The Last Net"
+    category "side"
+    name "The Last Net"
+    description "Take a bundle of netting twine to the fishing families at Blackwater Reach."
+    source "Pelican's Rest"
+    destination "Blackwater Reach"
+    reward 280
+    speaker offer "Old Jory Pike"
+    speaker visit "Mina Pike"
+    speaker complete "Mina Pike"
+    on offer
+        conversation
+            `Old Jory Pike sits beside a heap of torn net, knotting the same length of twine over and over. His hands shake when he pulls it tight.`
+            `"The shoal took our last good net in the blow. There's a bundle of proper twine waiting at Blackwater Reach, paid for by three families together. My boat won't make the crossing with this weather coming. Take it to my daughter Mina; she'll know what to do."`
+            choice
+                `"I'll bring it to her."`
+                    accept
+                `"I cannot take on another cargo."`
+                    close
+    on accept
+        log "Accepted The Last Net. Carry fishing twine from Pelican's Rest to Mina Pike at Blackwater Reach."
+    on visit
+        conversation
+            `Mina Pike checks the twine and lets out a breath. "This will keep six boats working through the season. Father will pretend he was never worried, of course."`
+    on complete
+        conversation
+            `Mina gives you a small purse and a parcel of smoked fish for the voyage. "It is not much, but the whole village wanted you paid. Thank you for bringing us another season."`

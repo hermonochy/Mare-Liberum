@@ -1,0 +1,52 @@
+mission "The Meridian Screen"
+    name "The Meridian Screen"
+    description "Sink the five screen ships in the Last Light Passage, then return to Last Light for the final pursuit orders."
+    source "Mermaid's Rest"
+    destination "Last Light"
+    reward 1480
+    objective kills 5
+    battlefield "The Last Light Passage" 16100 7600
+    enemy "The Last Light Passage Guard 1"
+    enemy "The Last Light Passage Guard 2"
+    enemy "The Last Light Passage Guard 3"
+    enemy "The Last Light Passage Guard 4"
+    enemy "The Last Light Passage Guard 5"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Last Repair: done"
+    on offer
+        conversation
+            `Five remaining Company warships protect the Meridian Star in the Last Light Passage.`
+            `Ashcombe has no repair yard left and cannot afford another delay. His ships will fight hard to keep the flagship clear of the free fleet.`
+            `The battle will decide whether the Meridian Star reaches the open ocean. The free captains are closing in from three directions.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The battle will decide whether the Meridian Star reaches the open ocean. The free captains are closing in from three directions.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The shipwright gives you the weak point on the chart. “One clean quartering pass. Do not let him turn his stern away.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Meridian Screen. Sink the five screen ships in the Last Light Passage, then return to Last Light for the final pursuit orders."
+    on visit
+        conversation
+            `The screen collapses. A signal from Bonny reports that the Meridian Star has turned back toward Port Royal, hoping to reach the old harbour guns.`
+    on complete
+        conversation
+            `The chase has come full circle.`
+        log "Completed The Meridian Screen. Received 1480 gold. The chase has come full circle."

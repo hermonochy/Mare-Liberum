@@ -26,12 +26,26 @@ class MissionMixin:
     def available_missions_at_port(self):
         if self.active_mission_id is not None or self.docked_port is None:
             return []
-        return [
+        available = [
             mission for mission in self.missions
-            if self.mission_state(mission) == "available"
+            if mission.category != "intro"
+            and self.mission_state(mission) == "available"
             and mission.source == self.docked_port
             and self.requirements_met(mission)
         ]
+        priority = {"main": 0, "side": 1}
+        return sorted(available, key=lambda mission: (priority.get(mission.category, 2), mission.name))
+
+    def available_intro_mission_at_port(self):
+        if self.active_mission_id is not None or self.docked_port is None:
+            return None
+        return next((
+            mission for mission in self.missions
+            if mission.category == "intro"
+            and mission.source == self.docked_port
+            and self.mission_state(mission) == "available"
+            and self.requirements_met(mission)
+        ), None)
 
     def mission_spawn_position(self, mission, index, count):
         center_x = mission.battlefield_x
@@ -48,8 +62,6 @@ class MissionMixin:
             radius = 125.0 + (attempt // 36) * 14.0
             x = center_x + math.cos(angle) * radius
             y = center_y + math.sin(angle) * radius
-            if not (55 <= x <= WORLD_WIDTH - 55 and 55 <= y <= WORLD_HEIGHT - 55):
-                continue
             if any(point_in_polygon((x, y), polygon) for polygon in polygons):
                 continue
             too_close_to_shore = False
@@ -99,6 +111,7 @@ class MissionMixin:
                 wander=self.rng.random() * 6.0,
                 mission_id=mission.mission_id,
                 objective_target=True,
+                ship_type=self.rng.choice(["Cutter", "Schooner", "Brigantine", "Frigate"]),
             )
             self.pirates.append(pirate)
             spawned.append(pirate)
@@ -115,6 +128,38 @@ class MissionMixin:
                 6.0,
             )
             self.add_journal(f"Warning: only {len(spawned)} of {mission.objective_count} mission ships were placed near {mission.battlefield}.")
+
+    def mission_route_distance(self, mission):
+        source = self.ports_by_name.get(mission.source)
+        destination = self.ports_by_name.get(mission.destination)
+        if source is None or destination is None:
+            return 0.0
+        if mission.objective_type == "kills" and mission.battlefield_x is not None and mission.battlefield_y is not None:
+            first_leg = math.hypot(mission.battlefield_x - source.x, mission.battlefield_y - source.y)
+            second_leg = math.hypot(destination.x - mission.battlefield_x, destination.y - mission.battlefield_y)
+            return first_leg + second_leg
+        return math.hypot(destination.x - source.x, destination.y - source.y)
+
+    def mission_route_description(self, distance):
+        if distance < 1500:
+            return "a short island passage"
+        if distance < 3000:
+            return "a neighbouring-island crossing"
+        if distance < 4500:
+            return "a regional passage"
+        if distance < 7000:
+            return "a long inter-island voyage"
+        if distance < 12000:
+            return "an extended open-water voyage"
+        return "a major ocean crossing"
+
+    def mission_route_brief(self, mission):
+        distance = self.mission_route_distance(mission)
+        description = self.mission_route_description(distance)
+        route = f"The straight-line chart distance is about {distance:,.0f} chart miles: {description}. Allow extra time to skirt reefs and shoals."
+        if mission.objective_type == "kills" and mission.battlefield:
+            return f"Route note: {route} The course runs via {mission.battlefield}, then on to {mission.destination}."
+        return f"Route note: {route} Your destination is {mission.destination}."
 
     def mission_navigation_target(self, mission=None):
         mission = mission or self.active_mission()
@@ -159,19 +204,59 @@ class MissionMixin:
         if mission.objective_type == "kills":
             self.spawn_mission_fleet(mission)
             self.toast_message(
-                f"Voyage accepted: {mission.name}. Sail to {mission.battlefield}; the target fleet is marked on your chart.",
+                f"Voyage accepted: {mission.name}. {self.mission_route_brief(mission)}",
                 6.0,
             )
         else:
-            self.toast_message(f"Voyage accepted: {mission.name}. Sail to {mission.destination}; follow the gold route on your chart.", 5.0)
+            self.toast_message(f"Voyage accepted: {mission.name}. {self.mission_route_brief(mission)}", 5.0)
 
     def start_conversation(self, mission, event, on_end=None):
         nodes = mission.sections.get(event, []) if mission else []
+        if mission and event == "offer" and nodes:
+            nodes = [TextNode(self.mission_route_brief(mission))] + nodes
         if not nodes:
             if on_end:
                 on_end()
             return
         self.dialogue_speaker = mission.section_speakers.get(event, mission.speaker) if mission else "Harbourmaster"
+        self.conversation = Conversation(self, mission, nodes, on_end)
+
+    def story_lead_after(self, completed_mission):
+        if completed_mission.category != "main":
+            return ""
+        for candidate in self.missions:
+            if candidate.category != "main" or self.mission_state(candidate) != "available":
+                continue
+            if candidate.source == completed_mission.destination:
+                continue
+            required_titles = {item.removesuffix(": done").strip() for item in candidate.requires_done}
+            if completed_mission.title not in required_titles:
+                continue
+            other_requirements_met = True
+            for required_title in required_titles - {completed_mission.title}:
+                required_mission = next((item for item in self.missions if item.title == required_title or item.name == required_title), None)
+                if required_mission is None or self.mission_state(required_mission) != "done":
+                    other_requirements_met = False
+                    break
+            if not other_requirements_met:
+                continue
+            if candidate.lead:
+                return candidate.lead
+            port = self.ports_by_name.get(candidate.source)
+            detail = port.description if port else "a busy harbour on the trade routes"
+            return (
+                f"Before you go, {candidate.speaker} has been asking after you at {candidate.source}. "
+                f"{detail} It is not urgent; there are other ports and other work between here and there."
+            )
+        return ""
+
+    def start_completion_conversation(self, mission, on_end):
+        nodes = list(mission.sections.get("complete", []))
+        lead = self.story_lead_after(mission)
+        if lead:
+            nodes.append(TextNode(lead))
+            self.add_journal(f"A new lead: {lead}")
+        self.dialogue_speaker = mission.section_speakers.get("complete", mission.speaker)
         self.conversation = Conversation(self, mission, nodes, on_end)
 
     def start_custom_conversation(self, speaker, nodes):
@@ -180,17 +265,25 @@ class MissionMixin:
 
     def open_port_talk(self):
         greeting = self.port_greetings.get(self.docked_port, "A harbour official looks up as you enter.")
-        nodes = [
-            TextNode(greeting),
-            ChoiceNode([
-                self.make_option("Ask whether there is work for a captain.", "offers"),
-                self.make_option("Look for ordinary day work on the notice board.", "day_jobs"),
-                self.make_option("Ask for the latest harbour news.", "news"),
-                self.make_option("Visit the shipwright and see the yard.", "shipyard"),
-                self.make_option("Take my leave.", "close"),
-            ]),
-        ]
+        options = []
+        if self.available_intro_mission_at_port():
+            options.append(self.make_option("Speak with the old Captain Elias Ward, who is retiring from the sea.", "intro_mission"))
+        options.extend([
+            self.make_option("Ask whether there is work for a captain.", "offers"),
+            self.make_option("Visit the harbour job board and browse available work.", "day_jobs"),
+            self.make_option("Ask for the latest harbour news.", "news"),
+            self.make_option("Visit the shipwright and see the yard.", "shipyard"),
+            self.make_option("Take my leave.", "close"),
+        ])
+        nodes = [TextNode(greeting), ChoiceNode(options)]
         self.start_custom_conversation("Harbour office", nodes)
+
+    def open_intro_mission_offer(self):
+        mission = self.available_intro_mission_at_port()
+        if mission is None:
+            self.start_custom_conversation("Harbour office", [TextNode("Captain Ward has already made his farewells. His advice is in your journal if you need a reminder.")])
+            return
+        self.start_conversation(mission, "offer")
 
     @staticmethod
     def make_option(text, command):
@@ -219,7 +312,30 @@ class MissionMixin:
                 message = "The harbourmaster turns a page in the ledger. \"No new work just now. Check the notice board another day, or listen for news in the taverns.\""
             self.start_custom_conversation("Harbourmaster", [TextNode(message)])
             return
-        mission = available[0]
+        if len(available) == 1:
+            self.start_conversation(available[0], "offer")
+            return
+        options = [
+            OptionNode(
+                f"[{('SIDE ADVENTURE' if mission.category == 'side' else 'MAIN STORY')}] {mission.name}  —  {mission.destination}  —  {mission.reward} gold  —  {mission.description}",
+                [CommandNode("mission_offer", mission.mission_id)],
+            )
+            for mission in available
+        ]
+        options.append(OptionNode("Not today. I will look around the harbour first.", [CommandNode("close")]))
+        self.start_custom_conversation(
+            "Harbourmaster",
+            [
+                TextNode("The harbourmaster opens the ledger. There are several matters being discussed around the islands; some are urgent, others can wait until you have a mind for them."),
+                ChoiceNode(options),
+            ],
+        )
+
+    def show_mission_offer_by_id(self, mission_id):
+        mission = next((item for item in self.available_missions_at_port() if item.mission_id == mission_id), None)
+        if mission is None:
+            self.toast_message("That posting has already been taken or is no longer available.", 3.0)
+            return
         self.start_conversation(mission, "offer")
 
     def show_port_news(self):
@@ -255,7 +371,7 @@ class MissionMixin:
         self.mission_completion_started = True
 
         def complete_after_visit():
-            self.start_conversation(mission, "complete", lambda: self.complete_mission(mission))
+            self.start_completion_conversation(mission, lambda: self.complete_mission(mission))
 
         self.start_conversation(mission, "visit", complete_after_visit)
 
@@ -287,6 +403,7 @@ class MissionMixin:
 
     def dock(self, port):
         self.docked_port = port.name
+        self.last_docked_port = port.name
         self.oars_deployed = False
         self.ship_heading = port.exit_heading
         self.ship_x = port.x

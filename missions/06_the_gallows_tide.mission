@@ -1,7 +1,7 @@
 mission "The Gallows Tide"
     name "The Gallows Tide"
-    description "Find Vane's prison flotilla south of Tortuga, sink its three guard ships, and return the freed crews safely to Tortuga."
-    destination "Tortuga"
+    description "Find Vane's prison flotilla south of Tortuga, sink its three guard ships, then sail to Port Royal so the freed crews can find safe harbour."
+    destination "Port Royal"
     source "Tortuga"
     reward 620
     objective kills 3
@@ -18,7 +18,7 @@ mission "The Gallows Tide"
         conversation
             `The Broken Mast is crowded, but the room falls quiet when Marta climbs onto a bench. She spreads a chart across the table. Three black marks sit along the shoals south of Tortuga.`
             `"Vane's men have taken sailors from six ships. They keep them aboard the prison flotilla and force them to work the pumps and guns. The Gallows Tide is its name, though there are other vessels guarding it."`
-            `"The flotilla is marked on this chart, south of Tortuga. Sink its three guard ships and the surviving prisoners can take the boats. Then return to Tortuga so we can give the freed crews a safe harbour."`
+            `"The flotilla is marked on this chart, south of Tortuga. Sink its three guard ships and the surviving prisoners can take the boats. Then sail to Port Royal. Its free captains have offered the prisoners a safe harbour."`
             choice
                 `"I'll break his prison fleet."`
                     goto accept_job
@@ -43,10 +43,10 @@ mission "The Gallows Tide"
         log "Hunting Vane's prison flotilla. Sink three pirate ships; their prisoners will try to escape in the confusion."
     on visit
         conversation
-            `You bring your ship back into Tortuga. The freed sailors are already coming ashore in small boats, and Marta is waiting at the Broken Mast to hear how the prison flotilla was broken.`
+            `You bring your ship into Port Royal. The freed sailors are already coming ashore in small boats, and Marta has travelled to Port Royal and is waiting beside the quay to hear how the prison flotilla was broken.`
     on complete
         conversation
-            `A signal rocket rises from the shoals. One by one, small boats pull away from the wrecks and steer for Tortuga. The rescued sailors cheer when they see your black ribbon.`
+            `A signal rocket rises from the shoals. One by one, small boats pull away from the wrecks and steer for Port Royal. The rescued sailors cheer when they see your black ribbon.`
             `Marta meets you on the quay. "You did it. Some have lost everything, but they are alive. One of them is a shipwright named Tomas. He says Vane is refitting a heavy warship in Havana, and he knows the secret route into the harbour."`
             `"Find Tomas at the quay. He will tell you what he knows."`
         log "Destroyed the prison flotilla and freed its captives. Shipwright Tomas knows a secret route into Havana."

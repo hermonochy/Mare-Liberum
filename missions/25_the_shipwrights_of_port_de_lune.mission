@@ -1,0 +1,46 @@
+mission "The Shipwrights of Port de Lune"
+    name "The Shipwrights of Port de Lune"
+    description "Sail to Port de Lune and collect the plans from Master Shipwright Lenoir."
+    source "Crown's Fall"
+    destination "Port de Lune"
+    lead "The harbourmaster passes you a note found among the cargo papers. “A broker in Crown’s Fall has been buying old ship plans and paying cash. Ask for Luc Vautrin. He has a message from the shipwrights at Port de Lune, who are being pressed into building gun decks for the Company. I do not know whether he is a fool or a Company man, but he may know who ordered the new hulls.”"
+    reward 690
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Cane Wharf Raid: done"
+    on offer
+        conversation
+            `A broker named Luc Vautrin has sent word from Port de Lune. The shipwrights there have been forced to build gun decks for the Meridian Company.`
+            `They hid the plans for Ashcombe's new flagship inside a sailmaker's pattern book. The foreman will hand them over if you guarantee the workers safe passage.`
+            `The plans show a broadside twice as heavy as Vane's old ship. They also reveal a weakness in the stern galleries.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The plans show a broadside twice as heavy as Vane's old ship. They also reveal a weakness in the stern galleries.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The island council pays for the workers' passage. “No one should have to build the chain that binds them,” the speaker says.`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Shipwrights of Port de Lune. Sail to Port de Lune and collect the plans from Master Shipwright Lenoir."
+    on visit
+        conversation
+            `Lenoir gives you the plans and points to Santa Isabela, where Ashcombe is testing the new flagship.`
+    on complete
+        conversation
+            `The flagship is called the Meridian Star.`
+        log "Completed The Shipwrights of Port de Lune. Received 690 gold. The flagship is called the Meridian Star."

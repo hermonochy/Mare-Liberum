@@ -1,0 +1,45 @@
+mission "The False Beacon"
+    name "The False Beacon"
+    description "Deliver the signal book to Mariner's Rest and speak with Captain Calderon."
+    source "Blackwater Reach"
+    destination "Mariner's Rest"
+    reward 820
+    speaker offer "Captain Ines Calderon"
+    speaker visit "Captain Ines Calderon"
+    speaker complete "Captain Ines Calderon"
+    to offer
+        has "A Fleet in Open Water: done"
+    on offer
+        conversation
+            `A false beacon has been lit on the coast, drawing merchant ships toward a dangerous reef.`
+            `The Company hopes the wrecks will look like ordinary accidents. The pilot at Mariner's Rest knows the true beacon code and can expose the trick.`
+            `Carry the recovered signal book to the pilot and help restore the proper channel lights.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `Carry the recovered signal book to the pilot and help restore the proper channel lights.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Ortez sends a fresh copy of the signal book. “A false light is a quiet weapon. Put the true one back where every sailor can see it.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The False Beacon. Deliver the signal book to Mariner's Rest and speak with Captain Calderon."
+    on visit
+        conversation
+            `Calderon restores the beacon sequence. The true signals show Ashcombe moving toward Stormhaven to repair his flagship.`
+    on complete
+        conversation
+            `The free fleet must reach Stormhaven before the Meridian Star can be made ready.`
+        log "Completed The False Beacon. Received 820 gold. The free fleet must reach Stormhaven before the Meridian Star can be made ready."

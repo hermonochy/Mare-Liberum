@@ -1,0 +1,45 @@
+mission "A Letter in the Main"
+    name "A Letter in the Main"
+    description "Deliver Ortez's letter to Judge Valera at Nueva Esperanza."
+    source "Cormorant Quay"
+    destination "Nueva Esperanza"
+    reward 640
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Boom at Cormorant Quay: done"
+    on offer
+        conversation
+            `A sealed letter from Magistrate Ortez must reach an honest judge in Nueva Esperanza.`
+            `The letter names Ashcombe and the governors who signed the false charter. It asks the judge to protect witnesses travelling between the islands.`
+            `The Spanish Main is more heavily patrolled than the outer islands. Keep the letter hidden and avoid unnecessary fights.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The Spanish Main is more heavily patrolled than the outer islands. Keep the letter hidden and avoid unnecessary fights.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Ortez gives you a brass seal to prove the letter is genuine. “The judge is cautious, but he still believes a law should mean something.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted A Letter in the Main. Deliver Ortez's letter to Judge Valera at Nueva Esperanza."
+    on visit
+        conversation
+            `Judge Valera confirms the charter was issued under false authority. The Company has been paying Crown's Fall to conceal the original document.`
+    on complete
+        conversation
+            `Valera asks you to meet a former royal notary at Crown's Fall.`
+        log "Completed A Letter in the Main. Received 640 gold. Valera asks you to meet a former royal notary at Crown's Fall."

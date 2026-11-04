@@ -1,0 +1,49 @@
+mission "Lanterns Under Black Sails"
+    name "Lanterns Under Black Sails"
+    description "Sail to the Lantern Shoals, sink the two Company cutters, then return to Lantern Bay and report to the harbourmaster."
+    source "Saint Brigid"
+    destination "Lantern Bay"
+    reward 520
+    objective kills 2
+    battlefield "The Lantern Shoals" 5580 2450
+    enemy "The Lantern Shoals Guard 1"
+    enemy "The Lantern Shoals Guard 2"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "The Salt Tax: done"
+    on offer
+        conversation
+            `Two Company cutters have seized the pilot boats that guide ships through the Lantern Shoals.`
+            `The pilots know the safe channels. Without them, the Company can strand independent traders on reefs and claim the cargo as salvage.`
+            `The cutters are quick and likely carry a prize crew. The harbourmaster at Lantern Bay has sent a signal asking for help.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `The cutters are quick and likely carry a prize crew. The harbourmaster at Lantern Bay has sent a signal asking for help.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Sister Agnes blesses the voyage. “Do not mistake a small ship for a harmless one. Those cutters know every channel in these waters.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted Lanterns Under Black Sails. Sail to the Lantern Shoals, sink the two Company cutters, then return to Lantern Bay and report to the harbourmaster."
+    on visit
+        conversation
+            `The cutters are gone, and the pilot boats limp back toward the bay. The harbourmaster says the Company has used the same trick in other regions.`
+    on complete
+        conversation
+            `The pilots can guide larger ships through the reach again. Their charts reveal a second Company depot near Port Azure.`
+        log "Completed Lanterns Under Black Sails. Received 520 gold. The pilots can guide larger ships through the reach again. Their charts reveal a second Company depot near Port Azure."

@@ -1,8 +1,9 @@
 mission "The Governor's Ledger"
     name "The Governor's Ledger"
-    description "Carry a stolen page from Havana to Port Royal and expose the governor's secret dealings with Captain Vane."
-    source "Havana"
+    description "Travel from Tortuga to Port Royal and obtain the ledger page that exposes the governor's secret dealings with Captain Vane."
+    source "Port Azure"
     destination "Port Royal"
+    lead "Don Rafael slides a folded note across the table. “A factor in Port Azure knows where these duplicate books were printed. His name is Amaro Velez. He has been asking after anyone who can keep a confidence. No need to rush there tonight; the islands are full of work between here and there.”"
     reward 420
     speaker offer "Don Rafael, Captain of the Watch"
     speaker visit "Nell the Chandlery Keeper"

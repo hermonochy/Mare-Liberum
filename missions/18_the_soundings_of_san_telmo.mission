@@ -1,0 +1,46 @@
+mission "The Soundings of San Telmo"
+    name "The Soundings of San Telmo"
+    description "Sail to San Telmo and collect the pilot's new chart from Captain Ines Calderon."
+    source "Cormorant Quay"
+    destination "San Telmo"
+    lead "Anne studies the new soundings, then marks a port on your chart. “Captain Ines Calderon is waiting at Cormorant Quay. She has been checking the Company buoys against her own soundings. I would hear her opinion before trusting any Company chart.”"
+    reward 500
+    speaker offer "Captain Ines Calderon"
+    speaker visit "Captain Ines Calderon"
+    speaker complete "Captain Ines Calderon"
+    to offer
+        has "The Long Blue Road: done"
+    on offer
+        conversation
+            `The magistrate needs proof that the Company is preparing to close the western convoy route.`
+            `A pilot at San Telmo has found new buoys laid across the old passage. Some are false markers intended to drive ships toward hidden guns.`
+            `You must carry the magistrate's warrant and compare the pilot's soundings with the official sea chart.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `You must carry the magistrate's warrant and compare the pilot's soundings with the official sea chart.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Ortez seals the warrant with red wax. “A false buoy can sink more ships than a broadside. Find the truth before the next convoy sails.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Soundings of San Telmo. Sail to San Telmo and collect the pilot's new chart from Captain Ines Calderon."
+    on visit
+        conversation
+            `Captain Calderon shows you the false markers and a list of Company gunboats stationed behind the reefs.`
+    on complete
+        conversation
+            `The soundings reveal a hidden anchorage near Mariner's Rest.`
+        log "Completed The Soundings of San Telmo. Received 500 gold. The soundings reveal a hidden anchorage near Mariner's Rest."

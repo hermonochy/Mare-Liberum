@@ -1,0 +1,52 @@
+mission "The Storm Line"
+    name "The Storm Line"
+    description "Break the five warships at the Storm Line, then return to Last Light to meet the free captains."
+    source "Saint's Refuge"
+    destination "Last Light"
+    reward 1250
+    objective kills 5
+    battlefield "The Storm Line" 16400 8200
+    enemy "The Storm Line Guard 1"
+    enemy "The Storm Line Guard 2"
+    enemy "The Storm Line Guard 3"
+    enemy "The Storm Line Guard 4"
+    enemy "The Storm Line Guard 5"
+    speaker offer "Harbourmaster"
+    speaker visit "Harbourmaster"
+    speaker complete "Harbourmaster"
+    to offer
+        has "A Harbour for the Hunted: done"
+    on offer
+        conversation
+            `Five Company warships patrol the storm line, screening the Meridian Star.`
+            `The deserters have given you the patrol schedule. If the screen is broken, Ashcombe must choose between fleeing into open ocean or defending his repair base.`
+            `This is the largest fleet you have faced. Use your escorts, keep the wind on your quarter, and do not let all five ships bring their broadsides to bear.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `This is the largest fleet you have faced. Use your escorts, keep the wind on your quarter, and do not let all five ships bring their broadsides to bear.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `The deserters mark the route in chalk. “They believe the storm will hide them. Let the weather hide us instead.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Storm Line. Break the five warships at the Storm Line, then return to Last Light to meet the free captains."
+    on visit
+        conversation
+            `The patrol line is broken. Ashcombe has abandoned his repair base and fled west with the Meridian Star.`
+    on complete
+        conversation
+            `The free captains have one last chance to stop him before he reaches the old Caribbean.`
+        log "Completed The Storm Line. Received 1250 gold. The free captains have one last chance to stop him before he reaches the old Caribbean."

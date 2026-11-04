@@ -1,0 +1,45 @@
+mission "The Edge of the Chart"
+    name "The Edge of the Chart"
+    description "Carry Calderon's chart to Navigator Ysabel at Mermaid's Rest."
+    source "Santa Isabela"
+    destination "Mermaid's Rest"
+    reward 780
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Meridian Star: done"
+    on offer
+        conversation
+            `Captain Calderon has found a fresh chart leading beyond the Spanish Main to the Outer Antilles.`
+            `The chart shows remote islands where the Company has established a private repair station. The waters are poorly sounded and currents are strong.`
+            `A navigator at Mermaid's Rest has crossed the passage before. He can guide you through the shoals and explain why the Company chose this strategically placed base just beyond the main Spanish Main trade lane.`
+            choice
+                `(I will take this voyage. Tell me the course.)`
+                    goto accept_job
+                `(What makes this business so important?)`
+                    goto more_details
+                `(I have other waters to sail.)`
+                    goto decline_job
+            label more_details
+                `A navigator at Mermaid's Rest has crossed the passage before. He can guide you through the shoals and explain why the Company chose this strategically placed base just beyond the main Spanish Main trade lane.`
+                choice
+                    `(Then I will see it done.)`
+                        goto accept_job
+                    `(Not this time.)`
+                        goto decline_job
+            label accept_job
+                `Calderon watches your ship prepare to leave. “Beyond these islands, the old charts end. Trust your compass, your crew, and the soundings you can take.”`
+                accept
+            label decline_job
+                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                close
+    on accept
+        log "Accepted The Edge of the Chart. Carry Calderon's chart to Navigator Ysabel at Mermaid's Rest."
+    on visit
+        conversation
+            `Ysabel reveals a hidden route through the Outer Antilles and reports that Company agents have been buying every repair yard in the chain.`
+    on complete
+        conversation
+            `Stormhaven is the next harbour on the route.`
+        log "Completed The Edge of the Chart. Received 780 gold. Stormhaven is the next harbour on the route."
