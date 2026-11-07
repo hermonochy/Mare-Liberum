@@ -1,4 +1,4 @@
-# Tidebound: Caribbean Pirates — Version 20
+# Mare Liberum
 
 A top-down Caribbean sailing adventure built with Python and Pygame.
 
@@ -28,8 +28,8 @@ The port islands are scattered in irregular diagonals and loose arcs rather than
 There are **51 authored narrative missions** in `missions/`:
 
 - **1 introductory voyage** — *An Old Captain's Farewell*. At Port Royal, retiring Captain Elias Ward offers a natural first job: take his sea chest and letter to his old quartermaster in Tortuga. During the conversation he explains sailing, oars, docking, harbour work, treasure maps, cannon broadsides, escort commands, shipyards, the atlas and the traffic on the sea. The first main-story job is unlocked after this short voyage.
-- **40 main-story missions** — the first eleven resolve Captain Vane's threat and establish the Free Captains' Code. The next twenty-nine follow the Meridian Company and Commodore Silas Ashcombe, uncovering an attempt to seize the trade routes and culminating in **A Sea Without Masters**.
-- **10 optional side adventures** — self-contained stories about islanders, working sailors, a doctor, a sailmaker's apprentice, a lighthouse, a whaling family and a small raider. They offer modest rewards and do not block the main campaign.
+- **Main-story missions** — the first eleven resolve Captain Vane's threat and establish the Free Captains' Code. The next twenty-nine follow the Meridian Company and Commodore Silas Ashcombe, uncovering an attempt to seize the trade routes and culminating in **A Sea Without Masters**.
+- **Optional side adventures** — self-contained stories about islanders, working sailors, a doctor, a sailmaker's apprentice, a lighthouse, a whaling family and a small raider. They offer modest rewards and do not block the main campaign.
 
 The main story no longer forces every chapter to begin at the port where the previous voyage ended. Several new leads send you to a different harbour, and the character who closes the previous chapter mentions who is waiting there and why. These are personal recommendations and local rumours, not a mechanical instruction to "continue the storyline". The journal records each lead, and you can take repeatable harbour jobs or side adventures before following it.
 
@@ -76,26 +76,6 @@ Mission files are plain text. They support categories (`intro`, `main`, `side`),
 | Mouse drag | Pan camera |
 | C | Recenter camera on ship |
 
-## Project layout
-
-- `main.py` — launcher.
-- `tidebound/game.py` — game setup and main loop.
-- `tidebound/config.py` — world, ships, region and port data.
-- `tidebound/models.py` — game data models.
-- `tidebound/geometry.py` — movement, collision and propulsion helpers.
-- `tidebound/dialogue.py` — branching conversation runner.
-- `tidebound/mission_system.py` — parser for the editable mission format.
-- `tidebound/mixins/` — separate systems for controls, camera, sailing/combat, rendering, missions, day work, treasure, shipyard/fleets, ambient shipping and save/load.
-- `missions/` — 51 authored narrative mission files (1 introduction, 40 main-story missions, 10 optional side adventures).
-- `saves/` — created automatically; stores one human-readable `.tide` file per named voyage.
-
-
-## Saving and loading voyages
-
-Tidebound now opens with a main menu. Choose **New Voyage**, **Load Voyage**, or **Quit**. Press **F5** while playing to save a named voyage. The game writes a readable `.tide` text file in the `saves/` directory. These files are indented JSON with named sections for the captain, ship, last berth, story, treasure, fleet, ships at sea and day work; they can be opened in any text editor.
-
-Press **Esc** or **F9** to open the pause menu. From there you can resume, save, load another voyage, return to the main menu, or quit. Multiple named saves are supported. A save records the last harbour you docked at. When loaded, your flagship is berthed there and your escorts are placed in formation nearby, even if you saved while sailing elsewhere.
-
 ## Living harbours and coastal defence
 
 The sea remains active while the captain is berthed. Merchantmen, fishing boats, mail packets, patrols and whalers continue on their routes while you are docked or using harbour conversations, the journal, job board or shipyard. Pirates also continue to sail in the region; they can approach and circle a harbour, but will not fire directly on a ship protected by the quay.
@@ -106,12 +86,12 @@ Every port has visible coastal guns. When a pirate enters the harbour's defensiv
 
 The living sea now has its own combat. Pirate captains select nearby merchantmen or navy patrols as targets and manoeuvre to bring their broadsides to bear. Naval patrols actively search for pirates and carry a heavier four-gun salvo; armed merchantmen return fire when raiders threaten them. Fishing boats, mail packets and whalers generally avoid combat.
 
-These engagements happen while you are sailing, docked, or using harbour conversations and shipyard screens. NPC cannonballs damage the intended opposing ship group: pirate fire can sink merchant and naval traffic, while merchant and navy fire can sink pirates. NPC kills are recorded as world events but do not award the player a bounty or advance a player-fired combat mission. Ship combat targets and reload timers are included in named `.tide` saves; older V17 saves remain compatible.
+These engagements happen while you are sailing, docked, or using harbour conversations and shipyard screens. NPC cannonballs damage the intended opposing ship group: pirate fire can sink merchant and naval traffic, while merchant and navy fire can sink pirates. NPC kills are recorded as world events but do not award the player a bounty or advance a player-fired combat mission. Ship combat targets and reload timers are included in named `.tide` saves.
 
 
-### NPC Fleet Command (V19)
+### NPC Fleet Command
 NPC vessels may sail alone or in named formations. Merchant convoys, naval squadrons and pirate bands have named commanders, maintain loose sailing stations, coordinate target selection and can withdraw when their remaining hull strength falls below the command threshold. These are autonomous world-simulation behaviours; the player need not join the engagement.
 
 
-### Commander Reputation & Notoriety (V20)
-NPC fleet commanders build a public record independently of the player. Victories and captures raise standing; losses and destroyed squadrons damage it; retreats are noted. Pirate captains gain notoriety for successful attacks and become known by increasingly fearful titles. Press **N** to open the Admirals' & Captains' Ledger. Commander dossiers are included in `.tide` saves, and earlier V19 saves are upgraded when loaded.
+### Commander Reputation & Notoriety
+NPC fleet commanders build a public record independently of the player. Victories and captures raise standing; losses and destroyed squadrons damage it; retreats are noted. Pirate captains gain notoriety for successful attacks and become known by increasingly fearful titles. Press **N** to open the Admirals' & Captains' Ledger. 

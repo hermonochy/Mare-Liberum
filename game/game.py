@@ -11,7 +11,7 @@ class Game(
 ):
     def __init__(self):
         pygame.init()
-        pygame.display.set_caption("Tidebound: Caribbean Pirates")
+        pygame.display.set_caption("Mare Liberum: Caribbean Pirates")
         self.screen = pygame.display.set_mode((1280, 800), pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("georgia", 30)

@@ -8,7 +8,7 @@ from ..common import *
 
 
 class SaveLoadMixin:
-    SAVE_FORMAT = "TIDEBOUND_VOYAGE"
+    SAVE_FORMAT = "MARE_LIBERUM_VOYAGE"
     SAVE_VERSION = 2
 
     def save_directory(self):
@@ -44,7 +44,7 @@ class SaveLoadMixin:
         data = {
             "format": self.SAVE_FORMAT,
             "version": self.SAVE_VERSION,
-            "description": "Human-readable Tidebound voyage record. Values may be edited while the game is closed.",
+            "description": "Human-readable Mare Liberum voyage record. Values may be edited while the game is closed.",
             "saved_at": timestamp,
             "captain": {
                 "gold": self.gold,
@@ -121,9 +121,9 @@ class SaveLoadMixin:
         path = Path(path)
         data = json.loads(path.read_text(encoding="utf-8"))
         if data.get("format") != self.SAVE_FORMAT:
-            raise ValueError("This file is not a recognised Tidebound voyage.")
+            raise ValueError("This file is not a recognised format.")
         if int(data.get("version", 0)) > self.SAVE_VERSION:
-            raise ValueError("This save was made by a newer version of Tidebound.")
+            raise ValueError("This save was made by a newer version of Mare Liberum.")
 
         captain = data.get("captain", {})
         ship = data.get("ship", {})
@@ -419,7 +419,7 @@ class SaveLoadMixin:
                     self.running = False
 
     def draw_main_menu(self):
-        self.draw_menu_panel("TIDEBOUND", "A Caribbean life under sail", ["New Voyage", "Load Voyage", "Quit"],
+        self.draw_menu_panel("MARE LIBERUM", "A Caribbean life under sail", ["New Voyage", "Load Voyage", "Quit"],
                              selected=self.menu_selection, footer="Up / Down: choose    Enter: select")
 
     def draw_pause_menu(self):

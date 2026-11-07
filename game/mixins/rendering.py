@@ -388,7 +388,7 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (38, 25, 19), panel.inflate(6, 6), border_radius=7)
         pygame.draw.rect(self.screen, (120, 77, 43), panel, border_radius=6)
         pygame.draw.rect(self.screen, (221, 185, 122), panel.inflate(-6, -6), 2, border_radius=5)
-        title = self.title_font.render("TIDEBOUND", True, (247, 221, 170))
+        title = self.title_font.render("MARE LIBERUM", True, (247, 221, 170))
         self.screen.blit(title, (panel.x + 14, panel.y + 7))
         gold_text = self.small_font.render(f"Pieces of eight: {self.gold} g", True, (255, 236, 193))
         self.screen.blit(gold_text, (panel.x + 16, panel.y + 63))
