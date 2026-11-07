@@ -117,6 +117,17 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (191, 152, 99), building)
         roof = [(building.left - 3, building.top + 2), (building.centerx, building.top - building_h // 2), (building.right + 3, building.top + 2)]
         pygame.draw.polygon(self.screen, (105, 52, 43), roof)
+        # Small stone coastal battery: the dark barrels represent the harbour's
+        # automatic defensive guns which engage pirates in nearby waters.
+        battery_y = sy + int(18 * self.camera_zoom)
+        battery_x = sx - int(18 * self.camera_zoom)
+        pygame.draw.rect(self.screen, (111, 100, 80),
+                         (battery_x - max(4, int(8 * self.camera_zoom)), battery_y - max(3, int(5 * self.camera_zoom)),
+                          max(9, int(17 * self.camera_zoom)), max(7, int(10 * self.camera_zoom))), border_radius=2)
+        for barrel_offset in (-4, 4):
+            start = (battery_x + int(barrel_offset * self.camera_zoom), battery_y)
+            end = (start[0] + int(10 * self.camera_zoom), start[1] - int(7 * self.camera_zoom))
+            pygame.draw.line(self.screen, (42, 39, 34), start, end, max(2, int(3 * self.camera_zoom)))
         crane_x = sx + int(33 * self.camera_zoom)
         crane_y = sy + int(3 * self.camera_zoom)
         crane_height = max(7, int(25 * self.camera_zoom))
@@ -715,6 +726,7 @@ class RenderingMixin:
             "Mouse drag   Pan the chart",
             "C       Centre on your ship",
             "J       Captain's log",
+            "N       Admirals' & captains' ledger",
             "F5      Save a named voyage",
             "Esc/F9  Pause, save or load",
             "F1      Show / hide these orders",
@@ -873,6 +885,51 @@ class RenderingMixin:
         close = self.small_font.render("J / Esc: close the log", True, (104, 74, 48))
         self.screen.blit(close, (box.right - close.get_width() - 25, box.bottom - 38))
 
+    def draw_commander_ledger(self):
+        width, height = self.screen.get_size()
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        overlay.fill((9, 17, 19, 195))
+        self.screen.blit(overlay, (0, 0))
+        box = pygame.Rect(max(24, width // 2 - 470), max(24, height // 2 - 330), min(940, width - 48), min(660, height - 48))
+        pygame.draw.rect(self.screen, (45, 27, 18), box.inflate(10, 10), border_radius=8)
+        pygame.draw.rect(self.screen, (225, 207, 163), box, border_radius=5)
+        pygame.draw.rect(self.screen, (144, 105, 66), box, 3, border_radius=5)
+        title = self.title_font.render("THE ADMIRALS' & CAPTAINS' LEDGER", True, (75, 44, 27))
+        self.screen.blit(title, (box.x + 24, box.y + 16))
+        subtitle = self.small_font.render("Reputation measures standing; notoriety measures how widely a name is feared or known.", True, (97, 66, 42))
+        self.screen.blit(subtitle, (box.x + 26, box.y + 76))
+        records = sorted(getattr(self, "commander_records", {}).values(),
+                         key=lambda record: (int(record.get("notoriety", 0)) + int(record.get("reputation", 50)),
+                                             int(record.get("victories", 0))), reverse=True)
+        if not records:
+            message = self.font.render("No commanders have yet made a name for themselves.", True, (73, 47, 31))
+            self.screen.blit(message, (box.x + 30, box.y + 150))
+        else:
+            visible = 7
+            max_scroll = max(0, len(records) - visible)
+            self.commander_ledger_scroll = max(0, min(int(getattr(self, "commander_ledger_scroll", 0)), max_scroll))
+            for index, record in enumerate(records[self.commander_ledger_scroll:self.commander_ledger_scroll + visible]):
+                y = box.y + 116 + index * 69
+                row = pygame.Rect(box.x + 22, y, box.width - 44, 63)
+                pygame.draw.rect(self.screen, (213, 195, 157) if index % 2 == 0 else (222, 205, 169), row, border_radius=4)
+                name = record.get("commander", "Unknown Commander")
+                faction = self.commander_faction_label(record.get("faction", "Unknown"))
+                rank = self.commander_rank(record)
+                label = self.font.render(f"{name}  —  {rank}", True, (68, 43, 27))
+                self.screen.blit(label, (row.x + 12, row.y + 5))
+                stats = (f"{faction}  |  Reputation {int(record.get('reputation', 50))}/100"
+                         f"  |  Notoriety {int(record.get('notoriety', 0))}")
+                detail = self.map_font.render(stats, True, (92, 66, 43))
+                self.screen.blit(detail, (row.x + 13, row.y + 31))
+                history = (f"Victories {int(record.get('victories', 0))}  |  Ships sunk/lost "
+                           f"{int(record.get('ships_sunk', 0))}/{int(record.get('ships_lost', 0))}"
+                           f"  |  Retreats {int(record.get('retreats', 0))}")
+                history_surf = self.map_font.render(history, True, (92, 66, 43))
+                self.screen.blit(history_surf, (row.x + 13, row.y + 47))
+        footer_text = f"Showing {min(7, len(records))} of {len(records)} commanders   •   Up/Down: scroll   •   N / Esc: close"
+        footer = self.small_font.render(footer_text, True, (104, 74, 48))
+        self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 13)))
+
     def draw_job_board(self):
         if not self.job_board_open or not self.docked_port:
             return
@@ -959,6 +1016,8 @@ class RenderingMixin:
             self.draw_conversation()
         if self.journal_open:
             self.draw_journal()
+        if getattr(self, "commander_ledger_open", False):
+            self.draw_commander_ledger()
         if self.treasure_chart_open:
             self.draw_treasure_chart()
         if self.shipyard_open:

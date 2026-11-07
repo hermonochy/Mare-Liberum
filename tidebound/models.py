@@ -29,6 +29,13 @@ class PirateShip:
     mission_id: str = ""
     objective_target: bool = False
     ship_type: str = "Sloop"
+    npc_target_name: str = ""
+    fleet_id: str = ""
+    commander_name: str = ""
+    formation_slot: int = 0
+    fleet_morale: float = 1.0
+    retreating: bool = False
+    fleet_size: int = 1
 
 @dataclass
 class FleetShip:
@@ -61,6 +68,15 @@ class TrafficShip:
     vy: float = 0.0
     wander: float = 0.0
     collision_bump_cooldown: float = 0.0
+    combat_target_name: str = ""
+    combat_cooldown: float = 0.0
+    under_attack: bool = False
+    fleet_id: str = ""
+    commander_name: str = ""
+    formation_slot: int = 0
+    fleet_morale: float = 1.0
+    retreating: bool = False
+    fleet_size: int = 1
 
 @dataclass
 class Cannonball:
@@ -70,6 +86,9 @@ class Cannonball:
     vy: float
     life: float
     owner: str
+    source_commander: str = ""
+    source_faction: str = ""
+    source_fleet_id: str = ""
 
 @dataclass
 class TreasureSite:

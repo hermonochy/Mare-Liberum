@@ -20,6 +20,14 @@ class ControlsMixin:
             elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self.accept_selected_day_jobs()
             return
+        if getattr(self, "commander_ledger_open", False):
+            if key in (pygame.K_n, pygame.K_ESCAPE):
+                self.commander_ledger_open = False
+            elif key in (pygame.K_UP, pygame.K_w):
+                self.commander_ledger_scroll = max(0, self.commander_ledger_scroll - 1)
+            elif key in (pygame.K_DOWN, pygame.K_s):
+                self.commander_ledger_scroll += 1
+            return
         if self.world_map_open:
             if key in (pygame.K_m, pygame.K_ESCAPE):
                 self.world_map_open = False
@@ -88,6 +96,9 @@ class ControlsMixin:
             self.world_map_open = True
         elif key == pygame.K_j:
             self.journal_open = True
+        elif key == pygame.K_n:
+            self.commander_ledger_open = True
+            self.commander_ledger_scroll = 0
         elif key == pygame.K_t:
             self.treasure_chart_open = True
         elif key == pygame.K_r:

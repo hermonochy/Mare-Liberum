@@ -196,6 +196,13 @@ class Game(
         self.reinforcement_timer = self.pirate_reinforcement_interval()
         self.pirate_collision_notice_timer = 0.0
         self.ship_collision_notice_timer = 0.0
+        self.port_defence_cooldowns = {port.name: self.rng.uniform(0.0, 0.8) for port in self.ports}
+        self.port_defence_notice_timer = 0.0
+        self.npc_battle_notice_timer = 0.0
+        self.commander_records = {}
+        self.commander_fleets = {}
+        self.commander_ledger_open = False
+        self.commander_ledger_scroll = 0
         self.traffic_ships = []
         self.traffic_spawn_timer = 20.0
         self.traffic_serial = 1

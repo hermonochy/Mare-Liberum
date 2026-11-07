@@ -104,6 +104,429 @@ class TrafficMixin:
         self.traffic_serial += 1
         return True
 
+    ADMIRAL_NAMES = {
+        "naval patrol": ["Admiral Horatio Vale", "Commodore Anne Wycliffe", "Captain-General Mateo Ruiz"],
+        "merchant": ["Commodore Elias Harcourt", "Master Mariner Beatrice Shaw", "Captain Tomas Bell"],
+        "pirate": ["Black Jack Rourke", "Madame Sabine Voss", "Calico Ned Mercer", "Red Tom Kersey"],
+    }
+
+    def organise_npc_fleets(self):
+        """Occasionally bind nearby ships into named, persistent NPC squadrons."""
+        # A few ships sail alone; others form small named squadrons.
+        for role in ("merchant", "naval patrol"):
+            unassigned = [s for s in self.traffic_ships if s.hull > 0 and s.role == role and not s.fleet_id]
+            while len(unassigned) >= 2:
+                leader = unassigned.pop(0)
+                if self.rng.random() > (0.68 if role == "naval patrol" else 0.48):
+                    continue
+                nearby = sorted(unassigned, key=lambda s: math.hypot(s.x-leader.x, s.y-leader.y))
+                if not nearby or math.hypot(nearby[0].x-leader.x, nearby[0].y-leader.y) > 980:
+                    continue
+                wing = [nearby[0]]
+                unassigned.remove(nearby[0])
+                if len(unassigned) and self.rng.random() < 0.38:
+                    extra = min(unassigned, key=lambda s: math.hypot(s.x-leader.x, s.y-leader.y))
+                    if math.hypot(extra.x-leader.x, extra.y-leader.y) < 1250:
+                        wing.append(extra); unassigned.remove(extra)
+                fid = f"{role.replace(' ','-')}-{leader.name.replace(' ','-')}"
+                commander = self.rng.choice(self.ADMIRAL_NAMES[role])
+                members = [leader] + wing
+                self.commander_fleet_state(fid, commander, role, len(members))
+                self.ensure_commander_record(commander, role)
+                for slot, member in enumerate(members):
+                    member.fleet_id, member.commander_name = fid, commander
+                    member.formation_slot = slot
+                    member.fleet_size = len(members)
+                    member.fleet_morale = 1.0
+        # Pirate bands form around a nearby uncommitted captain.
+        free = [p for p in self.pirates if not p.dead and not p.objective_target and not p.fleet_id]
+        while len(free) >= 2:
+            leader = free.pop(0)
+            if self.rng.random() > 0.62:
+                continue
+            wing = min(free, key=lambda p: math.hypot(p.x-leader.x, p.y-leader.y), default=None)
+            if wing is None or math.hypot(wing.x-leader.x, wing.y-leader.y) > 900:
+                continue
+            free.remove(wing)
+            members = [leader, wing]
+            if free and self.rng.random() < 0.35:
+                extra = min(free, key=lambda p: math.hypot(p.x-leader.x, p.y-leader.y))
+                if math.hypot(extra.x-leader.x, extra.y-leader.y) < 1150:
+                    members.append(extra); free.remove(extra)
+            fid = f"pirate-{leader.name.replace(' ','-')}"
+            commander = self.rng.choice(self.ADMIRAL_NAMES["pirate"])
+            self.commander_fleet_state(fid, commander, "pirate", len(members))
+            self.ensure_commander_record(commander, "pirate")
+            for slot, member in enumerate(members):
+                member.fleet_id, member.commander_name = fid, commander
+                member.formation_slot, member.fleet_morale = slot, 1.0
+                member.fleet_size = len(members)
+
+
+    def ensure_commander_record(self, commander_name, faction):
+        if not commander_name:
+            return None
+        records = getattr(self, "commander_records", None)
+        if records is None:
+            self.commander_records = {}
+            records = self.commander_records
+        record = records.setdefault(commander_name, {
+            "commander": commander_name,
+            "faction": faction,
+            "reputation": 50,
+            "notoriety": 0,
+            "victories": 0,
+            "defeats": 0,
+            "ships_sunk": 0,
+            "ships_lost": 0,
+            "retreats": 0,
+            "last_event": "Recently entered Caribbean waters",
+        })
+        # Keep a commander's allegiance stable if a similarly named captain is
+        # ever encountered in another context.
+        record.setdefault("faction", faction)
+        for key, default in (("reputation", 50), ("notoriety", 0), ("victories", 0),
+                             ("defeats", 0), ("ships_sunk", 0), ("ships_lost", 0),
+                             ("retreats", 0), ("last_event", "No recent reports")):
+            record.setdefault(key, default)
+        return record
+
+    def commander_rank(self, record):
+        faction = record.get("faction", "")
+        reputation = int(record.get("reputation", 50))
+        notoriety = int(record.get("notoriety", 0))
+        if faction == "pirate":
+            if notoriety >= 90: return "Terror of the Caribbean"
+            if notoriety >= 65: return "Dread Captain"
+            if notoriety >= 40: return "Infamous Raider"
+            if notoriety >= 20: return "Wanted Captain"
+            return "Rising Pirate"
+        if faction == "naval patrol":
+            if reputation >= 90: return "Legendary Admiral"
+            if reputation >= 72: return "Decorated Commander"
+            if reputation >= 55: return "Respected Officer"
+            if reputation >= 40: return "Promising Officer"
+            if reputation >= 25: return "Under Scrutiny"
+            return "Disgraced Commander"
+        if reputation >= 85: return "Master of the Trade Routes"
+        if reputation >= 68: return "Trusted Convoy Master"
+        if reputation >= 52: return "Respected Merchant"
+        if reputation >= 35: return "Risky Speculator"
+        return "Shunned Merchant"
+
+    def adjust_commander_record(self, commander_name, faction, *, reputation=0, notoriety=0,
+                                event=None, counter=None):
+        record = self.ensure_commander_record(commander_name, faction)
+        if record is None:
+            return None
+        record["reputation"] = max(0, min(100, int(record.get("reputation", 50)) + int(reputation)))
+        record["notoriety"] = max(0, min(1000, int(record.get("notoriety", 0)) + int(notoriety)))
+        if counter:
+            record[counter] = int(record.get(counter, 0)) + 1
+        if event:
+            record["last_event"] = event
+        return record
+
+    def commander_fleet_state(self, fleet_id, commander_name="", faction="", fleet_size=1):
+        if not fleet_id:
+            return None
+        states = getattr(self, "commander_fleets", None)
+        if states is None:
+            self.commander_fleets = {}
+            states = self.commander_fleets
+        state = states.setdefault(fleet_id, {
+            "commander": commander_name,
+            "faction": faction,
+            "size": max(1, int(fleet_size)),
+            "losses": 0,
+            "retreat_recorded": False,
+            "defeat_recorded": False,
+        })
+        state["size"] = max(int(state.get("size", 1)), int(fleet_size), 1)
+        if commander_name:
+            state["commander"] = commander_name
+        if faction:
+            state["faction"] = faction
+        return state
+
+    def record_commander_retreat(self, members):
+        if not members:
+            return
+        leader = min(members, key=lambda member: getattr(member, "formation_slot", 0))
+        commander = getattr(leader, "commander_name", "")
+        if not commander:
+            return
+        faction = "pirate" if isinstance(leader, PirateShip) else leader.role
+        fleet_id = getattr(leader, "fleet_id", "")
+        state = self.commander_fleet_state(fleet_id, commander, faction, getattr(leader, "fleet_size", len(members)))
+        if state and state.get("retreat_recorded"):
+            return
+        if state:
+            state["retreat_recorded"] = True
+        rep_change = -4 if faction == "naval patrol" else (-2 if faction == "pirate" else -3)
+        notoriety_change = 2 if faction == "pirate" else 1
+        record = self.adjust_commander_record(
+            commander, faction, reputation=rep_change, notoriety=notoriety_change,
+            event="Ordered a withdrawal after taking heavy losses", counter="retreats")
+        if record:
+            self.add_journal(f"{commander} ordered a retreat. Reports now describe them as {self.commander_rank(record).lower()}.")
+
+    def record_commander_ship_loss(self, victim, cause="an independent sea battle", attacker=None):
+        victim_commander = getattr(victim, "commander_name", "")
+        victim_faction = "pirate" if isinstance(victim, PirateShip) else getattr(victim, "role", "merchant")
+        if victim_commander:
+            record = self.adjust_commander_record(
+                victim_commander, victim_faction, reputation=-5, notoriety=2,
+                event=f"Lost {victim.name} to {cause}", counter="ships_lost")
+            fleet_id = getattr(victim, "fleet_id", "")
+            state = self.commander_fleet_state(fleet_id, victim_commander, victim_faction,
+                                               getattr(victim, "fleet_size", 1))
+            if state and not state.get("defeat_recorded"):
+                state["losses"] = int(state.get("losses", 0)) + 1
+                if state["losses"] >= int(state.get("size", 1)):
+                    state["defeat_recorded"] = True
+                    record["defeats"] = int(record.get("defeats", 0)) + 1
+                    record["reputation"] = max(0, int(record.get("reputation", 50)) - 10)
+                    record["notoriety"] = min(1000, int(record.get("notoriety", 0)) + 4)
+                    record["last_event"] = "Commanded a fleet that was destroyed"
+                    self.add_journal(f"The fleet of {victim_commander} has been destroyed; their standing suffers across the Caribbean.")
+        if attacker:
+            attacker_name = getattr(attacker, "source_commander", "")
+            attacker_faction = getattr(attacker, "source_faction", "")
+            if attacker_name:
+                reward = 6 if attacker_faction == "naval patrol" else (4 if attacker_faction == "merchant" else 5)
+                fear = 7 if attacker_faction == "pirate" else (2 if attacker_faction == "naval patrol" else 1)
+                record = self.adjust_commander_record(
+                    attacker_name, attacker_faction, reputation=reward, notoriety=fear,
+                    event=f"Sank {victim.name}", counter="ships_sunk")
+                record["victories"] = int(record.get("victories", 0)) + 1
+                self.add_journal(f"{attacker_name} wins renown after {victim.name} is sunk in an independent battle.")
+
+    def commander_faction_label(self, faction):
+        return {"naval patrol": "Royal Navy", "merchant": "Merchant Fleet", "pirate": "Pirate Brotherhood"}.get(faction, faction.title())
+
+    def fleet_members(self, ship):
+        if not getattr(ship, "fleet_id", ""):
+            return [ship]
+        members = [s for s in self.traffic_ships + self.pirates
+                   if getattr(s, "fleet_id", "") == ship.fleet_id and
+                   (getattr(s, "hull", 0) > 0 if hasattr(s, "hull") else not s.dead)]
+        return members or [ship]
+
+    def fleet_formation_point(self, ship):
+        members = self.fleet_members(ship)
+        leader = min(members, key=lambda m: getattr(m, "formation_slot", 0))
+        if ship is leader:
+            return None
+        angle = math.radians(leader.heading)
+        slot = getattr(ship, "formation_slot", 1)
+        row = (slot + 1) // 2
+        side = -1 if slot % 2 else 1
+        return (leader.x - math.cos(angle) * (105.0 * row) - math.sin(angle) * side * 82.0,
+                leader.y - math.sin(angle) * (105.0 * row) + math.cos(angle) * side * 82.0)
+
+    def update_fleet_commanders(self, dt):
+        # Commanders weigh the squadron's remaining strength and order a withdrawal
+        # when losses make the engagement untenable.
+        seen = set()
+        for ship in self.traffic_ships + self.pirates:
+            fid = getattr(ship, "fleet_id", "")
+            if not fid or fid in seen:
+                continue
+            seen.add(fid)
+            members = self.fleet_members(ship)
+            living = [m for m in members if (m.hull > 0 if hasattr(m, "hull") else not m.dead)]
+            if not living:
+                continue
+            leader = min(living, key=lambda m: getattr(m, "formation_slot", 0))
+            faction = "pirate" if isinstance(leader, PirateShip) else leader.role
+            state = self.commander_fleet_state(fid, leader.commander_name, faction, getattr(leader, "fleet_size", len(members)))
+            fleet_size = max(1, int(state.get("size", len(members))) if state else len(members))
+            strength = sum(max(0, m.hull) / max(1, m.max_hull) for m in living) / fleet_size
+            should_retreat = strength < 0.43 or (len(living) / fleet_size <= 0.5)
+            if should_retreat and not any(getattr(m, "retreating", False) for m in members):
+                self.record_commander_retreat(members)
+            for member in members:
+                member.fleet_morale = strength
+                if should_retreat:
+                    member.retreating = True
+                elif strength > 0.78:
+                    member.retreating = False
+                    if state:
+                        state["retreat_recorded"] = False
+            if any(getattr(m, "retreating", False) for m in members):
+                # Retreat as a squadron toward the leader's next port, or away
+                # from its pursuer when a pirate band has no port itinerary.
+                leader = min(living, key=lambda m: getattr(m, "formation_slot", 0))
+                if hasattr(leader, "destination") and leader.destination in self.ports_by_name:
+                    dest = self.ports_by_name[leader.destination]
+                    away = math.degrees(math.atan2(dest.y-leader.y, dest.x-leader.x))
+                else:
+                    threats = [v for v in self.traffic_ships if v.hull > 0]
+                    threats += [p for p in self.pirates if not p.dead and p.fleet_id != fid]
+                    target_name = getattr(leader, "npc_target_name", "")
+                    named_target = next((v for v in threats if getattr(v, "name", "") == target_name), None)
+                    threat = named_target or (min(threats, key=lambda v: math.hypot(v.x-leader.x, v.y-leader.y)) if threats else None)
+                    if threat is not None:
+                        away = math.degrees(math.atan2(leader.y-threat.y, leader.x-threat.x))
+                    else:
+                        away = leader.heading
+                for member in living:
+                    member.heading = (member.heading + clamp(angle_difference(away, member.heading), -30*dt, 30*dt)) % 360
+
+    def assign_npc_battle_targets(self):
+        """Give autonomous ships sensible opponents without involving the player."""
+        living_pirates = [pirate for pirate in self.pirates if not pirate.dead]
+        battle_vessels = [
+            ship for ship in self.traffic_ships
+            if ship.hull > 0 and ship.role in {"merchant", "naval patrol"}
+        ]
+
+        # Pirates seek merchant prizes and naval patrols. Story-mission enemies
+        # keep their scripted objective and are not diverted into ambient fights.
+        for pirate in living_pirates:
+            pirate.npc_target_name = ""
+            if pirate.objective_target or pirate.retreating:
+                continue
+            candidates = []
+            for ship in battle_vessels:
+                distance = math.hypot(ship.x - pirate.x, ship.y - pirate.y)
+                limit = 1450.0 if ship.role == "naval patrol" else 1120.0
+                if distance <= limit:
+                    # Patrols are the more dangerous opponent; merchants are the
+                    # easier prize. A modest navy preference produces convoy escorts.
+                    score = distance * (0.78 if ship.role == "naval patrol" else 1.0)
+                    candidates.append((score, distance, ship))
+            if candidates:
+                _, _, target = min(candidates, key=lambda item: item[0])
+                if pirate.fleet_id:
+                    squad_targets = [p.npc_target_name for p in living_pirates
+                                     if p.fleet_id == pirate.fleet_id and p.npc_target_name]
+                    if squad_targets:
+                        shared = next((v for v in battle_vessels if v.name == squad_targets[0]), None)
+                        if shared is not None:
+                            target = shared
+                pirate.npc_target_name = target.name
+
+        # Naval patrols actively hunt pirates. Armed merchantmen join a fight
+        # when a pirate comes close enough to threaten the vessel or convoy.
+        for ship in self.traffic_ships:
+            ship.combat_target_name = ""
+            ship.under_attack = False
+            if ship.hull <= 0 or ship.retreating or ship.role not in {"merchant", "naval patrol"}:
+                continue
+            candidates = []
+            for pirate in living_pirates:
+                if pirate.objective_target:
+                    continue
+                distance = math.hypot(pirate.x - ship.x, pirate.y - ship.y)
+                limit = 1650.0 if ship.role == "naval patrol" else 760.0
+                if distance <= limit:
+                    candidates.append((distance, pirate))
+            if candidates:
+                distance, target = min(candidates, key=lambda item: item[0])
+                ship.combat_target_name = target.name
+                ship.under_attack = distance <= 500.0
+
+    def _combat_target_for_traffic(self, ship):
+        if not ship.combat_target_name:
+            return None
+        return next((pirate for pirate in self.pirates
+                     if not pirate.dead and pirate.name == ship.combat_target_name), None)
+
+    def _combat_target_for_pirate(self, pirate):
+        if not pirate.npc_target_name:
+            return None
+        return next((ship for ship in self.traffic_ships
+                     if ship.hull > 0 and ship.name == pirate.npc_target_name), None)
+
+    @staticmethod
+    def _broadside_course(bearing, current_heading, distance):
+        """Approach, then circle at cannon range with a broadside facing the target."""
+        if distance > 690.0:
+            return bearing
+        if distance < 265.0:
+            return (bearing + 180.0) % 360.0
+        choices = ((bearing - 90.0) % 360.0, (bearing + 90.0) % 360.0)
+        return min(choices, key=lambda course: abs(angle_difference(course, current_heading)))
+
+    def fire_npc_broadside(self, attacker, target, owner, shot_count=3, speed=415.0):
+        dx = target.x - attacker.x
+        dy = target.y - attacker.y
+        distance = math.hypot(dx, dy)
+        if distance < 145.0 or distance > 720.0:
+            return False
+        bearing = math.degrees(math.atan2(dy, dx))
+        port_alignment = abs(angle_difference((attacker.heading - 90.0) % 360.0, bearing))
+        starboard_alignment = abs(angle_difference((attacker.heading + 90.0) % 360.0, bearing))
+        if min(port_alignment, starboard_alignment) > 31.0:
+            return False
+
+        angle = math.radians(bearing)
+        side = -1.0 if port_alignment <= starboard_alignment else 1.0
+        broadside = angle + side * math.pi / 2.0
+        forward = math.radians(attacker.heading)
+        for index in range(shot_count):
+            offset = (index - (shot_count - 1) / 2.0) * 12.0
+            spread = (index - (shot_count - 1) / 2.0) * 0.018
+            aim = angle + spread
+            self.projectiles.append(Cannonball(
+                attacker.x + math.cos(forward) * offset + math.cos(broadside) * 18.0,
+                attacker.y + math.sin(forward) * offset + math.sin(broadside) * 18.0,
+                math.cos(aim) * speed + attacker.vx * 0.12,
+                math.sin(aim) * speed + attacker.vy * 0.12,
+                1.7,
+                owner,
+                getattr(attacker, "commander_name", ""),
+                "pirate" if isinstance(attacker, PirateShip) else getattr(attacker, "role", ""),
+                getattr(attacker, "fleet_id", ""),
+            ))
+        return True
+
+    def update_npc_battles(self, dt):
+        """Resolve independent merchant/pirate/naval engagements in the living sea."""
+        battle_notice_timer = max(0.0, getattr(self, "npc_battle_notice_timer", 0.0) - dt)
+        self.npc_battle_notice_timer = battle_notice_timer
+
+        for pirate in self.pirates:
+            if pirate.dead or pirate.objective_target:
+                continue
+            target = self._combat_target_for_pirate(pirate)
+            if target is None:
+                continue
+            distance = math.hypot(target.x - pirate.x, target.y - pirate.y)
+            bearing = math.degrees(math.atan2(target.y - pirate.y, target.x - pirate.x))
+            desired = (bearing + 180.0) % 360.0 if pirate.retreating else self._broadside_course(bearing, pirate.heading, distance)
+            pirate.heading = (pirate.heading + clamp(angle_difference(desired, pirate.heading), -40.0 * dt, 40.0 * dt)) % 360.0
+            pirate.cooldown = max(0.0, pirate.cooldown - dt)
+            if pirate.cooldown <= 0.0 and self.fire_npc_broadside(pirate, target, "npc_pirate", shot_count=3, speed=390.0):
+                pirate.cooldown = 2.8 + self.rng.uniform(0.0, 1.0)
+                if math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y) < 1350.0 and self.npc_battle_notice_timer <= 0.0:
+                    self.toast_message(f"Beyond the waves, {pirate.name} trades broadsides with {target.name}.", 2.6)
+                    self.npc_battle_notice_timer = 7.0
+
+        for ship in self.traffic_ships:
+            if ship.hull <= 0 or ship.retreating or ship.role not in {"merchant", "naval patrol"}:
+                continue
+            target = self._combat_target_for_traffic(ship)
+            if target is None:
+                continue
+            distance = math.hypot(target.x - ship.x, target.y - ship.y)
+            bearing = math.degrees(math.atan2(target.y - ship.y, target.x - ship.x))
+            desired = (bearing + 180.0) % 360.0 if ship.retreating else self._broadside_course(bearing, ship.heading, distance)
+            ship.heading = (ship.heading + clamp(angle_difference(desired, ship.heading), -38.0 * dt, 38.0 * dt)) % 360.0
+            ship.combat_cooldown = max(0.0, ship.combat_cooldown - dt)
+            shot_limit = 760.0 if ship.role == "naval patrol" else 620.0
+            if distance <= shot_limit and ship.combat_cooldown <= 0.0:
+                shots = 4 if ship.role == "naval patrol" else 2
+                speed = 435.0 if ship.role == "naval patrol" else 365.0
+                owner = "npc_navy" if ship.role == "naval patrol" else "npc_merchant"
+                if self.fire_npc_broadside(ship, target, owner, shot_count=shots, speed=speed):
+                    ship.combat_cooldown = (2.25 if ship.role == "naval patrol" else 3.4) + self.rng.uniform(0.0, 0.85)
+                    if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) < 1350.0 and self.npc_battle_notice_timer <= 0.0:
+                        self.toast_message(f"{ship.name} opens fire on {target.name}.", 2.6)
+                        self.npc_battle_notice_timer = 7.0
+
     def update_traffic_ships(self, dt):
         self.traffic_spawn_timer -= dt
         if self.traffic_spawn_timer <= 0.0:
@@ -123,16 +546,29 @@ class TrafficMixin:
             dx = destination.x - ship.x
             dy = destination.y - ship.y
             distance = math.hypot(dx, dy)
-            if distance < 165.0:
-                destination = self.choose_traffic_destination(ship.destination)
-                if destination is not None:
-                    ship.destination = destination.name
-                    dx = destination.x - ship.x
-                    dy = destination.y - ship.y
-                    distance = max(1.0, math.hypot(dx, dy))
-            desired = math.degrees(math.atan2(dy, dx))
+            combat_target = None if ship.retreating else self._combat_target_for_traffic(ship)
+            if ship.retreating:
+                desired = ship.heading
+            elif combat_target is not None:
+                battle_dx = combat_target.x - ship.x
+                battle_dy = combat_target.y - ship.y
+                battle_distance = math.hypot(battle_dx, battle_dy)
+                battle_bearing = math.degrees(math.atan2(battle_dy, battle_dx))
+                desired = self._broadside_course(battle_bearing, ship.heading, battle_distance)
+            else:
+                if distance < 165.0:
+                    destination = self.choose_traffic_destination(ship.destination)
+                    if destination is not None:
+                        ship.destination = destination.name
+                        dx = destination.x - ship.x
+                        dy = destination.y - ship.y
+                        distance = max(1.0, math.hypot(dx, dy))
+                desired = math.degrees(math.atan2(dy, dx))
+                point = self.fleet_formation_point(ship)
+                if point and not ship.retreating:
+                    desired = math.degrees(math.atan2(point[1]-ship.y, point[0]-ship.x))
             difference = angle_difference(desired, ship.heading)
-            turn_rate = 25.0 if ship.role == "whaler" else 34.0
+            turn_rate = 25.0 if ship.role == "whaler" else (38.0 if combat_target is not None else 34.0)
             ship.heading = (ship.heading + clamp(difference, -turn_rate * dt, turn_rate * dt)) % 360.0
             heading = math.radians(ship.heading)
             profile = self.TRAFFIC_ROLES[ship.role]

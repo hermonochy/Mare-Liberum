@@ -210,11 +210,12 @@ class VesselsMixin:
         return spawned
 
     def update_pirates(self, dt):
-        if self.docked_port or self.conversation or self.journal_open or self.shipyard_open:
-            return
+        # Pirates remain part of the living world while the flagship is berthed
+        # or the captain has a harbour panel open. They continue sailing, but
+        # will not fire directly at a ship protected by a port's guns.
         active_mission = self.active_mission()
         combat_mission_active = bool(active_mission and active_mission.objective_type == "kills")
-        if not combat_mission_active:
+        if not combat_mission_active and not self.docked_port:
             self.reinforcement_timer -= dt
             if self.reinforcement_timer <= 0.0:
                 self.spawn_pirate_reinforcement()
@@ -223,11 +224,27 @@ class VesselsMixin:
             if pirate.dead:
                 continue
             pirate.cooldown = max(0.0, pirate.cooldown - dt)
-            distance = math.hypot(self.ship_x - pirate.x, self.ship_y - pirate.y)
-            dx = self.ship_x - pirate.x
-            dy = self.ship_y - pirate.y
-            bearing = math.degrees(math.atan2(dy, dx))
-            if pirate.objective_target:
+            npc_target = self._combat_target_for_pirate(pirate)
+            if pirate.retreating:
+                # Fleet-command logic has already pointed this vessel toward
+                # a withdrawal course; preserve it and make way from the fight.
+                distance = 9999.0
+                bearing = pirate.heading
+                desired = pirate.heading
+                thrust = 43.0
+            elif npc_target is not None and not pirate.objective_target:
+                dx = npc_target.x - pirate.x
+                dy = npc_target.y - pirate.y
+                distance = math.hypot(dx, dy)
+                bearing = math.degrees(math.atan2(dy, dx))
+                desired = self._broadside_course(bearing, pirate.heading, distance)
+                thrust = 39.0 if distance > 480.0 else (20.0 if distance > 285.0 else 27.0)
+            else:
+                distance = math.hypot(self.ship_x - pirate.x, self.ship_y - pirate.y)
+                dx = self.ship_x - pirate.x
+                dy = self.ship_y - pirate.y
+                bearing = math.degrees(math.atan2(dy, dx))
+            if not pirate.retreating and npc_target is None and pirate.objective_target:
                 if distance > 430:
                     desired = bearing
                 else:
@@ -237,7 +254,7 @@ class VesselsMixin:
                     current_b = abs(angle_difference(side_b, pirate.heading))
                     desired = side_a if current_a <= current_b else side_b
                 thrust = 48.0 if distance < 1500 else 31.0
-            elif distance < 1100:
+            elif not pirate.retreating and npc_target is None and distance < 1100:
                 if distance > 430:
                     desired = bearing
                 else:
@@ -247,7 +264,7 @@ class VesselsMixin:
                     current_b = abs(angle_difference(side_b, pirate.heading))
                     desired = side_a if current_a <= current_b else side_b
                 thrust = 36.0
-            else:
+            elif not pirate.retreating and npc_target is None:
                 pirate.wander += dt * 0.22
                 desired = pirate.heading + math.sin(pirate.wander) * 17.0
                 thrust = 18.0
@@ -267,8 +284,54 @@ class VesselsMixin:
             pirate.x, pirate.y, pirate.vx, pirate.vy, _ = resolve_land_collision(
                 pirate.x, pirate.y, pirate.vx, pirate.vy, 30, self.collision_land_polygons()
             )
-            if 160 < distance < 560 and pirate.cooldown <= 0:
+            if npc_target is None and not pirate.retreating and not self.docked_port and 160 < distance < 560 and pirate.cooldown <= 0:
                 self.enemy_fire_if_aligned(pirate, bearing, distance)
+
+    def update_port_defences(self, dt):
+        """Fire each harbour's coastal battery at pirates that enter its waters."""
+        gun_range = 590.0
+        reload_seconds = 1.55
+        projectile_speed = 525.0
+        cooldowns = getattr(self, "port_defence_cooldowns", None)
+        if cooldowns is None:
+            cooldowns = self.port_defence_cooldowns = {port.name: 0.0 for port in self.ports}
+        self.port_defence_notice_timer = max(0.0, getattr(self, "port_defence_notice_timer", 0.0) - dt)
+
+        living_pirates = [pirate for pirate in self.pirates if not pirate.dead]
+        if not living_pirates:
+            for port in self.ports:
+                cooldowns[port.name] = max(0.0, cooldowns.get(port.name, 0.0) - dt)
+            return
+
+        for port in self.ports:
+            cooldown = max(0.0, cooldowns.get(port.name, 0.0) - dt)
+            cooldowns[port.name] = cooldown
+            if cooldown > 0.0:
+                continue
+            candidates = [
+                (math.hypot(pirate.x - port.x, pirate.y - port.y), pirate)
+                for pirate in living_pirates
+            ]
+            candidates = [(distance, pirate) for distance, pirate in candidates if distance <= gun_range]
+            if not candidates:
+                continue
+            distance, target = min(candidates, key=lambda item: item[0])
+            aim = math.atan2(target.y - port.y, target.x - port.x)
+            # A short three-gun salvo makes the threat and the defence visible,
+            # while the reload interval gives ships a chance to escape.
+            for spread in (-0.035, 0.0, 0.035):
+                angle = aim + spread
+                vx = math.cos(angle) * projectile_speed
+                vy = math.sin(angle) * projectile_speed
+                self.projectiles.append(Cannonball(
+                    port.x + math.cos(angle) * 17.0,
+                    port.y + math.sin(angle) * 17.0,
+                    vx, vy, 1.45, "port"
+                ))
+            cooldowns[port.name] = reload_seconds
+            if port.name == self.docked_port and self.port_defence_notice_timer <= 0.0:
+                self.toast_message(f"The guns of {port.name} fire on {target.name}!", 2.2)
+                self.port_defence_notice_timer = 4.0
 
     def enemy_fire_if_aligned(self, pirate, bearing, distance):
         choices = []
@@ -300,30 +363,57 @@ class VesselsMixin:
                 continue
             if any(point_in_polygon((ball.x, ball.y), polygon) for polygon in self.collision_land_polygons()):
                 continue
-            if ball.owner in {"player", "fleet"}:
+            if ball.owner in {"player", "fleet", "port", "npc_navy", "npc_merchant"}:
                 hit = False
                 for pirate in self.pirates:
                     if pirate.dead:
                         continue
-                    if math.hypot(ball.x - pirate.x, ball.y - pirate.y) < 25:
+                    if math.hypot(ball.x - pirate.x, ball.y - pirate.y) < 27:
                         pirate.hull -= 1
                         hit = True
                         if pirate.hull <= 0:
                             pirate.dead = True
+                            if ball.owner == "port":
+                                self.record_commander_ship_loss(pirate, "harbour guns")
+                                self.add_journal(f"{pirate.name} was sunk by the harbour guns.")
+                                if pirate.name and self.port_defence_notice_timer <= 0.0:
+                                    self.toast_message(f"The harbour guns sink {pirate.name}!", 3.0)
+                                    self.port_defence_notice_timer = 2.5
+                            elif ball.owner in {"npc_navy", "npc_merchant"}:
+                                source = "a naval patrol" if ball.owner == "npc_navy" else "an armed merchant"
+                                self.record_commander_ship_loss(pirate, source, ball)
+                                self.add_journal(f"{pirate.name} was sunk by {source} in an independent sea battle.")
+                                self.toast_message(f"{pirate.name} is sunk in an independent sea battle!", 3.0)
+                            else:
+                                self.record_commander_ship_loss(pirate, "the captain's guns")
                             self.register_pirate_sunk(pirate)
-                        else:
+                        elif ball.owner not in {"port", "npc_navy", "npc_merchant"}:
                             self.toast_message(f"Hit {pirate.name}! Hull remaining: {pirate.hull}.", 1.3)
                         break
                 if hit:
                     continue
-                traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and math.hypot(ball.x - ship.x, ball.y - ship.y) < 27), None)
+                if ball.owner in {"player", "fleet"}:
+                    traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and math.hypot(ball.x - ship.x, ball.y - ship.y) < 27), None)
+                    if traffic_hit:
+                        traffic_hit.hull = max(0, traffic_hit.hull - 1)
+                        if traffic_hit.hull <= 0:
+                            self.record_commander_ship_loss(traffic_hit, "the player's guns")
+                            self.traffic_ships.remove(traffic_hit)
+                            self.toast_message(f"Your cannonball sinks the {traffic_hit.role} ship {traffic_hit.name}.", 3.2)
+                        else:
+                            self.toast_message(f"A ball strikes {traffic_hit.name}!", 1.3)
+                        continue
+            elif ball.owner == "npc_pirate":
+                traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and math.hypot(ball.x - ship.x, ball.y - ship.y) < 29), None)
                 if traffic_hit:
                     traffic_hit.hull = max(0, traffic_hit.hull - 1)
                     if traffic_hit.hull <= 0:
+                        self.record_commander_ship_loss(traffic_hit, "pirate guns", ball)
                         self.traffic_ships.remove(traffic_hit)
-                        self.toast_message(f"Your cannonball sinks the {traffic_hit.role} ship {traffic_hit.name}.", 3.2)
-                    else:
-                        self.toast_message(f"A ball strikes {traffic_hit.name}!", 1.3)
+                        self.add_journal(f"{traffic_hit.name} was sunk by pirate guns in open water.")
+                        if self.npc_battle_notice_timer <= 0.0:
+                            self.toast_message(f"{traffic_hit.name} is sunk by pirates!", 3.0)
+                            self.npc_battle_notice_timer = 3.0
                     continue
             elif not self.docked_port:
                 if math.hypot(ball.x - self.ship_x, ball.y - self.ship_y) < 23:
@@ -368,7 +458,22 @@ class VesselsMixin:
         self.mission_result_timer = max(0.0, self.mission_result_timer - dt)
         self.wind_angle = 24.0 + math.sin(self.world_time * 0.035) * 11.0
         self.wind_strength = 0.92 + math.sin(self.world_time * 0.06) * 0.08
-        if self.conversation or self.journal_open or self.treasure_chart_open or self.shipyard_open or self.job_board_open or self.world_map_open:
+
+        # Ambient shipping and hostile sails keep moving even while the player
+        # is moored, speaking to harbour officials, or browsing a shipyard.
+        self.organise_npc_fleets()
+        self.update_fleet_commanders(dt)
+        self.assign_npc_battle_targets()
+        self.update_pirates(dt)
+        self.update_traffic_ships(dt)
+        self.update_npc_battles(dt)
+        self.update_port_defences(dt)
+        self.resolve_ship_collisions(dt)
+        self.update_projectiles(dt)
+
+        # Modal harbour/captain interfaces pause player input and fleet orders,
+        # not the living sea outside the quay.
+        if self.conversation or self.journal_open or getattr(self, "commander_ledger_open", False) or self.treasure_chart_open or self.shipyard_open or self.job_board_open or self.world_map_open:
             self.cannon_held[-1] = False
             self.cannon_held[1] = False
             return
@@ -376,7 +481,3 @@ class VesselsMixin:
         self.update_player_sailing(dt)
         self.update_fleet(dt)
         self.update_treasure_discovery()
-        self.update_pirates(dt)
-        self.update_traffic_ships(dt)
-        self.resolve_ship_collisions(dt)
-        self.update_projectiles(dt)

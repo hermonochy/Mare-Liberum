@@ -1,3 +1,0 @@
-Tidebound V16 – Save & Load
-Readable .tide save files
-Multiple save slots and main menu

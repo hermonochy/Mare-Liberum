@@ -9,7 +9,7 @@ from ..common import *
 
 class SaveLoadMixin:
     SAVE_FORMAT = "TIDEBOUND_VOYAGE"
-    SAVE_VERSION = 1
+    SAVE_VERSION = 2
 
     def save_directory(self):
         directory = Path(__file__).resolve().parents[2] / "saves"
@@ -105,8 +105,11 @@ class SaveLoadMixin:
                 "reinforcement_timer": self.reinforcement_timer,
                 "traffic_spawn_timer": self.traffic_spawn_timer,
                 "traffic_serial": self.traffic_serial,
+                "port_defence_cooldowns": dict(getattr(self, "port_defence_cooldowns", {})),
                 "camera_zoom": self.camera_zoom,
                 "random_state": json.loads(json.dumps(self.rng.getstate())),
+                "commander_records": getattr(self, "commander_records", {}),
+                "commander_fleets": getattr(self, "commander_fleets", {}),
             },
         }
         text = json.dumps(data, ensure_ascii=False, indent=2)
@@ -189,6 +192,26 @@ class SaveLoadMixin:
             escort.anchor_x, escort.anchor_y = escort.x, escort.y
         self.pirates = [PirateShip(**entry) for entry in data.get("pirate_ships", [])]
         self.traffic_ships = [TrafficShip(**entry) for entry in data.get("other_ships", [])]
+        self.commander_records = dict(world.get("commander_records", {}))
+        self.commander_fleets = dict(world.get("commander_fleets", {}))
+        # Migrate V19 saves: generate dossiers for any already-formed NPC fleets.
+        migrated_groups = {}
+        for npc in self.pirates + self.traffic_ships:
+            commander = getattr(npc, "commander_name", "")
+            if commander:
+                faction = "pirate" if isinstance(npc, PirateShip) else npc.role
+                self.ensure_commander_record(commander, faction)
+                fid = getattr(npc, "fleet_id", "")
+                if fid:
+                    migrated_groups.setdefault(fid, []).append(npc)
+        for fid, members in migrated_groups.items():
+            leader = min(members, key=lambda member: getattr(member, "formation_slot", 0))
+            faction = "pirate" if isinstance(leader, PirateShip) else leader.role
+            self.commander_fleet_state(fid, leader.commander_name, faction, len(members))
+            for npc in members:
+                npc.fleet_size = max(getattr(npc, "fleet_size", 1), len(members))
+        self.commander_ledger_open = False
+        self.commander_ledger_scroll = 0
 
         day_work = data.get("day_work", {})
         self.day_job_serial = max(1, int(day_work.get("serial", 1)))
@@ -202,6 +225,12 @@ class SaveLoadMixin:
         self.reinforcement_timer = max(1.0, float(world.get("reinforcement_timer", 30.0)))
         self.traffic_spawn_timer = max(1.0, float(world.get("traffic_spawn_timer", 20.0)))
         self.traffic_serial = max(1, int(world.get("traffic_serial", 1)))
+        saved_defence = world.get("port_defence_cooldowns", {})
+        self.port_defence_cooldowns = {
+            port.name: max(0.0, float(saved_defence.get(port.name, 0.25)))
+            for port in self.ports
+        }
+        self.port_defence_notice_timer = 0.0
         self.camera_zoom = max(0.55, min(2.4, float(world.get("camera_zoom", 1.0))))
         if "random_state" in world:
             def restore_tuple(value):
