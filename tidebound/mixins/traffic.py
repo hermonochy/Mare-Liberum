@@ -52,6 +52,16 @@ class TrafficMixin:
         choices = [port for port in self.ports if port.name != exclude]
         return self.rng.choice(choices) if choices else None
 
+    @staticmethod
+    def harbour_berth_position(port, slot):
+        axis_x, axis_y = port.x - port.shore_x, port.y - port.shore_y
+        length = max(1.0, math.hypot(axis_x, axis_y))
+        axis_x, axis_y = axis_x / length, axis_y / length
+        perp_x, perp_y = -axis_y, axis_x
+        offset = (int(slot) - 2) * 120.0
+        return port.x + axis_x * 26.0 + perp_x * offset, port.y + axis_y * 26.0 + perp_y * offset
+
+
     def spawn_traffic_ship(self):
         if len(self.traffic_ships) >= 18:
             return False
@@ -87,6 +97,17 @@ class TrafficMixin:
         x, y = position
         heading = math.degrees(math.atan2(destination.y - y, destination.x - x)) % 360.0
         name = self.rng.choice(profile["names"])
+        faction_weights = {
+            "naval patrol": [("British Crown", 48), ("Spanish Crown", 32), ("French Crown", 20)],
+            "merchant": [("Merchant League", 58), ("Independent", 20), ("British Crown", 8), ("Spanish Crown", 8), ("French Crown", 6)],
+            "fishing": [("Independent", 85), ("Merchant League", 15)],
+            "mail packet": [("British Crown", 30), ("Spanish Crown", 20), ("French Crown", 20), ("Merchant League", 20), ("Independent", 10)],
+            "whaler": [("Merchant League", 50), ("Independent", 50)],
+        }
+        faction_choices = faction_weights.get(role, [("Independent", 1)])
+        ship_faction = self.rng.choices([item[0] for item in faction_choices],
+                                        weights=[item[1] for item in faction_choices], k=1)[0]
+        attitude = self.relation_label(self.faction_standing(ship_faction))
         self.traffic_ships.append(
             TrafficShip(
                 name=f"{name} {self.traffic_serial}",
@@ -99,6 +120,9 @@ class TrafficMixin:
                 hull=profile["hull"],
                 max_hull=profile["hull"],
                 wander=self.rng.random() * math.tau,
+                faction=ship_faction,
+                player_attitude=attitude.lower(),
+                hostile_to_player=(attitude == "HOSTILE"),
             )
         )
         self.traffic_serial += 1
@@ -117,17 +141,20 @@ class TrafficMixin:
             unassigned = [s for s in self.traffic_ships if s.hull > 0 and s.role == role and not s.fleet_id]
             while len(unassigned) >= 2:
                 leader = unassigned.pop(0)
+                same_flag = [ship for ship in unassigned if getattr(ship, "faction", "") == getattr(leader, "faction", "")]
                 if self.rng.random() > (0.68 if role == "naval patrol" else 0.48):
                     continue
-                nearby = sorted(unassigned, key=lambda s: math.hypot(s.x-leader.x, s.y-leader.y))
+                nearby = sorted(same_flag, key=lambda s: math.hypot(s.x-leader.x, s.y-leader.y))
                 if not nearby or math.hypot(nearby[0].x-leader.x, nearby[0].y-leader.y) > 980:
                     continue
                 wing = [nearby[0]]
                 unassigned.remove(nearby[0])
-                if len(unassigned) and self.rng.random() < 0.38:
-                    extra = min(unassigned, key=lambda s: math.hypot(s.x-leader.x, s.y-leader.y))
-                    if math.hypot(extra.x-leader.x, extra.y-leader.y) < 1250:
-                        wing.append(extra); unassigned.remove(extra)
+                if self.rng.random() < 0.38:
+                    remaining_same_flag = [ship for ship in unassigned if getattr(ship, "faction", "") == getattr(leader, "faction", "")]
+                    if remaining_same_flag:
+                        extra = min(remaining_same_flag, key=lambda s: math.hypot(s.x-leader.x, s.y-leader.y))
+                        if math.hypot(extra.x-leader.x, extra.y-leader.y) < 1250:
+                            wing.append(extra); unassigned.remove(extra)
                 fid = f"{role.replace(' ','-')}-{leader.name.replace(' ','-')}"
                 commander = self.rng.choice(self.ADMIRAL_NAMES[role])
                 members = [leader] + wing
@@ -413,6 +440,10 @@ class TrafficMixin:
         for ship in self.traffic_ships:
             ship.combat_target_name = ""
             ship.under_attack = False
+            if ship.hostile_to_player and ship.hull > 0 and not ship.retreating:
+                ship.combat_target_name = "__player__"
+                ship.under_attack = True
+                continue
             if ship.hull <= 0 or ship.retreating or ship.role not in {"merchant", "naval patrol"}:
                 continue
             candidates = []
@@ -429,10 +460,25 @@ class TrafficMixin:
                 ship.under_attack = distance <= 500.0
 
     def _combat_target_for_traffic(self, ship):
+        if ship.combat_target_name == "__player__":
+            return self
         if not ship.combat_target_name:
             return None
         return next((pirate for pirate in self.pirates
                      if not pirate.dead and pirate.name == ship.combat_target_name), None)
+
+    def _battle_target_position(self, target):
+        if target is self:
+            return self.ship_x, self.ship_y
+        return target.x, target.y
+
+    def provoke_traffic_ship(self, ship, source="Your guns"):
+        """A friendly vessel struck by player-owned guns turns hostile with its squadron."""
+        was_hostile = bool(ship.hostile_to_player)
+        self.record_player_attack_on_npc(ship, source)
+        if not was_hostile:
+            self.add_journal(f"{source} struck {ship.name}. {ship.name} and any surviving ships in its fleet now regard your vessel as hostile.")
+            self.toast_message(f"{ship.name} turns hostile and brings its guns to bear!", 3.2)
 
     def _combat_target_for_pirate(self, pirate):
         if not pirate.npc_target_name:
@@ -451,8 +497,9 @@ class TrafficMixin:
         return min(choices, key=lambda course: abs(angle_difference(course, current_heading)))
 
     def fire_npc_broadside(self, attacker, target, owner, shot_count=3, speed=415.0):
-        dx = target.x - attacker.x
-        dy = target.y - attacker.y
+        target_x, target_y = self._battle_target_position(target)
+        dx = target_x - attacker.x
+        dy = target_y - attacker.y
         distance = math.hypot(dx, dy)
         if distance < 145.0 or distance > 720.0:
             return False
@@ -481,6 +528,12 @@ class TrafficMixin:
                 "pirate" if isinstance(attacker, PirateShip) else getattr(attacker, "role", ""),
                 getattr(attacker, "fleet_id", ""),
             ))
+        self.apply_cannon_recoil(attacker, math.cos(broadside), math.sin(broadside), 8.5)
+        self.spawn_cannon_smoke(attacker.x + math.cos(broadside) * 19,
+                                attacker.y + math.sin(broadside) * 19,
+                                math.cos(broadside), math.sin(broadside), amount=max(3, shot_count))
+        distance_to_player = math.hypot(attacker.x - self.ship_x, attacker.y - self.ship_y)
+        self.audio.play("cannon_fire", volume=max(0.03, 0.24 * (1.0 - distance_to_player / 3200.0)))
         return True
 
     def update_npc_battles(self, dt):
@@ -506,25 +559,29 @@ class TrafficMixin:
                     self.npc_battle_notice_timer = 7.0
 
         for ship in self.traffic_ships:
-            if ship.hull <= 0 or ship.retreating or ship.role not in {"merchant", "naval patrol"}:
+            if ship.hull <= 0 or ship.retreating:
+                continue
+            if ship.role not in {"merchant", "naval patrol"} and not ship.hostile_to_player:
                 continue
             target = self._combat_target_for_traffic(ship)
             if target is None:
                 continue
-            distance = math.hypot(target.x - ship.x, target.y - ship.y)
-            bearing = math.degrees(math.atan2(target.y - ship.y, target.x - ship.x))
+            target_x, target_y = self._battle_target_position(target)
+            distance = math.hypot(target_x - ship.x, target_y - ship.y)
+            bearing = math.degrees(math.atan2(target_y - ship.y, target_x - ship.x))
             desired = (bearing + 180.0) % 360.0 if ship.retreating else self._broadside_course(bearing, ship.heading, distance)
             ship.heading = (ship.heading + clamp(angle_difference(desired, ship.heading), -38.0 * dt, 38.0 * dt)) % 360.0
             ship.combat_cooldown = max(0.0, ship.combat_cooldown - dt)
-            shot_limit = 760.0 if ship.role == "naval patrol" else 620.0
+            shot_limit = 760.0 if ship.role == "naval patrol" else 650.0
             if distance <= shot_limit and ship.combat_cooldown <= 0.0:
-                shots = 4 if ship.role == "naval patrol" else 2
-                speed = 435.0 if ship.role == "naval patrol" else 365.0
-                owner = "npc_navy" if ship.role == "naval patrol" else "npc_merchant"
+                shots = 4 if ship.role == "naval patrol" else (3 if ship.hostile_to_player else 2)
+                speed = 435.0 if ship.role == "naval patrol" else 375.0
+                owner = "npc_traffic_hostile" if target is self else ("npc_navy" if ship.role == "naval patrol" else "npc_merchant")
                 if self.fire_npc_broadside(ship, target, owner, shot_count=shots, speed=speed):
-                    ship.combat_cooldown = (2.25 if ship.role == "naval patrol" else 3.4) + self.rng.uniform(0.0, 0.85)
+                    ship.combat_cooldown = (2.25 if ship.role == "naval patrol" else 3.0) + self.rng.uniform(0.0, 0.85)
                     if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) < 1350.0 and self.npc_battle_notice_timer <= 0.0:
-                        self.toast_message(f"{ship.name} opens fire on {target.name}.", 2.6)
+                        target_name = "your ship" if target is self else target.name
+                        self.toast_message(f"{ship.name} opens fire on {target_name}.", 2.6)
                         self.npc_battle_notice_timer = 7.0
 
     def update_traffic_ships(self, dt):
@@ -534,6 +591,13 @@ class TrafficMixin:
             self.traffic_spawn_timer = self.rng.uniform(22.0, 36.0)
 
         land_polygons = self.collision_land_polygons()
+        occupied_berths = {}
+        if self.docked_port:
+            occupied_berths.setdefault(self.docked_port, set()).add(2)
+        for ship in self.traffic_ships:
+            if ship.hull > 0 and getattr(ship, "port_dwell", 0.0) > 0.0 and getattr(ship, "berth_port", ""):
+                occupied_berths.setdefault(ship.berth_port, set()).add(int(getattr(ship, "berth_slot", -1)))
+
         for ship in list(self.traffic_ships):
             if ship.hull <= 0:
                 continue
@@ -543,15 +607,62 @@ class TrafficMixin:
                 if destination is None:
                     continue
                 ship.destination = destination.name
+
+            combat_target = None if ship.retreating else self._combat_target_for_traffic(ship)
+            # Merchantmen and patrols can spend a little time alongside. This
+            # creates a visible multi-ship anchorage rather than passing through
+            # every port without stopping. Combat immediately breaks the berth.
+            if getattr(ship, "port_dwell", 0.0) > 0.0 and getattr(ship, "berth_port", "") and combat_target is None and not ship.retreating:
+                berth = self.ports_by_name.get(ship.berth_port)
+                if berth is not None:
+                    ship.port_dwell = max(0.0, ship.port_dwell - dt)
+                    ship.x, ship.y = self.harbour_berth_position(berth, ship.berth_slot)
+                    ship.vx = ship.vy = 0.0
+                    ship.heading = berth.exit_heading
+                    if ship.port_dwell > 0.0:
+                        continue
+                ship.berth_port = ""
+                ship.berth_slot = -1
+                destination = self.choose_traffic_destination(ship.destination)
+                if destination is not None:
+                    ship.destination = destination.name
+            elif getattr(ship, "berth_port", "") and (combat_target is not None or ship.retreating):
+                occupied_berths.get(ship.berth_port, set()).discard(getattr(ship, "berth_slot", -1))
+                ship.berth_port = ""
+                ship.berth_slot = -1
+                ship.port_dwell = 0.0
+
             dx = destination.x - ship.x
             dy = destination.y - ship.y
             distance = math.hypot(dx, dy)
-            combat_target = None if ship.retreating else self._combat_target_for_traffic(ship)
+            if combat_target is None and not ship.retreating and distance < 205.0:
+                used = occupied_berths.setdefault(destination.name, set())
+                available = [slot for slot in (0, 1, 2, 3, 4) if slot not in used]
+                if available:
+                    slot = min(available, key=lambda value: abs(value - 2) + self.rng.random() * 0.2)
+                    used.add(slot)
+                    ship.berth_port = destination.name
+                    ship.berth_slot = slot
+                    ship.port_dwell = self.rng.uniform(17.0, 36.0)
+                    ship.x, ship.y = self.harbour_berth_position(destination, slot)
+                    ship.vx = ship.vy = 0.0
+                    ship.heading = destination.exit_heading
+                    continue
+                # All berths are occupied: choose another harbour rather than
+                # crowding vessels into the same water.
+                destination = self.choose_traffic_destination(ship.destination)
+                if destination is not None:
+                    ship.destination = destination.name
+                    dx = destination.x - ship.x
+                    dy = destination.y - ship.y
+                    distance = max(1.0, math.hypot(dx, dy))
+
             if ship.retreating:
                 desired = ship.heading
             elif combat_target is not None:
-                battle_dx = combat_target.x - ship.x
-                battle_dy = combat_target.y - ship.y
+                battle_target_x, battle_target_y = self._battle_target_position(combat_target)
+                battle_dx = battle_target_x - ship.x
+                battle_dy = battle_target_y - ship.y
                 battle_distance = math.hypot(battle_dx, battle_dy)
                 battle_bearing = math.degrees(math.atan2(battle_dy, battle_dx))
                 desired = self._broadside_course(battle_bearing, ship.heading, battle_distance)
@@ -621,7 +732,7 @@ class TrafficMixin:
                 bodies.append({
                     "entity": ship, "x_key": "x", "y_key": "y", "vx_key": "vx", "vy_key": "vy",
                     "radius": self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
-                    "mass": max(0.9, ship.max_hull / 6.5), "player": False, "static": False,
+                    "mass": max(0.9, ship.max_hull / 6.5), "player": False, "static": bool(getattr(ship, "port_dwell", 0.0) > 0.0),
                 })
         return bodies
 

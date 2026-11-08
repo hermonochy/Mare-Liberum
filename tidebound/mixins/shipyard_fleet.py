@@ -331,6 +331,11 @@ class ShipyardFleetMixin:
             vx = broadside[0] * 455 + escort.vx * 0.14
             vy = broadside[1] * 455 + escort.vy * 0.14
             self.projectiles.append(Cannonball(x, y, vx, vy, 1.4, "fleet"))
+        self.apply_cannon_recoil(escort, broadside[0], broadside[1], 8.0)
+        self.spawn_cannon_smoke(escort.x + broadside[0] * 18, escort.y + broadside[1] * 18,
+                                broadside[0], broadside[1], amount=max(3, gun_count))
+        distance_to_player = math.hypot(escort.x - self.ship_x, escort.y - self.ship_y)
+        self.audio.play("cannon_fire", volume=max(0.04, 0.25 * (1.0 - distance_to_player / 2700.0)))
         escort.cooldown = SHIP_CLASSES[escort.ship_type]["reload"] + 0.25
 
     def draw_shipyard(self):
@@ -344,47 +349,53 @@ class ShipyardFleetMixin:
         pygame.draw.rect(self.screen, (35, 22, 16), box.inflate(12, 12), border_radius=9)
         pygame.draw.rect(self.screen, (222, 203, 159), box, border_radius=7)
         pygame.draw.rect(self.screen, (142, 98, 60), box, 3, border_radius=7)
-        title = self.big_font.render("THE SHIPWRIGHT'S YARD", True, (77, 43, 25))
-        self.screen.blit(title, title.get_rect(midtop=(box.centerx, box.y + 15)))
-        sub = self.small_font.render(f"{self.docked_port}  |  Pieces of eight: {self.gold} g  |  Flagship: {self.player_ship_name}", True, (87, 60, 38))
-        self.screen.blit(sub, sub.get_rect(midtop=(box.centerx, box.y + 76)))
-        tab_y = box.y + 126
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box.inflate(-8, -8))
+        title = fit_text_surface(self.big_font, "THE SHIPWRIGHT'S YARD", (77, 43, 25), box.width - 50, 42)
+        self.screen.blit(title, title.get_rect(midtop=(box.centerx, box.y + 13)))
+        sub = fit_text_surface(self.small_font, f"{self.docked_port}  |  Pieces of eight: {self.gold} g  |  Flagship: {self.player_ship_name}", (87, 60, 38), box.width - 54, 25)
+        self.screen.blit(sub, sub.get_rect(midtop=(box.centerx, box.y + 67)))
+        tab_y = box.y + 111
         tab_width = (box.width - 42) // len(self.shipyard_tabs)
         for index, tab in enumerate(self.shipyard_tabs):
-            tab_rect = pygame.Rect(box.x + 21 + index * tab_width, tab_y, tab_width - 5, 48)
+            tab_rect = pygame.Rect(box.x + 21 + index * tab_width, tab_y, tab_width - 5, 44)
             selected = index == self.shipyard_tab
             pygame.draw.rect(self.screen, (130, 78, 43) if selected else (193, 171, 130), tab_rect, border_radius=4)
             color = (255, 231, 184) if selected else (75, 51, 34)
-            label = self.small_font.render(tab, True, color)
+            label = fit_text_surface(self.small_font, tab, color, tab_rect.width - 12, tab_rect.height - 8)
             self.screen.blit(label, label.get_rect(center=tab_rect.center))
         items = self.shipyard_items()
-        start_y = tab_y + 64
-        row_height = 88
+        start_y = tab_y + 56
+        available_rows_height = max(1, box.bottom - start_y - 54)
+        visible_rows = max(3, min(5, available_rows_height // 72))
+        row_height = min(88, available_rows_height // visible_rows)
         if self.ship_rename_mode:
-            prompt = self.title_font.render("Name your flagship", True, (77, 43, 25))
-            self.screen.blit(prompt, (box.x + 42, start_y + 30))
-            input_box = pygame.Rect(box.x + 40, start_y + 100, box.width - 80, 66)
+            prompt = fit_text_surface(self.title_font, "Name your flagship", (77, 43, 25), box.width - 84, 38)
+            self.screen.blit(prompt, (box.x + 42, start_y + 18))
+            input_box = pygame.Rect(box.x + 40, start_y + 82, box.width - 80, 58)
             pygame.draw.rect(self.screen, (246, 235, 210), input_box, border_radius=5)
             pygame.draw.rect(self.screen, (142, 98, 60), input_box, 2, border_radius=5)
-            text = self.font.render(self.ship_name_input + "▏", True, (54, 43, 30))
-            self.screen.blit(text, (input_box.x + 16, input_box.y + 12))
-            hint = self.small_font.render("Type a name, then press Enter. Esc cancels.", True, (87, 60, 38))
-            self.screen.blit(hint, (input_box.x, input_box.bottom + 24))
+            text = fit_text_surface(self.font, self.ship_name_input + "▏", (54, 43, 30), input_box.width - 30, input_box.height - 14)
+            self.screen.blit(text, (input_box.x + 15, input_box.y + (input_box.height - text.get_height()) // 2))
+            hint = fit_text_surface(self.small_font, "Type a name, then press Enter. Esc cancels.", (87, 60, 38), box.width - 84, 25)
+            self.screen.blit(hint, (input_box.x, input_box.bottom + 16))
         elif not items:
-            message = self.font.render("Nothing needs doing on this page, captain.", True, (77, 54, 36))
-            self.screen.blit(message, (box.x + 42, start_y + 36))
+            message = fit_text_surface(self.font, "Nothing needs doing on this page, captain.", (77, 54, 36), box.width - 84, 32)
+            self.screen.blit(message, (box.x + 42, start_y + 30))
         else:
-            visible_start = max(0, min(self.shipyard_selection - 4, len(items) - 5))
-            for visible_index, item in enumerate(items[visible_start:visible_start + 5]):
+            visible_start = max(0, min(self.shipyard_selection - visible_rows + 1, len(items) - visible_rows))
+            for visible_index, item in enumerate(items[visible_start:visible_start + visible_rows]):
                 index = visible_start + visible_index
                 row = pygame.Rect(box.x + 24, start_y + visible_index * row_height, box.width - 48, row_height - 7)
                 selected = index == self.shipyard_selection
                 pygame.draw.rect(self.screen, (196, 173, 132) if selected else (211, 195, 161), row, border_radius=5)
                 if selected:
                     pygame.draw.rect(self.screen, (117, 69, 38), row, 3, border_radius=5)
-                label = self.font.render(item["label"], True, (73, 43, 27))
-                self.screen.blit(label, (row.x + 15, row.y + 8))
+                label = fit_text_surface(self.font, item["label"], (73, 43, 27), row.width - 30, 25)
+                self.screen.blit(label, (row.x + 15, row.y + 6))
                 for line_index, line in enumerate(wrap_text(self.small_font, item["detail"], row.width - 30)[:2]):
-                    self.screen.blit(self.small_font.render(line, True, (94, 68, 43)), (row.x + 15, row.y + 43 + line_index * 25))
-        footer = self.small_font.render("Up / Down: choose   Enter: confirm   Left / Right: pages   B / Esc: leave the yard", True, (91, 62, 40))
-        self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 17)))
+                    fitted_line = fit_text_surface(self.small_font, line, (94, 68, 43), row.width - 30, 17)
+                    self.screen.blit(fitted_line, (row.x + 15, row.y + min(34, row.height - 39) + line_index * 18))
+        footer = fit_text_surface(self.small_font, "Up / Down: choose   Enter: confirm   Left / Right: pages   B / Esc: leave the yard", (91, 62, 40), box.width - 48, 22)
+        self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 12)))
+        self.screen.set_clip(previous_clip)

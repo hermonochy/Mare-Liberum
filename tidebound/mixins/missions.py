@@ -427,6 +427,7 @@ class MissionMixin:
         self.start_custom_conversation("A sailor at the quay", [TextNode(message)])
 
     def complete_mission(self, mission):
+        self.reward_mission_diplomacy(mission)
         self.mission_states[mission.mission_id] = "done"
         self.gold += mission.reward
         self.add_journal(f"Completed {mission.name}. Received {mission.reward} gold.")
@@ -459,7 +460,9 @@ class MissionMixin:
 
         self.start_conversation(mission, "visit", complete_after_visit)
 
-    def register_pirate_sunk(self, pirate):
+    def register_pirate_sunk(self, pirate, by_player=False):
+        if by_player:
+            self.record_player_sunk_pirate(pirate)
         self.gold += 65
         self.add_journal(f"Sank {pirate.name}. Salvaged 65 gold from the wreckage.")
         self.toast_message(f"{pirate.name} is going down! +65 gold", 3.6)
@@ -486,18 +489,36 @@ class MissionMixin:
                 self.add_journal(f"Battle objective complete. Return to {mission.destination} for the debrief and reward.")
 
     def dock(self, port):
+        if self.port_attitude(port) == "HOSTILE":
+            self.toast_message(f"The harbour guns of {port.name} refuse your entry. Press I near the harbour to seek safe conduct.", 5.0)
+            return False
+        # The central berth belongs to the player's flagship while docked.
+        # If a merchant has just arrived there, move it to the nearest free quay.
+        used = {int(getattr(ship, "berth_slot", -1)) for ship in self.traffic_ships
+                if getattr(ship, "berth_port", "") == port.name and getattr(ship, "port_dwell", 0.0) > 0.0}
+        for ship in self.traffic_ships:
+            if getattr(ship, "berth_port", "") == port.name and getattr(ship, "berth_slot", -1) == 2:
+                alternatives = [slot for slot in (0, 1, 3, 4) if slot not in used]
+                if alternatives:
+                    ship.berth_slot = min(alternatives, key=lambda slot: abs(slot - 2))
+                    ship.x, ship.y = self.harbour_berth_position(port, ship.berth_slot)
+                else:
+                    ship.berth_port = ""
+                    ship.berth_slot = -1
+                    ship.port_dwell = 0.0
+                break
         self.docked_port = port.name
         self.last_docked_port = port.name
         self.oars_deployed = False
         self.ship_heading = port.exit_heading
-        self.ship_x = port.x
-        self.ship_y = port.y
+        self.ship_x, self.ship_y = self.harbour_berth_position(port, 2)
         self.ship_vx = 0.0
         self.ship_vy = 0.0
         self.near_port = port
         self.toast_message(f"Made fast at {port.name}. Q: speak to the harbourmaster.", 4.0)
         self.trigger_port_visit(port)
         self.complete_day_job_at_port(port)
+        return True
 
     def undock(self):
         port = self.ports_by_name[self.docked_port]

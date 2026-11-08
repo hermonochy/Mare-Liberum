@@ -11,6 +11,7 @@ class Port:
     exit_heading: float
     description: str
     region: str = "Old Caribbean"
+    faction: str = "Independent"
 
 @dataclass
 class PirateShip:
@@ -36,6 +37,9 @@ class PirateShip:
     fleet_morale: float = 1.0
     retreating: bool = False
     fleet_size: int = 1
+    player_attitude: str = "hostile"
+    player_incident_recorded: bool = False
+    player_provoked: bool = False
 
 @dataclass
 class FleetShip:
@@ -77,6 +81,14 @@ class TrafficShip:
     fleet_morale: float = 1.0
     retreating: bool = False
     fleet_size: int = 1
+    hostile_to_player: bool = False
+    faction: str = ""
+    player_attitude: str = "neutral"
+    player_provoked: bool = False
+    player_incident_recorded: bool = False
+    berth_port: str = ""
+    berth_slot: int = -1
+    port_dwell: float = 0.0
 
 @dataclass
 class Cannonball:

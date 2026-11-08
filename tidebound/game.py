@@ -1,16 +1,18 @@
 from .common import *
+from .audio import AudioEngine
 from .mixins import (
     TreasureMixin, MissionMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
-    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin,
+    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin,
 )
 
 
 class Game(
     TreasureMixin, MissionMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
-    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin,
+    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin,
 ):
     def __init__(self):
         pygame.init()
+        self.audio = AudioEngine(PROJECT_ROOT / "assets" / "audio")
         pygame.display.set_caption("Mare Liberum")
         self.screen = pygame.display.set_mode((1280, 800), pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
@@ -68,6 +70,7 @@ class Game(
         self.cannon_battery_timers = {-1: [], 1: []}
         self.cannon_battery_rates = {-1: [], 1: []}
         self.projectiles = []
+        self.cannon_smoke = []
         self.journal = [
             "A battered sloop, a short purse, and a long stretch of blue water. Port Royal is your home for now.",
             "The harbourmaster may know who is hiring. Ask around before putting out to sea.",
@@ -115,9 +118,9 @@ class Game(
   (1670, 3255)],
  [(3250, 3500), (3380, 3415), (3540, 3460), (3640, 3600), (3570, 3760), (3410, 3810), (3270, 3710)]]
         self.ports = [
-            Port("Port Royal", 540, 825, 540, 682, 90.0, "A noisy free port of privateers, rum runners, fishwives, and crooked customs men.", "Old Caribbean"),
-            Port("Tortuga", 1610, 605, 1600, 487, 90.0, "A lawless harbour tucked beneath green hills. Every tavern has a different version of the truth.", "Old Caribbean"),
-            Port("Havana", 2245, 810, 2245, 938, -90.0, "A fortified Spanish harbour with high stone walls, merchant galleons, and watchful soldiers.", "Old Caribbean"),
+            Port("Port Royal", 540, 825, 540, 682, 90.0, "A noisy free port of privateers, rum runners, fishwives, and crooked customs men.", "Old Caribbean", "Independent"),
+            Port("Tortuga", 1610, 605, 1600, 487, 90.0, "A lawless harbour tucked beneath green hills. Every tavern has a different version of the truth.", "Old Caribbean", "Pirate Brotherhood"),
+            Port("Havana", 2245, 810, 2245, 938, -90.0, "A fortified Spanish harbour with high stone walls, merchant galleons, and watchful soldiers.", "Old Caribbean", "Spanish Crown"),
         ]
         self.add_regional_islands_and_ports()
         self.treasure_sites = [
@@ -156,6 +159,8 @@ class Game(
             ),
         ]
         self.add_scattered_cays()
+        self.add_faction_ports()
+        self.expand_world_layout(WORLD_SCALE)
         self.tree_positions = self.make_tree_positions()
         for site in self.treasure_sites:
             site.trees = self.make_tree_positions_for_polygon(site.polygon, 7)
@@ -167,6 +172,7 @@ class Game(
         }
         for port in self.ports:
             self.port_greetings.setdefault(port.name, f"The harbour office at {port.name} smells of tar, salt, and damp ledgers. A clerk looks up as you enter.")
+            self.port_greetings[port.name] += f" The harbour flies the colours of the {port.faction}."
         self.news_by_port = {
             "Port Royal": "A fisherman says black-sailed vessels have been seen beyond the eastern reefs. The customs men claim it is none of their concern.",
             "Tortuga": "The taverns whisper of Captain Vane, a ruthless privateer who has taken to flying the black flag. His ships are gathering in the cays.",
@@ -175,6 +181,11 @@ class Game(
         for port in self.ports:
             self.news_by_port.setdefault(port.name, f"Word from {port.region}: merchant captains report strange sails, missing cargoes, and unfamiliar agents asking after old charts.")
         self.missions = load_missions(MISSION_DIR)
+        for mission in self.missions:
+            if mission.battlefield_x is not None:
+                mission.battlefield_x *= WORLD_SCALE
+            if mission.battlefield_y is not None:
+                mission.battlefield_y *= WORLD_SCALE
         self.mission_states = {mission.mission_id: "available" for mission in self.missions}
         self.active_mission_id = None
         self.mission_kills = 0
@@ -186,7 +197,7 @@ class Game(
         self.mission_result_timer = 0.0
         self.initialise_day_jobs()
         self.pirates = [
-            PirateShip("The Drowned Crown", 2760, 1510, -130, side_choice=1, wander=4.1),
+            PirateShip("The Drowned Crown", 2760 * WORLD_SCALE, 1510 * WORLD_SCALE, -130, side_choice=1, wander=4.1),
         ]
         self.reinforcement_number = 1
         self.reinforcement_timer = self.pirate_reinforcement_interval()
@@ -199,6 +210,7 @@ class Game(
         self.commander_fleets = {}
         self.commander_ledger_open = False
         self.commander_ledger_scroll = 0
+        self.initialise_diplomacy()
         self.traffic_ships = []
         self.traffic_spawn_timer = 20.0
         self.traffic_serial = 1
@@ -211,6 +223,29 @@ class Game(
         self.save_dialog_open = False
         self.save_dialog_return_to_pause = False
         self.save_name_input = ""
+
+    def expand_world_layout(self, factor):
+        """Enlarge the whole chart coherently: islands, reefs, berths and passages."""
+        factor = float(factor)
+        self.land = [[(x * factor, y * factor) for x, y in polygon] for polygon in self.land]
+        for port in self.ports:
+            port.x *= factor
+            port.y *= factor
+            port.shore_x *= factor
+            port.shore_y *= factor
+        for site in self.treasure_sites:
+            site.polygon = [(x * factor, y * factor) for x, y in site.polygon]
+            site.chest_x *= factor
+            site.chest_y *= factor
+            site.bottle_x *= factor
+            site.bottle_y *= factor
+        self.ship_x *= factor
+        self.ship_y *= factor
+        self.camera_x *= factor
+        self.camera_y *= factor
+        if self.ports:
+            self.ship_x, self.ship_y = self.harbour_berth_position(self.ports[0], 2)
+            self.camera_x, self.camera_y = self.ship_x, self.ship_y
 
     def make_regional_island_polygon(self, cx, cy, index):
         shape_rng = random.Random(7319 + index * 977)
@@ -250,9 +285,37 @@ class Game(
             shore_x = westmost[0] + 6.0
             shore_y = westmost[1]
             berth_x = westmost[0] - 180.0
+            faction = REGIONAL_PORT_FACTIONS.get(name, "Independent")
             self.ports.append(
-                Port(name, berth_x, shore_y, shore_x, shore_y, 180.0, description, region)
+                Port(name, berth_x, shore_y, shore_x, shore_y, 180.0, description, region, faction)
             )
+
+    def add_faction_ports(self):
+        """Place extra faction strongholds on isolated islands without crowding existing harbours."""
+        for index, (name, anchor_x, anchor_y, region, description, faction) in enumerate(FACTION_PORT_DATA):
+            placement_rng = random.Random(9900 + index * 137)
+            accepted = None
+            for attempt in range(900):
+                cx = anchor_x + placement_rng.uniform(-650.0, 650.0)
+                cy = anchor_y + placement_rng.uniform(-500.0, 500.0)
+                if not (350.0 < cx < WORLD_WIDTH - 350.0 and 350.0 < cy < WORLD_HEIGHT - 350.0):
+                    continue
+                polygon = self.make_regional_island_polygon(cx, cy, 100 + index)
+                if any(point_in_polygon((cx, cy), existing) or nearest_polygon_edge(cx, cy, existing)[1] < 520.0 for existing in self.land):
+                    continue
+                if any(math.hypot(cx - port.x, cy - port.y) < 900.0 for port in self.ports):
+                    continue
+                if any(point_in_polygon((cx, cy), site.polygon) or nearest_polygon_edge(cx, cy, site.polygon)[1] < 420.0 for site in self.treasure_sites):
+                    continue
+                accepted = polygon
+                break
+            if accepted is None:
+                continue
+            self.land.append(accepted)
+            westmost = min(accepted, key=lambda point: point[0])
+            shore_x, shore_y = westmost[0] + 6.0, westmost[1]
+            berth_x = westmost[0] - 180.0
+            self.ports.append(Port(name, berth_x, shore_y, shore_x, shore_y, 180.0, description, region, faction))
 
     def add_scattered_cays(self):
         cay_rng = random.Random(86420)
@@ -325,5 +388,6 @@ class Game(
                 self.handle_event(event)
             self.update(dt)
             self.draw()
+        self.audio.close()
         pygame.quit()
         sys.exit()

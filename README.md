@@ -1,5 +1,5 @@
 # Mare Liberum
-### A Caribbean life under sail — Version 22
+### A Caribbean life under sail — Version 25
 
 Take command of a small sailing ship and make your name across a living Caribbean. Trade, explore, hunt for buried treasure, take work from harbourmasters, build a fleet, or become the captain that every admiral fears. The sea carries on whether you are watching it or not: merchants cross between ports, pirate squadrons hunt prizes, and naval commanders fight battles of their own.
 
@@ -33,17 +33,26 @@ Your adventure begins at Port Royal in a modest sloop. An old captain at the har
 
 You do not have to follow the main story every time you reach port. Speak with people, look over the local work, visit the shipyard, or simply cast off and see what lies beyond the next island.
 
+## Sound and atmosphere
+
+Mare Liberum includes an original soundscape: offshore wind and rolling waves, creaking timbers, flapping canvas, broadside cannon fire and impacts, harbour murmur, dockside work, and seabird calls. Important story encounters and campaign battles bring in a restrained, original nautical music cue. Sound starts automatically when the voyage begins; the game will still run if the computer has no available audio device.
+
+Cannon discharges now push the firing vessel back slightly, and a brief expanding powder-smoke cloud hangs beside the gunports after each shot. The recoil is subtle but visible in the ship's movement, especially during a full broadside.
+
 ## A world with its own affairs
 
-Explore a broad Caribbean chart of island regions, busy harbours, remote cays and open water. The chart extends beyond its island chains, so you can sail out into the blue rather than run into an invisible edge. Ports have their own character, local rumours and people to meet.
+Explore a broader Caribbean chart with six island regions, 33 ports, enlarged island chains, remote cays and longer open-water passages. Islands and sea lanes have been enlarged by roughly 28%, making crossings feel more like voyages. The ports are divided among the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and independent settlements. Each harbour displays its faction colours on the world map and its flag. The chart extends beyond its island chains, so you can sail out into the blue rather than run into an invisible edge. Ports have their own character, local rumours and people to meet. Their expanded quays have five alongside berths, and merchantmen or patrol ships may stop briefly in harbour instead of simply sailing through. Their flags and atlas markers show which power controls each harbour: the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood or independent communities.
+
+New faction strongholds include Black Flag Anchorage (Pirate Brotherhood), King's Sounding (British Crown), Puerto Escondido (Spanish Crown), La Compagnie (French Crown), St Anne's Exchange (Merchant League), and Free Sailors' Haven (Independent). Each has its own local atmosphere and appears in the chart under its faction colours.
 
 The world is active even when your ship is safely berthed:
 
 - Merchantmen, fishing boats, mail packets, whalers and naval patrols travel between ports.
 - Some ships sail alone; others gather into merchant convoys, naval squadrons or pirate bands.
 - NPC fleets can find enemies, coordinate attacks, exchange broadsides, lose ships and retreat without the player taking part.
-- Coastal batteries defend ports against nearby pirate vessels.
+- Coastal batteries defend ports against nearby pirate vessels. Pirate Brotherhood harbours do not automatically fire on ships flying the black flag unless your standing with the Brotherhood has turned hostile.
 - Named admirals, pirate captains and merchant commanders develop reputations through victories, losses and retreats. Open the **Admirals' & Captains' Ledger** with **N** to follow their careers.
+- The six factions remember your conduct. Harbours and NPC fleets can regard you as friendly, neutral or hostile, and named commanders can develop personal grudges of their own.
 
 ## Stories, rumours and people
 
@@ -74,7 +83,17 @@ There is more than one way to earn a living:
 
 Sailing uses wind, momentum and steering rather than instant movement. Set your sails with **W** and **S**, steer with **A** and **D**, and deploy oars with **O** when the wind is against you.
 
-Cannons fire in broadsides. Hold **Z** to fire the port battery or **X** to fire starboard. The first volley is together; after that, individual guns reload and fire on their own timing. Keep your distance, watch your heading and avoid letting an enemy sit on your unprotected side.
+Cannons fire in broadsides. Hold **Z** to fire the port battery or **X** to fire starboard. The first volley is together; after that, individual guns reload and fire on their own timing. Keep your distance, watch your heading and avoid letting an enemy sit on your unprotected side. Take care with your aim: a cannonball from your flagship or escort fleet that strikes a normally friendly vessel makes that ship—and its surviving squadron, if it has one—hostile to you. It will turn and fire back, and the vessel's faction will remember the attack. Repeated incidents can sour relations across that faction.
+
+## Factions and diplomacy
+
+Open the **Ledger of Flags & Treaties** with **I**. It shows your standing with the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and Independent settlements. Standing ranges from -100 to +100: at +30 or above a faction is **friendly**; from -29 to +29 it is **neutral**; at -30 or below it is **hostile**.
+
+Your actions matter. Completing work and story contracts improves relations with the people who commissioned or received the work. Sinking pirate vessels earns goodwill with several trading and naval powers, but makes the Pirate Brotherhood less forgiving. Firing on a merchantman, patrol ship or pirate vessel damages relations with its faction; sinking it makes matters worse. Named fleet commanders can also remember attacks on their own ships.
+
+Friendly ships will not treat you as an enemy. Neutral traffic generally leaves you alone, while hostile faction vessels may attack when encountered. Neutral and friendly pirate captains do not attack you unless you or your fleet have personally provoked them; a captain you personally attack remembers the insult, even before the whole Brotherhood turns hostile. Harbours belonging to a hostile faction refuse ordinary docking, and their batteries may warn you away if you approach too closely.
+
+Diplomacy offers ways to repair a damaged relationship. Sail close to a hostile harbour and open the diplomacy ledger; select its faction and press **P** to pay reparations for safe conduct (the amount reflects how badly relations have deteriorated). While docked at a faction's harbour, select that faction and press **G** to present a 150-gold gift, improving its standing by 8 points. Safe conduct restores the faction to neutral, but individual captains you personally wronged may still remember you.
 
 Ships collide and push one another apart. A damaged ship can be repaired at a shipyard.
 
@@ -111,6 +130,7 @@ Your wealth and growing fleet can attract attention. A well-equipped flagship, v
 | **Mouse drag** | Pan the camera |
 | **J** | Open the captain's journal |
 | **N** | Open the Admirals' & Captains' Ledger |
+| **I** | Open the faction relations and diplomacy ledger |
 | **F1** | Show help |
 | **F5** | Save your voyage |
 | **Esc / F9** | Open the pause menu |
@@ -121,9 +141,9 @@ In harbour conversations, read the available choices carefully. Some are introdu
 
 Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a save. You can keep multiple voyages, each with its own name.
 
-A save records the last port where you docked. You can save while out at sea; when you load that save, your flagship returns safely to that last berth, with your escorts nearby. Your story progress, ship, gold, fleet, treasure, jobs and discoveries are preserved.
+A save records the last port where you docked. You can save while out at sea; when you load that save, your flagship returns safely to that last berth, with your escorts nearby. Your story progress, ship, gold, fleet, treasure, jobs, discoveries, faction standings, harbour attitudes and commanders' personal opinions are preserved.
 
-The game also remembers your text-size preference automatically. From the main menu, open **Text & Display Settings** and choose **Smaller text** or **Larger text**. The setting is retained the next time you play.
+Text size is adjustable, and the interface now scales or fits labels to their panels so enlarged text stays within its allotted space. The game also remembers your text-size preference automatically. Existing V23 `.tide` saves can be loaded; they begin with the new diplomacy system's default faction standings. From the main menu, open **Text & Display Settings** and choose **Smaller text** or **Larger text**. The setting is retained the next time you play.
 
 ## A note for captains
 

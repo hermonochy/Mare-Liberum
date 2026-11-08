@@ -1,0 +1,42 @@
+mission "The Chartless Light"
+    name "The Chartless Light"
+    description "Silence a false lighthouse signal that has been drawing ships onto a reef at night."
+    source "Port Royal"
+    destination "Last Light"
+    reward 1720
+    speaker offer "Warden Sloane"
+    speaker visit "Warden Sloane"
+    speaker complete "Warden Sloane"
+    to offer
+        has "A Bargain with Black Jack: done"
+    objective kills 2
+    battlefield "False Beacon Reach" 16600 2600
+    enemy "Rook's Vanguard"
+    enemy "Rook's Second"
+    on offer
+        conversation
+            `Silence a false lighthouse signal that has been drawing ships onto a reef at night.`
+            `Warden Sloane studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Warden Sloane lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted The Chartless Light. Silence a false lighthouse signal that has been drawing ships onto a reef at night."
+    on visit
+        conversation
+            `Warden Sloane receives you at Last Light. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Warden Sloane thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed The Chartless Light. Received 1720 gold. Silence a false lighthouse signal that has been drawing ships onto a reef at night."

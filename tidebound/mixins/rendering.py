@@ -97,6 +97,22 @@ class RenderingMixin:
         pier_end = self.world_to_screen(port.x, port.y)
         pygame.draw.line(self.screen, (76, 49, 33), pier_start, pier_end, max(5, int(14 * self.camera_zoom)))
         pygame.draw.line(self.screen, (155, 112, 70), pier_start, pier_end, max(2, int(8 * self.camera_zoom)))
+        # A broad outer quay with five separate alongside berths. The short
+        # finger piers are wide enough for several vessels to lie alongside.
+        axis_x, axis_y = port.x - port.shore_x, port.y - port.shore_y
+        axis_len = max(1.0, math.hypot(axis_x, axis_y))
+        axis_x, axis_y = axis_x / axis_len, axis_y / axis_len
+        perp_x, perp_y = -axis_y, axis_x
+        for berth_slot in range(5):
+            offset = (berth_slot - 2) * 120.0
+            bx = port.x + perp_x * offset
+            by = port.y + perp_y * offset
+            berth_start = self.world_to_screen(bx - axis_x * 24.0, by - axis_y * 24.0)
+            berth_end = self.world_to_screen(bx + axis_x * 55.0, by + axis_y * 55.0)
+            pygame.draw.line(self.screen, (76, 49, 33), berth_start, berth_end, max(4, int(10 * self.camera_zoom)))
+            pygame.draw.line(self.screen, (155, 112, 70), berth_start, berth_end, max(2, int(5 * self.camera_zoom)))
+            cleat = self.world_to_screen(bx + axis_x * 55.0, by + axis_y * 55.0)
+            pygame.draw.circle(self.screen, (213, 187, 139), cleat, max(2, int(3 * self.camera_zoom)))
         if self.camera_zoom > 0.7:
             dx = port.x - port.shore_x
             dy = port.y - port.shore_y
@@ -142,11 +158,18 @@ class RenderingMixin:
         flag_x = sx + int(23 * self.camera_zoom)
         flag_y = sy - int(23 * self.camera_zoom)
         pygame.draw.line(self.screen, (54, 39, 30), (flag_x, flag_y), (flag_x, flag_y - int(22 * self.camera_zoom)), max(1, int(2 * self.camera_zoom)))
-        pygame.draw.polygon(self.screen, (35, 30, 28), [(flag_x, flag_y - int(22 * self.camera_zoom)), (flag_x + int(17 * self.camera_zoom), flag_y - int(17 * self.camera_zoom)), (flag_x, flag_y - int(12 * self.camera_zoom))])
+        faction_color = FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (35, 30, 28))
+        flag_points = [(flag_x, flag_y - int(22 * self.camera_zoom)),
+                       (flag_x + int(17 * self.camera_zoom), flag_y - int(17 * self.camera_zoom)),
+                       (flag_x, flag_y - int(12 * self.camera_zoom))]
+        pygame.draw.polygon(self.screen, faction_color, flag_points)
+        pygame.draw.lines(self.screen, (224, 203, 157), False, flag_points, max(1, int(self.camera_zoom)))
         label_x, label_y = self.world_to_screen(port.x, port.y + 30)
-        label = self.small_font.render(port.name, True, (255, 236, 190))
+        label = fit_text_surface(self.small_font, port.name, (255, 236, 190), 170, 28)
+        faction_dot = max(3, int(4 * self.camera_zoom))
         label_box = label.get_rect(center=(label_x, label_y))
         pygame.draw.rect(self.screen, (28, 45, 42), label_box.inflate(12, 6), border_radius=4)
+        pygame.draw.circle(self.screen, faction_color, (label_box.left - 3, label_box.centery), faction_dot)
         self.screen.blit(label, label_box)
 
     def create_ship_surface(self, player=True, allied=False, rowing=False, ship_type="Sloop", faction=""):
@@ -314,6 +337,18 @@ class RenderingMixin:
             fill = pygame.Rect(bar.x, bar.y, int(bar.width * max(0, hull) / max_hull), bar.height)
             pygame.draw.rect(self.screen, (70, 171, 126) if allied else (171, 52, 40), fill)
 
+    def draw_cannon_smoke(self):
+        for puff in self.cannon_smoke:
+            sx, sy = self.world_to_screen(puff["x"], puff["y"])
+            life_ratio = max(0.0, min(1.0, puff["life"] / max(0.01, puff["max_life"])))
+            radius = max(2, int(puff["radius"] * self.camera_zoom))
+            if sx < -radius * 2 or sy < -radius * 2 or sx > self.screen.get_width() + radius * 2 or sy > self.screen.get_height() + radius * 2:
+                continue
+            alpha = int(150 * life_ratio)
+            cloud = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(cloud, (190, 190, 181, alpha), (radius + 1, radius + 1), radius)
+            self.screen.blit(cloud, (sx - radius - 1, sy - radius - 1))
+
     def draw_cannonballs(self):
         for ball in self.projectiles:
             pos = self.world_to_screen(ball.x, ball.y)
@@ -362,6 +397,7 @@ class RenderingMixin:
                     pygame.draw.rect(self.screen, (37, 28, 24), label_rect.inflate(8, 4), border_radius=3)
                     self.screen.blit(label, label_rect)
         self.draw_ship(self.ship_x, self.ship_y, self.ship_heading, True, rowing=self.oars_deployed, ship_type=self.current_ship)
+        self.draw_cannon_smoke()
         self.draw_cannonballs()
 
     def draw_mission_waypoint(self):
@@ -377,7 +413,7 @@ class RenderingMixin:
             pygame.draw.line(self.screen, color, (sx - 13, sy), (sx + 13, sy), max(2, int(3 * self.camera_zoom)))
             pygame.draw.line(self.screen, color, (sx, sy - 13), (sx, sy + 13), max(2, int(3 * self.camera_zoom)))
             caption = "BATTLE WATERS" if target_kind == "battlefield" else "MISSION PORT"
-            label = self.tiny_font.render(f"{caption}: {target_name.upper()}", True, (255, 229, 176))
+            label = fit_text_surface(self.tiny_font, f"{caption}: {target_name.upper()}", (255, 229, 176), 270, 25)
             label_rect = label.get_rect(center=(sx, sy - max(31, int(38 * self.camera_zoom))))
             pygame.draw.rect(self.screen, (39, 29, 21), label_rect.inflate(10, 5), border_radius=3)
             self.screen.blit(label, label_rect)
@@ -388,11 +424,11 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (38, 25, 19), panel.inflate(6, 6), border_radius=7)
         pygame.draw.rect(self.screen, (120, 77, 43), panel, border_radius=6)
         pygame.draw.rect(self.screen, (221, 185, 122), panel.inflate(-6, -6), 2, border_radius=5)
-        title = self.title_font.render("TIDEBOUND", True, (247, 221, 170))
+        title = fit_text_surface(self.title_font, "MARE LIBERUM", (247, 221, 170), panel.width - 28, 48)
         self.screen.blit(title, (panel.x + 14, panel.y + 7))
-        gold_text = self.small_font.render(f"Pieces of eight: {self.gold} g", True, (255, 236, 193))
+        gold_text = fit_text_surface(self.small_font, f"Pieces of eight: {self.gold} g", (255, 236, 193), panel.width - 32, 31)
         self.screen.blit(gold_text, (panel.x + 16, panel.y + 63))
-        hull_text = self.small_font.render(f"Hull {int(100 * self.player_hull / max(1, self.player_max_hull))}%", True, (245, 224, 185))
+        hull_text = fit_text_surface(self.small_font, f"Hull {int(100 * self.player_hull / max(1, self.player_max_hull))}%", (245, 224, 185), 205, 31)
         self.screen.blit(hull_text, (panel.x + 16, panel.y + 112))
         bar = pygame.Rect(panel.x + 69, panel.y + 119, 150, 13)
         pygame.draw.rect(self.screen, (37, 31, 25), bar)
@@ -400,10 +436,11 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (159, 55, 42), fill)
         pygame.draw.rect(self.screen, (232, 202, 155), bar, 1)
         speed = math.hypot(self.ship_vx, self.ship_vy)
-        self.screen.blit(self.small_font.render(f"Way: {int(speed)} kn", True, (255, 236, 193)), (panel.x + 231, panel.y + 112))
-        ship_line = self.tiny_font.render(f"Flagship: {self.player_ship_name}", True, (255, 236, 193))
+        way_text = fit_text_surface(self.small_font, f"Way: {int(speed)} kn", (255, 236, 193), 220, 31)
+        self.screen.blit(way_text, (panel.x + 231, panel.y + 112))
+        ship_line = fit_text_surface(self.tiny_font, f"Flagship: {self.player_ship_name}", (255, 236, 193), panel.width - 32, 23)
         order_display = {"fight": "Fight", "hold_fire": "Hold fire", "gather": "Gather", "follow": "Follow"}.get(self.fleet_order, self.fleet_order.title())
-        fleet_line = self.tiny_font.render(f"{self.current_ship}  |  Escorts: {len(self.fleet)}  |  Orders: {order_display}", True, (255, 236, 193))
+        fleet_line = fit_text_surface(self.tiny_font, f"{self.current_ship}  |  Escorts: {len(self.fleet)}  |  Orders: {order_display}", (255, 236, 193), panel.width - 32, 23)
         self.screen.blit(ship_line, (panel.x + 16, panel.y + 147))
         self.screen.blit(fleet_line, (panel.x + 16, panel.y + 171))
         right_x = width - 285
@@ -411,10 +448,10 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (38, 25, 19), info.inflate(6, 6), border_radius=7)
         pygame.draw.rect(self.screen, (120, 77, 43), info, border_radius=6)
         pygame.draw.rect(self.screen, (221, 185, 122), info.inflate(-6, -6), 2, border_radius=5)
-        wind_text = self.small_font.render(f"Wind: {int(self.wind_angle)} deg", True, (255, 236, 193))
-        sails_text = self.small_font.render(f"Sails: {int(self.sail_setting * 100)}%", True, (255, 236, 193))
-        zoom_text = self.small_font.render(f"Chart zoom: {int(self.camera_zoom * 100)}%", True, (255, 236, 193))
-        oars_text = self.small_font.render(f"Oars: {'OUT' if self.oars_deployed else 'STOWED'}  (O)", True, (255, 236, 193))
+        wind_text = fit_text_surface(self.small_font, f"Wind: {int(self.wind_angle)} deg", (255, 236, 193), 175, 28)
+        sails_text = fit_text_surface(self.small_font, f"Sails: {int(self.sail_setting * 100)}%", (255, 236, 193), 175, 28)
+        zoom_text = fit_text_surface(self.small_font, f"Chart zoom: {int(self.camera_zoom * 100)}%", (255, 236, 193), 175, 28)
+        oars_text = fit_text_surface(self.small_font, f"Oars: {'OUT' if self.oars_deployed else 'STOWED'}  (O)", (255, 236, 193), 175, 28)
         self.screen.blit(wind_text, (info.x + 14, info.y + 12))
         self.screen.blit(sails_text, (info.x + 14, info.y + 45))
         self.screen.blit(zoom_text, (info.x + 14, info.y + 78))
@@ -432,9 +469,9 @@ class RenderingMixin:
             pygame.draw.rect(self.screen, (37, 25, 18), result_box.inflate(8, 8), border_radius=7)
             pygame.draw.rect(self.screen, (221, 190, 123), result_box, border_radius=6)
             pygame.draw.rect(self.screen, (126, 83, 43), result_box.inflate(-6, -6), 2, border_radius=5)
-            heading = self.font.render("VOYAGE COMPLETE", True, (255, 230, 173))
-            detail = self.small_font.render(f"{self.mission_result_title}  •  Reward: {self.mission_result_reward} gold", True, (255, 239, 207))
-            self.screen.blit(heading, heading.get_rect(midtop=(result_box.centerx, result_box.y + 8)))
+            heading = fit_text_surface(self.font, "VOYAGE COMPLETE", (255, 230, 173), result_box.width - 28, 32)
+            detail = fit_text_surface(self.small_font, f"{self.mission_result_title}  •  Reward: {self.mission_result_reward} gold", (255, 239, 207), result_box.width - 32, 25)
+            self.screen.blit(heading, heading.get_rect(midtop=(result_box.centerx, result_box.y + 7)))
             self.screen.blit(detail, detail.get_rect(midtop=(result_box.centerx, result_box.y + 49)))
         active = self.active_mission()
         if active:
@@ -443,10 +480,12 @@ class RenderingMixin:
             pygame.draw.rect(self.screen, (38, 25, 19), quest_box.inflate(5, 5), border_radius=6)
             pygame.draw.rect(self.screen, (120, 77, 43), quest_box, border_radius=6)
             pygame.draw.rect(self.screen, (221, 185, 122), quest_box.inflate(-5, -5), 1, border_radius=5)
-            self.screen.blit(self.small_font.render(active.name.upper(), True, (250, 222, 168)), (quest_box.x + 14, quest_box.y + 8))
-            objective_lines = wrap_text(self.tiny_font, objective, quest_box.width - 26)
+            quest_title = fit_text_surface(self.small_font, active.name.upper(), (250, 222, 168), quest_box.width - 28, 24)
+            self.screen.blit(quest_title, (quest_box.x + 14, quest_box.y + 7))
+            objective_lines = wrap_text(self.tiny_font, objective, quest_box.width - 28)
             for line_index, line in enumerate(objective_lines[:2]):
-                self.screen.blit(self.tiny_font.render(line, True, (240, 239, 212)), (quest_box.x + 14, quest_box.y + 42 + line_index * 22))
+                fitted_line = fit_text_surface(self.tiny_font, line, (240, 239, 212), quest_box.width - 28, 18)
+                self.screen.blit(fitted_line, (quest_box.x + 14, quest_box.y + 39 + line_index * 20))
         day_job_lines = self.day_job_hud_texts()
         if day_job_lines:
             row_count = min(3, len(day_job_lines))
@@ -458,16 +497,23 @@ class RenderingMixin:
             pygame.draw.rect(self.screen, (38, 31, 20), day_box.inflate(5, 5), border_radius=6)
             pygame.draw.rect(self.screen, (126, 96, 50), day_box, border_radius=6)
             pygame.draw.rect(self.screen, (229, 197, 125), day_box.inflate(-5, -5), 1, border_radius=5)
-            self.screen.blit(self.small_font.render(f"DAY WORK  |  {len(self.active_day_jobs)} ACTIVE", True, (250, 222, 168)), (day_box.x + 14, day_box.y + 7))
+            day_title = fit_text_surface(self.small_font, f"DAY WORK  |  {len(self.active_day_jobs)} ACTIVE", (250, 222, 168), day_box.width - 28, 24)
+            self.screen.blit(day_title, (day_box.x + 14, day_box.y + 7))
             for line_index, line in enumerate(day_job_lines[:3]):
-                self.screen.blit(self.tiny_font.render(line, True, (240, 239, 212)), (day_box.x + 14, day_box.y + 37 + line_index * 24))
+                fitted_line = fit_text_surface(self.tiny_font, line, (240, 239, 212), day_box.width - 28, 20)
+                self.screen.blit(fitted_line, (day_box.x + 14, day_box.y + 35 + line_index * 24))
         if self.near_port and not self.docked_port:
-            prompt = self.small_font.render(f"E  Come alongside {self.near_port.name}", True, (255, 239, 198))
+            faction_name = getattr(self.near_port, "faction", "Independent")
+            prompt = fit_text_surface(self.small_font, f"E  Come alongside {self.near_port.name} · {faction_name}", (255, 239, 198), width - 54, 34)
             box = prompt.get_rect(center=(width // 2, height - 35)).inflate(25, 13)
             pygame.draw.rect(self.screen, (36, 29, 21), box, border_radius=5)
             self.screen.blit(prompt, prompt.get_rect(center=box.center))
         elif self.docked_port:
-            prompt = self.small_font.render(f"{self.docked_port}  |  E: cast off   Q: harbourmaster   B: shipyard", True, (255, 239, 198))
+            port_record = self.ports_by_name.get(self.docked_port)
+            faction_name = getattr(port_record, "faction", "Independent")
+            standing = self.faction_attitude(faction_name)
+            prompt_text = f"{self.docked_port} · {faction_name} ({standing})  |  E: cast off   Q: harbourmaster   B: shipyard   I: diplomacy"
+            prompt = fit_text_surface(self.small_font, prompt_text, (255, 239, 198), width - 54, 34)
             box = prompt.get_rect(center=(width // 2, height - 35)).inflate(25, 13)
             pygame.draw.rect(self.screen, (36, 29, 21), box, border_radius=5)
             self.screen.blit(prompt, prompt.get_rect(center=box.center))
@@ -487,8 +533,9 @@ class RenderingMixin:
             elif site and not site.map_found:
                 prompt_text = f"{site.island_name}: an uncharted beach — find a treasure map"
             if prompt_text:
-                prompt = self.small_font.render(prompt_text, True, (255, 239, 198))
+                prompt = fit_text_surface(self.small_font, prompt_text, (255, 239, 198), width - 58, 30)
                 box = prompt.get_rect(center=(width // 2, height - 78)).inflate(28, 14)
+                box.clamp_ip(self.screen.get_rect())
                 pygame.draw.rect(self.screen, (36, 29, 21), box, border_radius=5)
                 pygame.draw.rect(self.screen, (157, 116, 71), box, 2, border_radius=5)
                 self.screen.blit(prompt, prompt.get_rect(center=box.center))
@@ -520,7 +567,7 @@ class RenderingMixin:
             px = inner.x + int((port.x - left) * sx)
             py = inner.y + int((port.y - top) * sy)
             if inner.collidepoint(px, py):
-                pygame.draw.circle(self.screen, (243, 210, 139), (px, py), 3)
+                pygame.draw.circle(self.screen, FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (243, 210, 139)), (px, py), 3)
         for pirate in self.pirates:
             if not pirate.dead:
                 px = inner.x + int((pirate.x - left) * sx)
@@ -585,7 +632,7 @@ class RenderingMixin:
                     pygame.draw.circle(self.screen, (255, 151, 101), (rescue_px, rescue_py), 4)
         pygame.draw.circle(self.screen, (255, 250, 222), inner.center, 4)
         self.screen.set_clip(previous_clip)
-        title = self.tiny_font.render("LOCAL WATERS  •  M: FULL CHART", True, (246, 222, 174))
+        title = fit_text_surface(self.tiny_font, "LOCAL WATERS  •  M: FULL CHART", (246, 222, 174), rect.width - 16, 18)
         self.screen.blit(title, (rect.x + 8, rect.y + 5))
 
     def draw_world_map(self):
@@ -597,7 +644,7 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (42, 31, 22), box.inflate(12, 12), border_radius=8)
         pygame.draw.rect(self.screen, (222, 190, 135), box, border_radius=6)
         pygame.draw.rect(self.screen, (116, 79, 48), box.inflate(-8, -8), 2, border_radius=5)
-        title = self.big_font.render("THE CARIBBEAN & OUTER SEAS", True, (248, 224, 180))
+        title = fit_text_surface(self.big_font, "THE CARIBBEAN & OUTER SEAS", (248, 224, 180), box.width - 60, 54)
         self.screen.blit(title, title.get_rect(midtop=(box.centerx, box.y + 10)))
 
         content_top = box.y + 76
@@ -627,11 +674,12 @@ class RenderingMixin:
                 pygame.draw.polygon(self.screen, (102, 143, 85), points)
 
         regions = [
-            ("OLD CARIBBEAN", "Old Caribbean", (1450, 1850)),
+            ("OLD CARIBBEAN", "Old Caribbean", (1450 * WORLD_SCALE, 1850 * WORLD_SCALE)),
             ("WINDWARD REACH", "Windward Reach", None),
             ("LEEWARD EXPANSE", "Leeward Expanse", None),
             ("SPANISH MAIN", "Spanish Main", None),
             ("OUTER ANTILLES", "Outer Antilles", None),
+            ("THE FAR SHOALS", "The Far Shoals", None),
         ]
         for label_text, region_name, fallback in regions:
             regional_ports = [port for port in self.ports if port.region == region_name]
@@ -649,14 +697,15 @@ class RenderingMixin:
             }
             offset_x, offset_y = label_offsets.get(region_name, (0, 0))
             pos = (chart.x + int((world_x + offset_x) * sx), chart.y + int((world_y + offset_y) * sy))
-            label = self.map_heading_font.render(label_text, True, (239, 224, 179))
+            label = fit_text_surface(self.map_heading_font, label_text, (239, 224, 179), 180, 26)
             self.screen.blit(label, label.get_rect(center=pos))
 
         for index, port in enumerate(self.ports, start=1):
             px = chart.x + int(port.x * sx)
             py = chart.y + int(port.y * sy)
-            pygame.draw.circle(self.screen, (255, 222, 152), (px, py), 3)
-            number = self.map_font.render(f"{index:02d}", True, (255, 245, 215))
+            faction_colour = FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (255, 222, 152))
+            pygame.draw.circle(self.screen, faction_colour, (px, py), 4)
+            number = fit_text_surface(self.map_font, f"{index:02d}", (255, 245, 215), 24, 20)
             self.screen.blit(number, (px + 4, py - 9))
 
         ship_point = (chart.x + int(self.ship_x * sx), chart.y + int(self.ship_y * sy))
@@ -673,31 +722,50 @@ class RenderingMixin:
 
         pygame.draw.rect(self.screen, (37, 49, 43), legend, border_radius=4)
         pygame.draw.rect(self.screen, (154, 119, 76), legend, 1, border_radius=4)
-        legend_title = self.map_heading_font.render("HARBOURS & REGIONS", True, (248, 224, 180))
+        legend_title = fit_text_surface(self.map_heading_font, "HARBOURS • FACTIONS • REGIONS", (248, 224, 180), legend.width - 24, 23)
         self.screen.blit(legend_title, (legend.x + 12, legend.y + 7))
-        y = legend.y + 34
-        region_order = ["Old Caribbean", "Windward Reach", "Leeward Expanse", "Spanish Main", "Outer Antilles"]
+        region_order = ["Old Caribbean", "Windward Reach", "Leeward Expanse", "Spanish Main", "Outer Antilles", "The Far Shoals"]
+        grouped = [(region_name, [(index, port) for index, port in enumerate(self.ports, start=1) if port.region == region_name])
+                   for region_name in region_order]
+        grouped = [(name, ports) for name, ports in grouped if ports]
+        # Divide the list into two compact columns so every harbour remains visible
+        # at the largest text setting without drawing beyond the parchment panel.
+        columns = [[], []]
+        heights = [0, 0]
+        for region_name, ports_in_region in grouped:
+            target_col = 0 if heights[0] <= heights[1] else 1
+            columns[target_col].append((region_name, ports_in_region))
+            heights[target_col] += 1 + len(ports_in_region)
         active = self.active_mission()
         target_port = active.destination if active and self.mission_returning else (active.source if active else None)
-        for region_name in region_order:
-            heading = self.map_heading_font.render(region_name.upper(), True, (238, 205, 145))
-            self.screen.blit(heading, (legend.x + 12, y))
-            y += 21
-            for index, port in enumerate(self.ports, start=1):
-                if port.region != region_name:
-                    continue
-                label = f"{index:02d}  {port.name}"
-                if port.name == target_port:
-                    label = "› " + label
-                entry = self.map_font.render(label, True, (246, 236, 210))
-                self.screen.blit(entry, (legend.x + 18, y))
-                y += 18
-            y += 5
+        col_gap = 8
+        col_width = (legend.width - 30 - col_gap) // 2
+        content_top_y = legend.y + 36
+        content_height = legend.height - 48
+        for col_index, sections in enumerate(columns):
+            x = legend.x + 12 + col_index * (col_width + col_gap)
+            total_rows = sum(1 + len(items) for _, items in sections)
+            row_step = min(18, max(12, content_height // max(1, total_rows)))
+            y = content_top_y
+            for region_name, ports_in_region in sections:
+                heading_surf = fit_text_surface(self.map_heading_font, region_name.upper(), (238, 205, 145), col_width, row_step)
+                self.screen.blit(heading_surf, (x, y))
+                y += row_step
+                for index, port in ports_in_region:
+                    label = f"{index:02d}  {port.name}"
+                    if port.name == target_port:
+                        label = "› " + label
+                    pygame.draw.circle(self.screen, FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (246, 236, 210)),
+                                       (x + 4, y + max(3, row_step // 2)), max(2, min(4, row_step // 3)))
+                    entry = fit_text_surface(self.map_font, label, (246, 236, 210), col_width - 12, row_step)
+                    self.screen.blit(entry, (x + 12, y))
+                    y += row_step
 
         player_status = "YOUR SHIP: ON CHART" if chart.collidepoint(ship_point) else "YOUR SHIP: BEYOND THE CHART"
-        status = self.map_font.render(player_status, True, (255, 227, 172))
+        status = fit_text_surface(self.map_font, player_status, (255, 227, 172), chart.width - 16, 20)
         self.screen.blit(status, (chart.x + 8, chart.bottom + 8))
-        footer = self.map_font.render("M / Esc: close  •  Five regions  •  23 ports  •  Scattered cays  •  Open ocean beyond the chart", True, (248, 226, 188))
+        footer_text = f"M / Esc: close  •  {len(self.ports)} ports  •  Faction colours mark each harbour  •  Open ocean beyond the chart"
+        footer = fit_text_surface(self.map_font, footer_text, (248, 226, 188), box.width - 40, 22)
         self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 12)))
 
     def draw_help(self):
@@ -705,7 +773,8 @@ class RenderingMixin:
         box = pygame.Rect(width - 470, height - 630, 450, 610)
         pygame.draw.rect(self.screen, (35, 26, 21), box, border_radius=6)
         pygame.draw.rect(self.screen, (146, 104, 64), box, 2, border_radius=6)
-        self.screen.blit(self.small_font.render("CAPTAIN'S ORDERS", True, (248, 221, 172)), (box.x + 14, box.y + 10))
+        heading = fit_text_surface(self.small_font, "CAPTAIN'S ORDERS", (248, 221, 172), box.width - 28, 27)
+        self.screen.blit(heading, (box.x + 14, box.y + 10))
         lines = [
             "W / S   Trim or reef sails",
             "O       Ship / stow the oars",
@@ -727,20 +796,25 @@ class RenderingMixin:
             "C       Centre on your ship",
             "J       Captain's log",
             "N       Admirals' & captains' ledger",
+            "I       Faction relations & diplomacy",
             "F5      Save a named voyage",
             "Esc/F9  Pause, save or load",
             "F1      Show / hide these orders",
         ]
+        help_row = min(24, max(18, (box.height - 70) // len(lines)))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
         for index, line in enumerate(lines):
-            rendered = self.tiny_font.render(line, True, (235, 222, 194))
-            self.screen.blit(rendered, (box.x + 14, box.y + 48 + index * 25))
+            rendered = fit_text_surface(self.tiny_font, line, (235, 222, 194), box.width - 28, help_row - 1)
+            self.screen.blit(rendered, (box.x + 14, box.y + 48 + index * help_row))
+        self.screen.set_clip(previous_clip)
 
     def draw_toast(self):
         if self.toast_time <= 0:
             return
         width = self.screen.get_width()
-        text = self.small_font.render(self.toast, True, (252, 235, 200))
-        box = text.get_rect(center=(width // 2, 25)).inflate(30, 15)
+        text = fit_text_surface(self.small_font, self.toast, (252, 235, 200), width - 52, 38)
+        box = text.get_rect(center=(width // 2, 25)).inflate(24, 12)
         pygame.draw.rect(self.screen, (42, 27, 20), box, border_radius=6)
         pygame.draw.rect(self.screen, (157, 116, 71), box, 2, border_radius=6)
         self.screen.blit(text, text.get_rect(center=box.center))
@@ -756,27 +830,31 @@ class RenderingMixin:
         parchment = box.inflate(-8, -8)
         pygame.draw.rect(self.screen, (224, 207, 163), parchment, border_radius=5)
         pygame.draw.rect(self.screen, (155, 118, 73), parchment, 2, border_radius=5)
-        heading = self.title_font.render(self.dialogue_speaker.upper(), True, (83, 48, 31))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
+        heading = fit_text_surface(self.title_font, self.dialogue_speaker.upper(), (83, 48, 31), box.width - 48, 44)
         self.screen.blit(heading, (box.x + 24, box.y + 12))
         pygame.draw.line(self.screen, (156, 119, 77), (box.x + 22, box.y + 61), (box.right - 22, box.y + 61), 2)
         current = self.conversation.current
         if isinstance(current, TextNode):
+            line_step = max(22, self.font.get_linesize() + 4)
             lines = wrap_text(self.font, current.text, box.width - 64)
-            line_step = 38
-            max_lines = max(1, (box.height - 112) // line_step)
+            content_height = max(40, box.height - 142)
+            max_lines = max(1, content_height // line_step)
             for index, line in enumerate(lines[:max_lines]):
-                rendered = self.font.render(line, True, (56, 43, 31))
+                rendered = fit_text_surface(self.font, line, (56, 43, 31), box.width - 64, line_step - 2)
                 self.screen.blit(rendered, (box.x + 30, box.y + 78 + index * line_step))
-            prompt = self.small_font.render("Enter / Space: continue", True, (104, 74, 48))
-            self.screen.blit(prompt, (box.right - prompt.get_width() - 28, box.bottom - 38))
+            prompt = fit_text_surface(self.small_font, "Enter / Space: continue", (104, 74, 48), box.width - 60, 26)
+            self.screen.blit(prompt, prompt.get_rect(bottomright=(box.right - 28, box.bottom - 15)))
         elif isinstance(current, ChoiceNode):
-            self.screen.blit(self.font.render("What do you say?", True, (56, 43, 31)), (box.x + 30, box.y + 72))
+            choice_prompt = fit_text_surface(self.font, "What do you say?", (56, 43, 31), box.width - 64, 33)
+            self.screen.blit(choice_prompt, (box.x + 30, box.y + 72))
             start_y = box.y + 116
             available_height = max(120, box.bottom - 46 - start_y)
             row_height = min(66, max(36, available_height // max(1, len(current.options))))
             option_font = self.small_font if row_height >= 52 else self.tiny_font
-            line_step = 25 if option_font is self.small_font else 21
-            max_lines = max(1, min(2, row_height // line_step))
+            line_step = max(18, option_font.get_linesize() + 2)
+            max_lines = max(1, min(2, (row_height - 8) // line_step))
             for index, option in enumerate(current.options):
                 selected = index == self.conversation.selected
                 text = ("▶  " if selected else "   ") + option.text
@@ -787,9 +865,11 @@ class RenderingMixin:
                     highlight = pygame.Rect(box.x + 22, row_y - 4, box.width - 44, row_height - 5)
                     pygame.draw.rect(self.screen, (210, 188, 143), highlight, border_radius=4)
                 for line_index, line in enumerate(lines[:max_lines]):
-                    self.screen.blit(option_font.render(line, True, color), (box.x + 34, row_y + line_index * line_step))
-            prompt = self.small_font.render("Up / Down to choose   Enter to speak", True, (104, 74, 48))
-            self.screen.blit(prompt, (box.right - prompt.get_width() - 28, box.bottom - 38))
+                    rendered_option = fit_text_surface(option_font, line, color, box.width - 90, line_step - 2)
+                    self.screen.blit(rendered_option, (box.x + 34, row_y + line_index * line_step))
+            prompt = fit_text_surface(self.small_font, "Up / Down to choose   Enter to speak", (104, 74, 48), box.width - 60, 26)
+            self.screen.blit(prompt, prompt.get_rect(bottomright=(box.right - 28, box.bottom - 15)))
+        self.screen.set_clip(previous_clip)
 
     def draw_treasure_chart(self):
         width, height = self.screen.get_size()
@@ -802,7 +882,9 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (45, 27, 18), box.inflate(10, 10), border_radius=8)
         pygame.draw.rect(self.screen, (225, 207, 163), box, border_radius=5)
         pygame.draw.rect(self.screen, (144, 105, 66), box, 3, border_radius=5)
-        title = self.big_font.render("BOTTLES, CHARTS & BURIED GOLD", True, (75, 44, 27))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
+        title = fit_text_surface(self.big_font, "BOTTLES, CHARTS & BURIED GOLD", (75, 44, 27), box.width - 60, 52)
         title_rect = title.get_rect(midtop=(box.centerx, box.y + 18))
         self.screen.blit(title, title_rect)
         y = box.y + 92
@@ -810,7 +892,8 @@ class RenderingMixin:
         if not found_sites:
             message = "No treasure charts yet. Keep a sharp lookout while sailing: green-glass bottles bob on the open water. Sail close and press R to recover one."
             for index, line in enumerate(wrap_text(self.font, message, box.width - 90)):
-                self.screen.blit(self.font.render(line, True, (73, 47, 31)), (box.x + 40, y + index * 39))
+                line_surface = fit_text_surface(self.font, line, (73, 47, 31), box.width - 90, max(22, self.font.get_linesize() + 2))
+                self.screen.blit(line_surface, (box.x + 40, y + index * max(22, self.font.get_linesize() + 3)))
             y += 190
         else:
             for site in found_sites:
@@ -819,24 +902,28 @@ class RenderingMixin:
                 card = pygame.Rect(box.x + 24, y, box.width - 48, 165)
                 pygame.draw.rect(self.screen, (211, 192, 151), card, border_radius=5)
                 pygame.draw.rect(self.screen, (159, 123, 80), card, 2, border_radius=5)
-                name = self.font.render(site.map_title, True, (76, 43, 27))
+                name = fit_text_surface(self.font, site.map_title, (76, 43, 27), card.width - 220, 32)
                 self.screen.blit(name, (card.x + 16, card.y + 10))
                 status = "CHEST RECOVERED" if site.dug else ("ISLAND CHARTED" if site.revealed else "ISLAND STILL HIDDEN")
-                status_surf = self.tiny_font.render(status, True, (111, 74, 43))
+                status_surf = fit_text_surface(self.tiny_font, status, (111, 74, 43), 190, 24)
                 self.screen.blit(status_surf, (card.right - status_surf.get_width() - 14, card.y + 16))
                 clue_lines = wrap_text(self.tiny_font, f"{site.island_name}: {site.clue}", card.width - 36)
-                for line_index, line in enumerate(clue_lines[:3]):
-                    self.screen.blit(self.tiny_font.render(line, True, (67, 52, 37)), (card.x + 16, card.y + 48 + line_index * 22))
+                small_step = max(20, self.tiny_font.get_linesize() + 1)
+                for line_index, line in enumerate(clue_lines[:2]):
+                    line_surface = fit_text_surface(self.tiny_font, line, (67, 52, 37), card.width - 36, small_step - 2)
+                    self.screen.blit(line_surface, (card.x + 16, card.y + 48 + line_index * small_step))
                 riddle_lines = wrap_text(self.tiny_font, f"Beach riddle: {site.riddle}", card.width - 36)
                 for line_index, line in enumerate(riddle_lines[:2]):
-                    self.screen.blit(self.tiny_font.render(line, True, (92, 66, 43)), (card.x + 16, card.y + 113 + line_index * 22))
+                    line_surface = fit_text_surface(self.tiny_font, line, (92, 66, 43), card.width - 36, small_step - 2)
+                    self.screen.blit(line_surface, (card.x + 16, card.y + 92 + line_index * small_step))
                 y += 176
         if self.relics:
-            relic_text = self.small_font.render("Keepsakes: " + ", ".join(self.relics), True, (82, 53, 32))
+            relic_text = fit_text_surface(self.small_font, "Keepsakes: " + ", ".join(self.relics), (82, 53, 32), box.width - 68, 30)
             self.screen.blit(relic_text, (box.x + 34, min(y + 4, box.bottom - 74)))
-        footer = self.small_font.render("Sail near a drifting bottle and press R. Find its cay, approach the marked beach, then press R to answer the riddle. T / Esc: close", True, (104, 74, 48))
+        footer = fit_text_surface(self.small_font, "Sail near a drifting bottle and press R. Find its cay, approach the marked beach, then press R to answer the riddle. T / Esc: close", (104, 74, 48), box.width - 54, 30)
         footer_rect = footer.get_rect(midbottom=(box.centerx, box.bottom - 16))
         self.screen.blit(footer, footer_rect)
+        self.screen.set_clip(previous_clip)
 
     def draw_journal(self):
         width, height = self.screen.get_size()
@@ -847,29 +934,38 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (45, 27, 18), box.inflate(10, 10), border_radius=8)
         pygame.draw.rect(self.screen, (225, 207, 163), box, border_radius=5)
         pygame.draw.rect(self.screen, (144, 105, 66), box, 3, border_radius=5)
-        title = self.big_font.render("THE CAPTAIN'S LOG", True, (75, 44, 27))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
+        title = fit_text_surface(self.big_font, "THE CAPTAIN'S LOG", (75, 44, 27), box.width - 56, 54)
         self.screen.blit(title, (box.x + 28, box.y + 20))
         y = box.y + 82
         active = self.active_mission()
         day_jobs = self.active_day_jobs
         if active:
             objective = self.mission_guidance_text(active)
-            self.screen.blit(self.font.render(f"Current voyage: {active.name}", True, (73, 47, 31)), (box.x + 30, y))
+            voyage_line = fit_text_surface(self.font, f"Current voyage: {active.name}", (73, 47, 31), box.width - 60, 34)
+            self.screen.blit(voyage_line, (box.x + 30, y))
             objective_lines = wrap_text(self.small_font, objective, box.width - 60)
+            objective_step = max(22, self.small_font.get_linesize() + 2)
             for line_index, line in enumerate(objective_lines[:2]):
-                self.screen.blit(self.small_font.render(line, True, (97, 66, 42)), (box.x + 30, y + 36 + line_index * 29))
+                line_surface = fit_text_surface(self.small_font, line, (97, 66, 42), box.width - 60, objective_step - 2)
+                self.screen.blit(line_surface, (box.x + 30, y + 36 + line_index * objective_step))
             y += 88 if len(objective_lines) > 1 else 78
         else:
-            self.screen.blit(self.font.render("No story voyage under contract.", True, (73, 47, 31)), (box.x + 30, y))
+            empty_voyage = fit_text_surface(self.font, "No story voyage under contract.", (73, 47, 31), box.width - 60, 34)
+            self.screen.blit(empty_voyage, (box.x + 30, y))
             y += 43
         if day_jobs:
-            self.screen.blit(self.font.render(f"Active day work: {len(day_jobs)} job(s)", True, (73, 47, 31)), (box.x + 30, y))
+            day_heading = fit_text_surface(self.font, f"Active day work: {len(day_jobs)} job(s)", (73, 47, 31), box.width - 60, 34)
+            self.screen.blit(day_heading, (box.x + 30, y))
             y += 38
             for job in day_jobs[:4]:
                 lines = wrap_text(self.small_font, f"• {job.title}: {self.day_job_objective(job)}", box.width - 66)
+                line_step = max(22, self.small_font.get_linesize() + 2)
                 for line in lines[:2]:
-                    self.screen.blit(self.small_font.render(line, True, (97, 66, 42)), (box.x + 38, y))
-                    y += 27
+                    line_surface = fit_text_surface(self.small_font, line, (97, 66, 42), box.width - 76, line_step - 2)
+                    self.screen.blit(line_surface, (box.x + 38, y))
+                    y += line_step
                 y += 3
             y += 8
         pygame.draw.line(self.screen, (160, 125, 80), (box.x + 25, y), (box.right - 25, y), 1)
@@ -879,11 +975,14 @@ class RenderingMixin:
             for line in lines:
                 if y > box.bottom - 42:
                     break
-                self.screen.blit(self.small_font.render(line, True, (70, 55, 39)), (box.x + 32, y))
-                y += 31
+                line_step = max(22, self.small_font.get_linesize() + 2)
+                line_surface = fit_text_surface(self.small_font, line, (70, 55, 39), box.width - 64, line_step - 2)
+                self.screen.blit(line_surface, (box.x + 32, y))
+                y += line_step
             y += 9
-        close = self.small_font.render("J / Esc: close the log", True, (104, 74, 48))
-        self.screen.blit(close, (box.right - close.get_width() - 25, box.bottom - 38))
+        close = fit_text_surface(self.small_font, "J / Esc: close the log", (104, 74, 48), box.width - 50, 27)
+        self.screen.blit(close, close.get_rect(bottomright=(box.right - 25, box.bottom - 13)))
+        self.screen.set_clip(previous_clip)
 
     def draw_commander_ledger(self):
         width, height = self.screen.get_size()
@@ -894,15 +993,17 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (45, 27, 18), box.inflate(10, 10), border_radius=8)
         pygame.draw.rect(self.screen, (225, 207, 163), box, border_radius=5)
         pygame.draw.rect(self.screen, (144, 105, 66), box, 3, border_radius=5)
-        title = self.title_font.render("THE ADMIRALS' & CAPTAINS' LEDGER", True, (75, 44, 27))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
+        title = fit_text_surface(self.title_font, "THE ADMIRALS' & CAPTAINS' LEDGER", (75, 44, 27), box.width - 48, 42)
         self.screen.blit(title, (box.x + 24, box.y + 16))
-        subtitle = self.small_font.render("Reputation measures standing; notoriety measures how widely a name is feared or known.", True, (97, 66, 42))
+        subtitle = fit_text_surface(self.small_font, "Reputation measures standing; notoriety measures how widely a name is feared or known.", (97, 66, 42), box.width - 52, 29)
         self.screen.blit(subtitle, (box.x + 26, box.y + 76))
         records = sorted(getattr(self, "commander_records", {}).values(),
                          key=lambda record: (int(record.get("notoriety", 0)) + int(record.get("reputation", 50)),
                                              int(record.get("victories", 0))), reverse=True)
         if not records:
-            message = self.font.render("No commanders have yet made a name for themselves.", True, (73, 47, 31))
+            message = fit_text_surface(self.font, "No commanders have yet made a name for themselves.", (73, 47, 31), box.width - 60, 34)
             self.screen.blit(message, (box.x + 30, box.y + 150))
         else:
             visible = 7
@@ -915,20 +1016,70 @@ class RenderingMixin:
                 name = record.get("commander", "Unknown Commander")
                 faction = self.commander_faction_label(record.get("faction", "Unknown"))
                 rank = self.commander_rank(record)
-                label = self.font.render(f"{name}  —  {rank}", True, (68, 43, 27))
+                label = fit_text_surface(self.font, f"{name}  —  {rank}", (68, 43, 27), row.width - 24, 26)
                 self.screen.blit(label, (row.x + 12, row.y + 5))
+                personal = int(getattr(self, "commander_relations", {}).get(name, 0))
                 stats = (f"{faction}  |  Reputation {int(record.get('reputation', 50))}/100"
-                         f"  |  Notoriety {int(record.get('notoriety', 0))}")
-                detail = self.map_font.render(stats, True, (92, 66, 43))
+                         f"  |  Notoriety {int(record.get('notoriety', 0))}"
+                         f"  |  Your standing with them {personal:+d} ({self.relation_label(personal).lower()})")
+                detail = fit_text_surface(self.map_font, stats, (92, 66, 43), row.width - 26, 21)
                 self.screen.blit(detail, (row.x + 13, row.y + 31))
                 history = (f"Victories {int(record.get('victories', 0))}  |  Ships sunk/lost "
                            f"{int(record.get('ships_sunk', 0))}/{int(record.get('ships_lost', 0))}"
                            f"  |  Retreats {int(record.get('retreats', 0))}")
-                history_surf = self.map_font.render(history, True, (92, 66, 43))
+                history_surf = fit_text_surface(self.map_font, history, (92, 66, 43), row.width - 26, 15)
                 self.screen.blit(history_surf, (row.x + 13, row.y + 47))
         footer_text = f"Showing {min(7, len(records))} of {len(records)} commanders   •   Up/Down: scroll   •   N / Esc: close"
-        footer = self.small_font.render(footer_text, True, (104, 74, 48))
+        footer = fit_text_surface(self.small_font, footer_text, (104, 74, 48), box.width - 40, 26)
         self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 13)))
+        self.screen.set_clip(previous_clip)
+
+    def draw_diplomacy_ledger(self):
+        width, height = self.screen.get_size()
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        overlay.fill((7, 15, 17, 205))
+        self.screen.blit(overlay, (0, 0))
+        box = pygame.Rect(max(22, width // 2 - 440), max(22, height // 2 - 300), min(880, width - 44), min(600, height - 44))
+        pygame.draw.rect(self.screen, (43, 27, 19), box.inflate(10, 10), border_radius=8)
+        pygame.draw.rect(self.screen, (226, 208, 166), box, border_radius=6)
+        pygame.draw.rect(self.screen, (145, 104, 66), box, 3, border_radius=6)
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
+        title = fit_text_surface(self.big_font, "THE LEDGER OF FLAGS & TREATIES", (76, 46, 29), box.width - 48, 48)
+        self.screen.blit(title, (box.x + 24, box.y + 18))
+        subtitle = fit_text_surface(self.small_font, "Factions remember your deeds. Their ports and captains respond to your standing.", (96, 68, 44), box.width - 52, 27)
+        self.screen.blit(subtitle, (box.x + 26, box.y + 76))
+        factions = list(self.FACTION_NAMES)
+        row_top = box.y + 116
+        for index, faction in enumerate(factions):
+            row = pygame.Rect(box.x + 22, row_top + index * 51, box.width - 44, 45)
+            selected = index == self.diplomacy_selection
+            pygame.draw.rect(self.screen, (192, 173, 137) if selected else (216, 199, 162), row, border_radius=4)
+            if selected:
+                pygame.draw.rect(self.screen, (104, 62, 34), row, 3, border_radius=4)
+            colour = FACTION_COLOURS.get(faction, (89, 89, 89))
+            pygame.draw.rect(self.screen, colour, pygame.Rect(row.x + 10, row.y + 9, 8, 27), border_radius=2)
+            score = self.faction_standing(faction)
+            state = self.relation_label(score)
+            left = fit_text_surface(self.font, faction, (67, 44, 29), 270, 30)
+            self.screen.blit(left, (row.x + 28, row.y + 7))
+            right = fit_text_surface(self.small_font, f"{state}   ·   Standing {score:+d}", (72, 54, 37), 250, 28)
+            self.screen.blit(right, right.get_rect(midright=(row.right - 14, row.centery)))
+            port_count = sum(1 for port in self.ports if port.faction == faction)
+            ports = fit_text_surface(self.tiny_font, f"{port_count} harbour(s)", (105, 78, 51), 110, 22)
+            self.screen.blit(ports, ports.get_rect(midright=(row.right - 280, row.centery)))
+        selected_faction = factions[self.diplomacy_selection]
+        selected_score = self.faction_standing(selected_faction)
+        detail = fit_text_surface(self.small_font,
+            f"{selected_faction}: {self.relation_label(selected_score)}. Friendly ≥ +30; hostile ≤ -30.",
+            (81, 57, 37), box.width - 50, 26)
+        self.screen.blit(detail, (box.x + 26, box.bottom - 115))
+        hint = fit_text_surface(self.tiny_font, self.diplomatic_action_hint(), (101, 73, 46), box.width - 50, 23)
+        self.screen.blit(hint, (box.x + 26, box.bottom - 83))
+        footer = fit_text_surface(self.small_font, "Up/Down: select faction   ·   P: request safe conduct   ·   G: give harbour gift   ·   I / Esc: close",
+                                  (104, 74, 48), box.width - 42, 25)
+        self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 13)))
+        self.screen.set_clip(previous_clip)
 
     def draw_job_board(self):
         if not self.job_board_open or not self.docked_port:
@@ -941,10 +1092,12 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (42, 26, 18), panel.inflate(12, 12), border_radius=10)
         pygame.draw.rect(self.screen, (226, 210, 170), panel, border_radius=7)
         pygame.draw.rect(self.screen, (143, 98, 57), panel, 3, border_radius=7)
-        title = self.big_font.render("HARBOUR JOB BOARD", True, (76, 45, 28))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(panel)
+        title = fit_text_surface(self.big_font, "HARBOUR JOB BOARD", (76, 45, 28), panel.width - 56, 48)
         self.screen.blit(title, (panel.x + 28, panel.y + 17))
         subtitle_text = f"{self.docked_port}  •  Pick one or several; accepted jobs remain active together."
-        subtitle = self.small_font.render(subtitle_text, True, (103, 74, 47))
+        subtitle = fit_text_surface(self.small_font, subtitle_text, (103, 74, 47), panel.width - 60, 28)
         self.screen.blit(subtitle, (panel.x + 30, panel.y + 76))
         offers = self.day_job_offers.get(self.docked_port, [])
         for index, row in enumerate(rows[:len(offers)]):
@@ -963,32 +1116,34 @@ class RenderingMixin:
                 pygame.draw.line(self.screen, (47, 112, 70), (checkbox.x + 5, checkbox.y + 14), (checkbox.x + 11, checkbox.y + 21), 4)
                 pygame.draw.line(self.screen, (47, 112, 70), (checkbox.x + 11, checkbox.y + 21), (checkbox.x + 23, checkbox.y + 5), 4)
             kind_labels = {"cargo": "CARGO", "letter": "LETTER", "passenger": "PASSAGE", "rescue": "RESCUE"}
-            job_title = self.small_font.render(f"{job.title}  ·  {kind_labels.get(job.kind, 'WORK')}", True, (68, 43, 28))
+            job_title = fit_text_surface(self.small_font, f"{job.title}  ·  {kind_labels.get(job.kind, 'WORK')}", (68, 43, 28), max(80, row.width - 240), 29)
             self.screen.blit(job_title, (row.x + 54, row.y + 3))
-            reward = self.small_font.render(f"{job.reward} gold", True, (76, 105, 64))
+            reward = fit_text_surface(self.small_font, f"{job.reward} gold", (76, 105, 64), 150, 27)
             self.screen.blit(reward, reward.get_rect(topright=(row.right - 16, row.y + 3)))
-            detail = self.tiny_font.render(f"To {job.destination}", True, (99, 69, 43))
+            detail = fit_text_surface(self.tiny_font, f"To {job.destination}", (99, 69, 43), 190, 24)
             self.screen.blit(detail, (row.x + 55, row.y + 36))
             summary = job.payload if job.kind != "rescue" else "Recover the crew from a drifting longboat."
             summary_lines = wrap_text(self.tiny_font, summary, row.width - 380)
             for line_index, line in enumerate(summary_lines[:1]):
-                self.screen.blit(self.tiny_font.render(line, True, (105, 81, 54)), (row.x + 260, row.y + 36))
+                summary_surface = fit_text_surface(self.tiny_font, line, (105, 81, 54), max(80, row.width - 390), 24)
+                self.screen.blit(summary_surface, (row.x + 260, row.y + 36))
         if not offers:
-            empty = self.font.render("No work is posted at this harbour just now.", True, (76, 48, 30))
+            empty = fit_text_surface(self.font, "No work is posted at this harbour just now.", (76, 48, 30), panel.width - 60, 34)
             self.screen.blit(empty, empty.get_rect(center=(panel.centerx, panel.centery)))
         active_count = len(self.active_day_jobs)
-        active_text = self.small_font.render(f"Already aboard: {active_count} active job(s).  Selected: {len(self.job_board_selected_ids)}", True, (96, 68, 43))
+        active_text = fit_text_surface(self.small_font, f"Already aboard: {active_count} active job(s).  Selected: {len(self.job_board_selected_ids)}", (96, 68, 43), panel.width - 60, 28)
         self.screen.blit(active_text, (panel.x + 30, panel.bottom - 113))
         pygame.draw.rect(self.screen, (115, 78, 47), close_rect, border_radius=5)
         pygame.draw.rect(self.screen, (226, 206, 165), close_rect, 2, border_radius=5)
-        close_text = self.small_font.render("Leave board", True, (255, 239, 211))
+        close_text = fit_text_surface(self.small_font, "Leave board", (255, 239, 211), close_rect.width - 12, close_rect.height - 8)
         self.screen.blit(close_text, close_text.get_rect(center=close_rect.center))
         pygame.draw.rect(self.screen, (55, 103, 68), accept_rect, border_radius=5)
         pygame.draw.rect(self.screen, (226, 206, 165), accept_rect, 2, border_radius=5)
-        accept_text = self.small_font.render(f"Accept selected ({len(self.job_board_selected_ids)})", True, (255, 243, 215))
+        accept_text = fit_text_surface(self.small_font, f"Accept selected ({len(self.job_board_selected_ids)})", (255, 243, 215), accept_rect.width - 12, accept_rect.height - 8)
         self.screen.blit(accept_text, accept_text.get_rect(center=accept_rect.center))
-        footer = self.tiny_font.render("Up / Down move  •  Space select  •  Enter accept  •  Click rows to select  •  Esc close", True, (103, 74, 47))
+        footer = fit_text_surface(self.tiny_font, "Up / Down move  •  Space select  •  Enter accept  •  Click rows to select  •  Esc close", (103, 74, 47), panel.width - 40, 24)
         self.screen.blit(footer, footer.get_rect(midbottom=(panel.centerx, panel.bottom - 12)))
+        self.screen.set_clip(previous_clip)
 
     def draw(self):
         self.draw_world()
@@ -1022,6 +1177,8 @@ class RenderingMixin:
             self.draw_journal()
         if getattr(self, "commander_ledger_open", False):
             self.draw_commander_ledger()
+        if getattr(self, "diplomacy_open", False):
+            self.draw_diplomacy_ledger()
         if self.treasure_chart_open:
             self.draw_treasure_chart()
         if self.shipyard_open:

@@ -8,8 +8,9 @@ from .camera import CameraMixin
 from .rendering import RenderingMixin
 from .traffic import TrafficMixin
 from .save_load import SaveLoadMixin
+from .diplomacy import DiplomacyMixin
 
 __all__ = [
     "TreasureMixin", "MissionMixin", "DayJobsMixin", "ShipyardFleetMixin", "ControlsMixin",
-    "VesselsMixin", "CameraMixin", "RenderingMixin", "TrafficMixin", "SaveLoadMixin",
+    "VesselsMixin", "CameraMixin", "RenderingMixin", "TrafficMixin", "SaveLoadMixin", "DiplomacyMixin",
 ]

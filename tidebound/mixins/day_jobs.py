@@ -269,8 +269,8 @@ class DayJobsMixin:
                 pygame.draw.line(self.screen, (225, 235, 226), (center[0], center[1] + 4), (center[0], center[1] - 19), max(2, int(2 * self.camera_zoom)))
                 pygame.draw.polygon(self.screen, (173, 57, 42), [center, (center[0] + 15, center[1] - 15), (center[0], center[1] - 12)])
                 if self.camera_zoom > 0.55:
-                    label = self.tiny_font.render(f"RESCUE: {job.destination.upper()}", True, (255, 235, 191))
-                    rect = label.get_rect(center=(center[0], center[1] - 34))
+                    label = fit_text_surface(self.tiny_font, f"RESCUE: {job.destination.upper()}", (255, 235, 191), 260, 20)
+                    rect = label.get_rect(center=(center[0], center[1] - 34)).clamp(self.screen.get_rect())
                     pygame.draw.rect(self.screen, (40, 30, 22), rect.inflate(10, 5), border_radius=3)
                     self.screen.blit(label, rect)
             elif job.stage == "deliver":
@@ -290,6 +290,7 @@ class DayJobsMixin:
         for job in completed:
             self.completed_day_jobs += 1
             self.add_journal(f"Completed day work: {job.title}. Earned {job.reward} gold at {port.name}.")
+            self.reward_day_job_diplomacy(port)
         if len(completed) == 1:
             self.toast_message(f"DAY JOB COMPLETE: {completed[0].title}. +{total_reward} gold", 4.8)
         else:

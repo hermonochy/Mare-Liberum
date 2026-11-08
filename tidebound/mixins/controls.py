@@ -7,6 +7,9 @@ class ControlsMixin:
         if self.menu_mode or self.save_dialog_open:
             self.handle_menu_key(key)
             return
+        if getattr(self, "diplomacy_open", False):
+            self.handle_diplomacy_key(key)
+            return
         if self.job_board_open:
             offers = self.day_job_offers.get(self.docked_port, [])
             if key in (pygame.K_ESCAPE, pygame.K_q):
@@ -99,6 +102,8 @@ class ControlsMixin:
         elif key == pygame.K_n:
             self.commander_ledger_open = True
             self.commander_ledger_scroll = 0
+        elif key == pygame.K_i:
+            self.open_diplomacy_ledger()
         elif key == pygame.K_t:
             self.treasure_chart_open = True
         elif key == pygame.K_r:

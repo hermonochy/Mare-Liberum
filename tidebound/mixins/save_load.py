@@ -9,7 +9,7 @@ from ..common import *
 
 class SaveLoadMixin:
     SAVE_FORMAT = "TIDEBOUND_VOYAGE"
-    SAVE_VERSION = 3
+    SAVE_VERSION = 6
 
     def settings_path(self):
         return Path(__file__).resolve().parents[2] / "mare_liberum_settings.json"
@@ -148,6 +148,11 @@ class SaveLoadMixin:
                 "random_state": json.loads(json.dumps(self.rng.getstate())),
                 "commander_records": getattr(self, "commander_records", {}),
                 "commander_fleets": getattr(self, "commander_fleets", {}),
+                "diplomacy": {
+                    "faction_relations": dict(getattr(self, "faction_relations", {})),
+                    "port_standings": dict(getattr(self, "port_standings", {})),
+                    "commander_relations": dict(getattr(self, "commander_relations", {})),
+                },
             },
         }
         text = json.dumps(data, ensure_ascii=False, indent=2)
@@ -172,10 +177,29 @@ class SaveLoadMixin:
         if port is None:
             raise ValueError(f"The saved harbour '{berth.get('port', 'unknown')}' is not present in this game version.")
 
+        # V25 enlarged the chart layout. Migrate saved NPC coordinates and
+        # world-space job targets from older charts while the player is safely
+        # returned to the same named harbour below.
+        save_version = int(data.get("version", 0))
+        if save_version < 6:
+            for collection_name in ("pirate_ships", "other_ships"):
+                for entry in data.get(collection_name, []):
+                    for coordinate in ("x", "y", "vx", "vy"):
+                        if entry.get(coordinate) is not None:
+                            entry[coordinate] = float(entry[coordinate]) * WORLD_SCALE
+            day_work_migration = data.get("day_work", {})
+            job_groups = [day_work_migration.get("active_jobs", [])]
+            job_groups.extend(day_work_migration.get("port_boards", {}).values())
+            for group in job_groups:
+                for entry in group:
+                    for coordinate in ("target_x", "target_y"):
+                        if entry.get(coordinate) is not None:
+                            entry[coordinate] = float(entry[coordinate]) * WORLD_SCALE
+
         self.last_docked_port = port.name
         self.docked_port = port.name
         self.near_port = port
-        self.ship_x, self.ship_y = float(port.x), float(port.y)
+        self.ship_x, self.ship_y = self.harbour_berth_position(port, 2)
         self.ship_heading = float(port.exit_heading)
         self.ship_vx = self.ship_vy = 0.0
         self.gold = max(0, int(captain.get("gold", 0)))
@@ -233,6 +257,22 @@ class SaveLoadMixin:
         self.traffic_ships = [TrafficShip(**entry) for entry in data.get("other_ships", [])]
         self.commander_records = dict(world.get("commander_records", {}))
         self.commander_fleets = dict(world.get("commander_fleets", {}))
+        saved_diplomacy = world.get("diplomacy", {})
+        default_relations = {
+            "British Crown": 5, "Spanish Crown": 0, "French Crown": 0,
+            "Merchant League": 8, "Pirate Brotherhood": -5, "Independent": 12,
+        }
+        default_relations.update(saved_diplomacy.get("faction_relations", {}))
+        self.faction_relations = {
+            faction: self.clamp_relation(default_relations.get(faction, 0))
+            for faction in self.FACTION_NAMES
+        }
+        self.commander_relations = {
+            str(name): self.clamp_relation(value)
+            for name, value in saved_diplomacy.get("commander_relations", {}).items()
+        }
+        self.port_standings = dict(saved_diplomacy.get("port_standings", {}))
+        self.refresh_port_standings()
         # Migrate V19 saves: generate dossiers for any already-formed NPC fleets.
         migrated_groups = {}
         for npc in self.pirates + self.traffic_ships:
@@ -251,6 +291,7 @@ class SaveLoadMixin:
                 npc.fleet_size = max(getattr(npc, "fleet_size", 1), len(members))
         self.commander_ledger_open = False
         self.commander_ledger_scroll = 0
+        self.diplomacy_open = False
 
         day_work = data.get("day_work", {})
         self.day_job_serial = max(1, int(day_work.get("serial", 1)))
@@ -277,8 +318,10 @@ class SaveLoadMixin:
                     return tuple(restore_tuple(item) for item in value)
                 return value
             self.rng.setstate(restore_tuple(world["random_state"]))
+        self.refresh_npc_attitudes()
 
         self.projectiles = []
+        self.cannon_smoke = []
         self.cannon_held = {-1: False, 1: False}
         self.cannon_first_volley_fired = {-1: False, 1: False}
         self.cannon_battery_timers = {-1: [], 1: []}
@@ -536,9 +579,11 @@ class SaveLoadMixin:
         pygame.draw.rect(self.screen, (35, 24, 18), panel.inflate(12, 12), border_radius=12)
         pygame.draw.rect(self.screen, (111, 72, 41), panel, border_radius=9)
         pygame.draw.rect(self.screen, (229, 199, 145), panel.inflate(-8, -8), 2, border_radius=7)
-        title = self.big_font.render(title_text, True, (248, 220, 169))
-        self.screen.blit(title, title.get_rect(center=(panel.centerx, panel.y + 58)))
-        sub = self.small_font.render(subtitle, True, (234, 215, 182))
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(panel)
+        title = fit_text_surface(self.big_font, title_text, (248, 220, 169), panel.width - 70, 58)
+        self.screen.blit(title, title.get_rect(center=(panel.centerx, panel.y + 57)))
+        sub = fit_text_surface(self.small_font, subtitle, (234, 215, 182), panel.width - 70, 34)
         self.screen.blit(sub, sub.get_rect(center=(panel.centerx, panel.y + 112)))
         row_height = 48
         visible_count = max(1, min(len(options), (panel.height - 200) // 56))
@@ -555,7 +600,8 @@ class SaveLoadMixin:
             else:
                 pygame.draw.rect(self.screen, (69, 48, 33), rect, border_radius=5)
                 color = (246, 227, 190)
-            label = self.small_font.render(str(options[index])[:78], True, color)
+            label = fit_text_surface(self.small_font, str(options[index]), color, rect.width - 32, rect.height - 8)
             self.screen.blit(label, label.get_rect(midleft=(rect.x + 16, rect.centery)))
-        foot = self.tiny_font.render(footer, True, (225, 205, 169))
-        self.screen.blit(foot, foot.get_rect(center=(panel.centerx, panel.bottom - 32)))
+        foot = fit_text_surface(self.tiny_font, footer, (225, 205, 169), panel.width - 60, 25)
+        self.screen.blit(foot, foot.get_rect(center=(panel.centerx, panel.bottom - 29)))
+        self.screen.set_clip(previous_clip)

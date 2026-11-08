@@ -2,8 +2,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MISSION_DIR = PROJECT_ROOT / "missions"
-WORLD_WIDTH = 19000
-WORLD_HEIGHT = 11000
+WORLD_SCALE = 1.28
+WORLD_WIDTH = int(19000 * WORLD_SCALE)
+WORLD_HEIGHT = int(11000 * WORLD_SCALE)
 PLAYER_RADIUS = 36
 MAX_PLAYER_SPEED = 205.0
 PLAYER_HULL = 100
@@ -48,7 +49,37 @@ REGIONAL_PORT_DATA = [
     ("Bellweather Cay", 9000, 9650, "The Far Shoals", "A steep green island whose observatory keeps records of storms, tides, and strange lights offshore."),
     ("San Aurelio", 11900, 2450, "The Far Shoals", "A quiet Spanish mission port built around a ruined monastery and an archive of forbidden charts."),
     ("Gallows Key", 14500, 7350, "The Far Shoals", "A remote anchorage where former privateers trade secrets and no flag is trusted for long."),
+
 ]
+
+REGIONAL_PORT_FACTIONS = {
+    "Isla Verde": "British Crown", "Saint Brigid": "Independent", "Lantern Bay": "British Crown",
+    "Port Azure": "Merchant League", "Pelican's Rest": "Independent", "Blackwater Reach": "Merchant League",
+    "San Telmo": "Spanish Crown", "Mariner's Rest": "Merchant League", "Puerto Cielo": "Spanish Crown",
+    "Cormorant Quay": "British Crown", "Nueva Esperanza": "Spanish Crown", "Crown's Fall": "British Crown",
+    "Sugarhook": "Merchant League", "Port de Lune": "French Crown", "Santa Isabela": "Spanish Crown",
+    "Mermaid's Rest": "Merchant League", "Stormhaven": "British Crown", "Redoubt": "British Crown",
+    "Saint's Refuge": "Independent", "Last Light": "British Crown", "Wreckers' Moon": "Pirate Brotherhood",
+    "Bellweather Cay": "Independent", "San Aurelio": "Spanish Crown", "Gallows Key": "Pirate Brotherhood",
+}
+
+FACTION_PORT_DATA = [
+    ("Black Flag Anchorage", 18300, 1450, "Outer Antilles", "A hard-bitten pirate harbour tucked among outer reefs. Captains gather here to bargain, refit, and disappear.", "Pirate Brotherhood"),
+    ("King's Sounding", 1050, 8100, "Leeward Expanse", "A remote Royal Navy station with a signal tower, a powder store, and officers who take the Crown's business seriously.", "British Crown"),
+    ("Puerto Escondido", 18400, 10600, "Spanish Main", "A Spanish Crown harbour on the far southern route, watched by customs cutters and guarded by an old stone battery.", "Spanish Crown"),
+    ("La Compagnie", 1550, 4500, "The Far Shoals", "A French charter-company port where brokers trade in sugar, maps, private contracts, and information from every flag.", "French Crown"),
+    ("St Anne's Exchange", 11200, 550, "Windward Reach", "A prosperous merchant harbour run by a league of shipowners. Its warehouses are full, its ledgers exact, and its guards well paid.", "Merchant League"),
+    ("Free Sailors' Haven", 10800, 7600, "Leeward Expanse", "A self-governing harbour where independent captains, shipwrights, and refugees vote on local rules beneath a weathered blue flag.", "Independent"),
+]
+
+FACTION_COLOURS = {
+    "British Crown": (62, 104, 160),
+    "Spanish Crown": (183, 61, 48),
+    "French Crown": (72, 118, 177),
+    "Merchant League": (205, 169, 77),
+    "Pirate Brotherhood": (37, 35, 34),
+    "Independent": (65, 139, 111),
+}
 
 SCATTERED_CAY_ANCHORS = [
     (1450, 5650), (3000, 8700), (4650, 5150), (9250, 1750),
