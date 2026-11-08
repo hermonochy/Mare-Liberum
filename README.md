@@ -1,97 +1,130 @@
 # Mare Liberum
+### A Caribbean life under sail — Version 22
 
-A top-down Caribbean sailing adventure built with Python and Pygame.
+Take command of a small sailing ship and make your name across a living Caribbean. Trade, explore, hunt for buried treasure, take work from harbourmasters, build a fleet, or become the captain that every admiral fears. The sea carries on whether you are watching it or not: merchants cross between ports, pirate squadrons hunt prizes, and naval commanders fight battles of their own.
 
-## Install and run
+Mare Liberum is a single-player, top-down sailing adventure made with Python and Pygame.
 
-```bash
-python -m pip install -r requirements.txt
-python main.py
-```
+## Getting started
 
-Run from this directory so the game can find the `missions/` folder.
+You will need **Python 3.10 or newer**.
 
-## World and navigation
+1. Extract the downloaded game folder.
+2. Open a terminal or command prompt in that folder.
+3. Install the required game library:
 
-The sea chart contains five island regions, 23 inhabited ports, and 16 uninhabited cays scattered between the main island chains:
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
 
-- **Old Caribbean** — Port Royal, Tortuga, Havana; the starting region.
-- **Windward Reach** — Isla Verde, Saint Brigid, Lantern Bay, Port Azure, Pelican's Rest.
-- **Leeward Expanse** — Blackwater Reach, San Telmo, Mariner's Rest, Puerto Cielo, Cormorant Quay.
-- **Spanish Main** — Nueva Esperanza, Crown's Fall, Sugarhook, Port de Lune, Santa Isabela.
-- **Outer Antilles** — Mermaid's Rest, Stormhaven, Redoubt, Saint's Refuge, Last Light.
+4. Start the game:
 
-The port islands are scattered in irregular diagonals and loose arcs rather than repeated rows or trapeziums. Smaller uninhabited cays break up long empty stretches, including the lower-left waters that were previously almost vacant. The regional island shapes vary in size, shoreline and orientation. Port approaches are kept clear of neighbouring land. The Port Royal departure water remains open, with the east, south and west sailing arcs clear of nearby islands. There is no world-edge collision or invisible sailing boundary: leave the charted regions and the ocean continues. Hold and drag the mouse to pan, use the wheel to zoom around the pointer, press **C** to return to ship-follow mode, and press **M** to open the full atlas. The minimap follows nearby waters and points toward distant objectives.
+   ```bash
+   python main.py
+   ```
 
-## Stories, side adventures and introduction
+On some systems, use `python3` instead of `python`.
 
-There are **51 authored narrative missions** in `missions/`:
+The game opens at the main menu. Choose **New Voyage** to begin, or **Load Voyage** to continue one of your saved captains.
 
-- **1 introductory voyage** — *An Old Captain's Farewell*. At Port Royal, retiring Captain Elias Ward offers a natural first job: take his sea chest and letter to his old quartermaster in Tortuga. During the conversation he explains sailing, oars, docking, harbour work, treasure maps, cannon broadsides, escort commands, shipyards, the atlas and the traffic on the sea. The first main-story job is unlocked after this short voyage.
-- **Main-story missions** — the first eleven resolve Captain Vane's threat and establish the Free Captains' Code. The next twenty-nine follow the Meridian Company and Commodore Silas Ashcombe, uncovering an attempt to seize the trade routes and culminating in **A Sea Without Masters**.
-- **Optional side adventures** — self-contained stories about islanders, working sailors, a doctor, a sailmaker's apprentice, a lighthouse, a whaling family and a small raider. They offer modest rewards and do not block the main campaign.
+## Your first voyage
 
-The main story no longer forces every chapter to begin at the port where the previous voyage ended. Several new leads send you to a different harbour, and the character who closes the previous chapter mentions who is waiting there and why. These are personal recommendations and local rumours, not a mechanical instruction to "continue the storyline". The journal records each lead, and you can take repeatable harbour jobs or side adventures before following it.
+Your adventure begins at Port Royal in a modest sloop. An old captain at the harbour has one last favour to ask. Hear him out: his conversation introduces sailing, rowing, harbour work, treasure, cannon fire and the other ways to make a living at sea.
 
-At a port, choose **Ask whether there is work for a captain** to browse available main and side adventures. When several are posted, the harbourmaster presents a selectable list with their descriptions and rewards. You can accept one narrative mission at a time, while continuing to carry several repeatable day jobs at once.
+You do not have to follow the main story every time you reach port. Speak with people, look over the local work, visit the shipyard, or simply cast off and see what lies beyond the next island.
 
-Mission files are plain text. They support categories (`intro`, `main`, `side`), prerequisites, natural follow-up leads, conversations, choices, labels, branches, port voyages, named combat fleets, visit/debrief scenes and rewards.
+## A world with its own affairs
 
-## Other game systems
+Explore a broad Caribbean chart of island regions, busy harbours, remote cays and open water. The chart extends beyond its island chains, so you can sail out into the blue rather than run into an invisible edge. Ports have their own character, local rumours and people to meet.
 
-- Wind- and momentum-based sailing, plus rowers and oars (**O**).
-- Broadside cannon combat (**hold Z** for port, **hold X** for starboard): the opening battery volley is synchronized, then each cannon reloads and fires independently with randomized timing. Hostile ships use distinct hull silhouettes too.
-- Working sea traffic: merchantmen, fishing boats, naval patrols, mail packets and whalers sail between ports, with their own ship types and paint schemes.
-- Independent NPC fleet battles: pirates raid merchantmen and challenge naval patrols; navy patrols hunt pirates; armed merchants defend themselves when threatened. Ships manoeuvre for broadsides, exchange cannon fire, take hull damage and can be sunk without the player taking part. NPC victories and losses do not count as player combat mission kills or bounty credit.
-- Named NPC fleet commanders develop persistent records. Victories improve standing, lost ships damage it, and destroyed squadrons are recorded as defeats. Pirate captains build notoriety through successful raids; commanders who withdraw are remembered for their retreats. Press **N** for the Admirals' & Captains' Ledger.
-- Ships physically collide and rebound. Player ships, escorts, pirates and civilian traffic separate rather than passing through one another; newly hired escorts are assigned spaced formation berths immediately.
-- Pirate pressure grows with your assets: a valuable flagship, upgrades, escorts, relics and gold shorten the interval between pirate sightings and can attract larger groups. Roaming pirates are no longer capped at two, so surviving raiders remain at sea until dealt with.
-- Story offers include a measured route note in chart miles. Combat missions measure the full route via the battle area and onward to the debrief port.
-- Personal escort fleets with no fixed ship-count cap: **F** fight, **H** hold fire, **G** gather, **V** follow.
-- Shipyards (**B** while docked) for buying hulls, refits, customisation, fleet hiring, and repairs.
-- Treasure bottles, hidden islands, maps, riddles, and buried chests (**R** to interact, **T** to view charts).
-- A harbour job board with five simultaneous offers per port: compare destinations and pay, select one or several (the keyboard focus is outlined), and carry multiple jobs at once. Repeatable work includes cargo, letters, passengers, and rescues (**Q** at a harbour, then choose the job board; **R** for rescue).
-- Captain's journal (**J**) and help overlay (**F1**).
+The world is active even when your ship is safely berthed:
+
+- Merchantmen, fishing boats, mail packets, whalers and naval patrols travel between ports.
+- Some ships sail alone; others gather into merchant convoys, naval squadrons or pirate bands.
+- NPC fleets can find enemies, coordinate attacks, exchange broadsides, lose ships and retreat without the player taking part.
+- Coastal batteries defend ports against nearby pirate vessels.
+- Named admirals, pirate captains and merchant commanders develop reputations through victories, losses and retreats. Open the **Admirals' & Captains' Ledger** with **N** to follow their careers.
+
+## Stories, rumours and people
+
+The campaign includes an introductory voyage, a long original Caribbean storyline, a sequel about a lost expedition and the Drowned Kingdom, and optional side adventures. The stories involve rival powers, pirate captains, naval officers, merchants, scholars and island communities.
+
+Not every conversation is a mission. Depending on the person and place, talking may let you:
+
+- Hear a rumour or learn the name of someone worth seeking out.
+- Discover a hidden location, shipwreck, old chart or piece of local history.
+- Buy a rare keepsake or unusual piece of equipment.
+- Meet a useful contact or uncover a new lead.
+- Take a chance on a dubious bargain — some sellers are honest, and some are not.
+- Accept a story adventure or ordinary harbour work.
+
+The journal keeps track of important discoveries and leads.
+
+## Make your fortune
+
+There is more than one way to earn a living:
+
+- **Harbour work:** carry cargo, deliver letters, transport passengers or rescue stranded sailors. Several ordinary jobs can be active at once.
+- **Side adventures:** take on self-contained stories when you want a change from the main campaign.
+- **Treasure hunting:** find bottles and charts, interpret riddles, locate hidden cays and dig up buried chests.
+- **Trade and salvage:** travel between ports and make use of opportunities you discover.
+- **Combat:** defend yourself, fight pirates, or take part in story battles.
+
+## Sailing and combat
+
+Sailing uses wind, momentum and steering rather than instant movement. Set your sails with **W** and **S**, steer with **A** and **D**, and deploy oars with **O** when the wind is against you.
+
+Cannons fire in broadsides. Hold **Z** to fire the port battery or **X** to fire starboard. The first volley is together; after that, individual guns reload and fire on their own timing. Keep your distance, watch your heading and avoid letting an enemy sit on your unprotected side.
+
+Ships collide and push one another apart. A damaged ship can be repaired at a shipyard.
+
+## Your ship and fleet
+
+Visit a shipyard while docked to buy ships, repair your flagship, improve its hull, guns, rigging and rudder, and change its name or colours. Recruit escorts and build a personal fleet. There is no fixed escort-count limit.
+
+Give your escorts orders:
+
+- **F** — Fight
+- **H** — Hold fire
+- **G** — Gather around the flagship
+- **V** — Follow in formation
+
+Your wealth and growing fleet can attract attention. A well-equipped flagship, valuable cargo, gold, relics and numerous escorts may bring more pirate interest.
 
 ## Controls
 
 | Key | Action |
 |---|---|
-| W / S | Set or reef sails |
-| A / D | Steer |
-| O | Deploy / stow oars |
-| Hold Z / X | Fire port / starboard batteries; cannons reload independently |
-| E | Dock / cast off |
-| Q | Harbour office; choose the job board in the conversation |
-| Job board | Up / Down move, Space tick jobs, Enter accept selected; or click rows and Accept |
-| B | Open shipyard while docked |
-| F / H / G / V | Fleet: fight / hold fire / gather / follow |
-| R / T | Interact / view treasure maps |
-| M | Full world atlas |
-| J / F1 | Journal / help |
-| N | Admirals' & Captains' Ledger |
-| F5 | Save a named voyage |
-| Esc / F9 | Pause menu: resume, save, load, main menu, quit |
-| Mouse wheel | Zoom toward pointer |
-| Mouse drag | Pan camera |
-| C | Recenter camera on ship |
+| **W / S** | Set sails / reef sails |
+| **A / D** | Steer |
+| **O** | Deploy / stow oars |
+| **Hold Z / X** | Fire port / starboard cannons |
+| **E** | Dock / cast off |
+| **Q** | Speak with the harbour office while docked |
+| **B** | Open the shipyard while docked |
+| **F / H / G / V** | Command your escort fleet |
+| **R** | Interact with nearby people, objects and treasure |
+| **T** | View treasure charts |
+| **M** | Open the world atlas |
+| **C** | Return the camera to your ship |
+| **Mouse wheel** | Zoom toward the pointer |
+| **Mouse drag** | Pan the camera |
+| **J** | Open the captain's journal |
+| **N** | Open the Admirals' & Captains' Ledger |
+| **F1** | Show help |
+| **F5** | Save your voyage |
+| **Esc / F9** | Open the pause menu |
 
-## Living harbours and coastal defence
+In harbour conversations, read the available choices carefully. Some are introductions, rumours or purchases rather than jobs. The job board lets you select and accept multiple ordinary jobs.
 
-The sea remains active while the captain is berthed. Merchantmen, fishing boats, mail packets, patrols and whalers continue on their routes while you are docked or using harbour conversations, the journal, job board or shipyard. Pirates also continue to sail in the region; they can approach and circle a harbour, but will not fire directly on a ship protected by the quay.
+## Save your voyage
 
-Every port has visible coastal guns. When a pirate enters the harbour's defensive waters (590 world units from the port), the battery automatically fires a three-shot salvo and reloads before firing again. Port cannonballs damage pirate ships. Sinking a raider with harbour artillery does not award the captain a bounty or count as a personal mission kill. Coastal battery reload timers are saved in `.tide` voyage files.
+Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a save. You can keep multiple voyages, each with its own name.
 
-## Independent naval battles
+A save records the last port where you docked. You can save while out at sea; when you load that save, your flagship returns safely to that last berth, with your escorts nearby. Your story progress, ship, gold, fleet, treasure, jobs and discoveries are preserved.
 
-The living sea now has its own combat. Pirate captains select nearby merchantmen or navy patrols as targets and manoeuvre to bring their broadsides to bear. Naval patrols actively search for pirates and carry a heavier four-gun salvo; armed merchantmen return fire when raiders threaten them. Fishing boats, mail packets and whalers generally avoid combat.
+The game also remembers your text-size preference automatically. From the main menu, open **Text & Display Settings** and choose **Smaller text** or **Larger text**. The setting is retained the next time you play.
 
-These engagements happen while you are sailing, docked, or using harbour conversations and shipyard screens. NPC cannonballs damage the intended opposing ship group: pirate fire can sink merchant and naval traffic, while merchant and navy fire can sink pirates. NPC kills are recorded as world events but do not award the player a bounty or advance a player-fired combat mission. Ship combat targets and reload timers are included in named `.tide` saves.
+## A note for captains
 
-
-### NPC Fleet Command
-NPC vessels may sail alone or in named formations. Merchant convoys, naval squadrons and pirate bands have named commanders, maintain loose sailing stations, coordinate target selection and can withdraw when their remaining hull strength falls below the command threshold. These are autonomous world-simulation behaviours; the player need not join the engagement.
-
-
-### Commander Reputation & Notoriety
-NPC fleet commanders build a public record independently of the player. Victories and captures raise standing; losses and destroyed squadrons damage it; retreats are noted. Pirate captains gain notoriety for successful attacks and become known by increasingly fearful titles. Press **N** to open the Admirals' & Captains' Ledger. 
+Mare Liberum is an adventure about making your own way. Follow the story, chase rumours, build a trading fleet, hunt treasure, or sail beyond the known routes. You are not expected to take every job or fight every battle. Sometimes the most interesting thing in port is simply the person sitting quietly by the window.

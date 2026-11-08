@@ -1,0 +1,38 @@
+mission "A Door in the Reef"
+    name "A Door in the Reef"
+    description "Carry the tideglass to the reef entrance and wait for the moon-pulled current."
+    source "Saint's Refuge"
+    destination "Mermaid's Rest"
+    reward 2045
+    speaker offer "Doctor Inez Salvatierra"
+    speaker visit "Doctor Inez Salvatierra"
+    speaker complete "Doctor Inez Salvatierra"
+    to offer
+        has "The Battle of Lantern Passage: done"
+    on offer
+        conversation
+            `Carry the tideglass to the reef entrance and wait for the moon-pulled current.`
+            `Doctor Inez Salvatierra studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Doctor Inez Salvatierra lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted A Door in the Reef. Carry the tideglass to the reef entrance and wait for the moon-pulled current."
+    on visit
+        conversation
+            `Doctor Inez Salvatierra receives you at Mermaid's Rest. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Doctor Inez Salvatierra thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed A Door in the Reef. Received 2045 gold. Carry the tideglass to the reef entrance and wait for the moon-pulled current."

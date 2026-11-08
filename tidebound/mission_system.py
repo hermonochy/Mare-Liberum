@@ -211,6 +211,9 @@ class MissionParser:
                 nodes.append(CommandNode(text))
             elif text.startswith("log "):
                 nodes.append(CommandNode("log", self.quoted(text)))
+            elif text.startswith(("purchase_unique ", "inspect_scam ", "learn_secret ")):
+                command, _, payload = text.partition(" ")
+                nodes.append(CommandNode(command, self.quoted(payload)))
         return nodes
 
     def parse_choice(self, choice_indent):

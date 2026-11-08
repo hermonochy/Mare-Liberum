@@ -1,0 +1,38 @@
+mission "The Sound Beneath the Soundings"
+    name "The Sound Beneath the Soundings"
+    description "Test the observatory's theory at a stretch of water where the lead line rings like a struck glass."
+    source "Port Azure"
+    destination "Bellweather Cay"
+    reward 940
+    speaker offer "Keeper Orlan"
+    speaker visit "Keeper Orlan"
+    speaker complete "Keeper Orlan"
+    to offer
+        has "A Scholar Without a Flag: done"
+    on offer
+        conversation
+            `Test the observatory's theory at a stretch of water where the lead line rings like a struck glass.`
+            `Keeper Orlan studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Keeper Orlan lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted The Sound Beneath the Soundings. Test the observatory's theory at a stretch of water where the lead line rings like a struck glass."
+    on visit
+        conversation
+            `Keeper Orlan receives you at Bellweather Cay. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Keeper Orlan thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed The Sound Beneath the Soundings. Received 940 gold. Test the observatory's theory at a stretch of water where the lead line rings like a struck glass."

@@ -1,0 +1,38 @@
+mission "Three Flags at Dusk"
+    name "Three Flags at Dusk"
+    description "Attend a secret parley between rival commanders before the expedition's trail becomes a new war."
+    source "Lantern Bay"
+    destination "San Telmo"
+    reward 1265
+    speaker offer "Admiral Vale"
+    speaker visit "Admiral Vale"
+    speaker complete "Admiral Vale"
+    to offer
+        has "The Convoy That Never Arrived: done"
+    on offer
+        conversation
+            `Attend a secret parley between rival commanders before the expedition's trail becomes a new war.`
+            `Admiral Vale studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Admiral Vale lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted Three Flags at Dusk. Attend a secret parley between rival commanders before the expedition's trail becomes a new war."
+    on visit
+        conversation
+            `Admiral Vale receives you at San Telmo. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Admiral Vale thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed Three Flags at Dusk. Received 1265 gold. Attend a secret parley between rival commanders before the expedition's trail becomes a new war."

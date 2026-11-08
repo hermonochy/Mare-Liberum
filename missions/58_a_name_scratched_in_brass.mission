@@ -1,0 +1,38 @@
+mission "A Name Scratched in Brass"
+    name "A Name Scratched in Brass"
+    description "Deliver the recovered token to an archivist who recognises the expedition's private seal."
+    source "Gallows Key"
+    destination "Nueva Esperanza"
+    reward 1135
+    speaker offer "Archivist Celia Rojas"
+    speaker visit "Archivist Celia Rojas"
+    speaker complete "Archivist Celia Rojas"
+    to offer
+        has "The Last Pilot of the Crown: done"
+    on offer
+        conversation
+            `Deliver the recovered token to an archivist who recognises the expedition's private seal.`
+            `Archivist Celia Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Archivist Celia Rojas lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted A Name Scratched in Brass. Deliver the recovered token to an archivist who recognises the expedition's private seal."
+    on visit
+        conversation
+            `Archivist Celia Rojas receives you at Nueva Esperanza. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Archivist Celia Rojas thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed A Name Scratched in Brass. Received 1135 gold. Deliver the recovered token to an archivist who recognises the expedition's private seal."

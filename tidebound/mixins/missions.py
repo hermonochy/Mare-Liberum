@@ -273,6 +273,7 @@ class MissionMixin:
             self.make_option("Visit the harbour job board and browse available work.", "day_jobs"),
             self.make_option("Ask for the latest harbour news.", "news"),
             self.make_option("Visit the shipwright and see the yard.", "shipyard"),
+            self.make_option("Ask about unusual wares, strangers, and local secrets.", "curiosities"),
             self.make_option("Take my leave.", "close"),
         ])
         nodes = [TextNode(greeting), ChoiceNode(options)]
@@ -337,6 +338,89 @@ class MissionMixin:
             self.toast_message("That posting has already been taken or is no longer available.", 3.0)
             return
         self.start_conversation(mission, "offer")
+
+    def open_curiosities(self):
+        port = self.docked_port
+        options = []
+        if port == "Wreckers' Moon":
+            options = [
+                OptionNode("Buy a salvaged brass diving bell (unique keepsake, 320 gold).", [CommandNode("purchase_unique", "Salvager's Diving Bell|320|A small brass diving bell recovered from a wreck.")]),
+                OptionNode("Hear the reef pilot's secret passage through the shoals.", [CommandNode("learn_secret", "Wreckers' Moon|The reef pilot marks a safe passage through the outer shoals in your journal.")]),
+            ]
+            speaker = "Marda Quill, salvage broker"
+        elif port == "Bellweather Cay":
+            options = [
+                OptionNode("Buy an astronomer's tideglass (unique keepsake, 480 gold).", [CommandNode("purchase_unique", "Bellweather Tideglass|480|A finely etched instrument for reading the height and turn of the tide.")]),
+                OptionNode("Ask the observatory keeper about the strange lights.", [CommandNode("learn_secret", "Bellweather Cay|The observatory records describe blue lights moving against the current near the Drowned Kingdom.")]),
+            ]
+            speaker = "Keeper Orlan"
+        elif port == "San Aurelio":
+            options = [
+                OptionNode("Buy a sealed monastery folio (unique keepsake, 600 gold).", [CommandNode("purchase_unique", "Monastery Folio|600|A sealed folio containing fragments of an old sea chronicle.")]),
+                OptionNode("Ask who has been buying old charts.", [CommandNode("learn_secret", "San Aurelio|A discreet buyer named Doctor Inez Salvatierra has been collecting charts of the western shoals.")]),
+            ]
+            speaker = "Brother Mateo"
+        elif port == "Gallows Key":
+            options = [
+                OptionNode("Inspect the captain's too-good-to-be-true 'royal' compass.", [CommandNode("inspect_scam", "Royal Compass|260|The brass is plated and the needle is fixed; the seller hopes you will not notice.")]),
+                OptionNode("Buy a genuine privateer's signal book (unique keepsake, 390 gold).", [CommandNode("purchase_unique", "Privateer's Signal Book|390|A coded signal book used by a long-dead privateer squadron.")]),
+                OptionNode("Ask which captains have been meeting here.", [CommandNode("learn_secret", "Gallows Key|Three former fleet officers have been meeting at Gallows Key to discuss the blue lights and a lost expedition.")]),
+            ]
+            speaker = "Silas Rook, beachcomber"
+        else:
+            options = [
+                OptionNode("Ask after a traveller called Doctor Inez Salvatierra.", [CommandNode("learn_secret", f"{port}|A travelling scholar named Doctor Inez Salvatierra has been asking about your voyages and the old western charts.")]),
+                OptionNode("Ask for a rumour worth remembering.", [CommandNode("learn_secret", f"{port}|A quay-side rumour mentions lights at sea and a bell heard beneath the water on windless nights.")]),
+            ]
+            speaker = "A familiar face at the quay"
+        options.append(OptionNode("Leave the matter for another time.", [CommandNode("close")]))
+        intro = {
+            "Wreckers' Moon": "Marda Quill has a table of salvaged curiosities. She insists every item has a story, though not every story is true.",
+            "Bellweather Cay": "The observatory keeper offers a look at instruments and tide records. The charts on his wall are covered in careful annotations.",
+            "San Aurelio": "A monk and a travelling scholar are speaking in low voices beside the monastery gate.",
+            "Gallows Key": "A beachcomber has laid out several objects on a blanket. One compass looks suspiciously new for something supposedly recovered from a Spanish wreck.",
+        }.get(port, "A sailor at the quay lowers their voice and offers a little local knowledge.")
+        self.start_custom_conversation(speaker, [TextNode(intro), ChoiceNode(options)])
+
+    def purchase_unique_offer(self, payload):
+        parts = payload.split("|", 2)
+        if len(parts) < 2:
+            return
+        item, price_text = parts[:2]
+        description = parts[2] if len(parts) > 2 else "A rare object from the islands."
+        price = max(0, int(price_text))
+        if item in getattr(self, "unique_items", []):
+            self.toast_message(f"You already own {item}.", 3.5)
+            return
+        if self.gold < price:
+            self.toast_message(f"You need {price} gold to buy {item}; you have {self.gold}.", 4.0)
+            return
+        self.gold -= price
+        self.unique_items = getattr(self, "unique_items", [])
+        self.unique_items.append(item)
+        self.relics.append(item)
+        self.add_journal(f"Purchased {item} for {price} gold. {description}")
+        self.toast_message(f"Purchased {item} for {price} gold.", 4.0)
+
+    def inspect_scam_offer(self, payload):
+        parts = payload.split("|", 2)
+        item = parts[0] if parts else "the suspicious object"
+        description = parts[2] if len(parts) > 2 else "The offer is not what it seems."
+        if self.rng.random() < 0.82:
+            self.add_journal(f"Exposed a harbour scam: {item}. {description}")
+            self.toast_message(f"You spot the fraud before paying. The seller hurriedly packs up.", 4.5)
+        else:
+            loss = min(self.gold, 90)
+            self.gold -= loss
+            self.add_journal(f"A confidence trickster distracted you while you inspected {item}; {loss} gold went missing.")
+            self.toast_message(f"The seller's accomplice lifts {loss} gold while you inspect the goods.", 4.5)
+
+    def learn_local_secret(self, payload):
+        parts = payload.split("|", 1)
+        place, secret = parts if len(parts) == 2 else ("A harbour", payload)
+        entry = f"Local knowledge from {place}: {secret}"
+        self.add_journal(entry)
+        self.toast_message("You have learned something worth keeping. Check your journal.", 4.0)
 
     def show_port_news(self):
         message = self.news_by_port.get(self.docked_port, "The harbour is full of rumours, though none worth repeating.")

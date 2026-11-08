@@ -1,0 +1,42 @@
+mission "The Black Tide Ambush"
+    name "The Black Tide Ambush"
+    description "Break a pirate screen that is preventing the scholar's launch from reaching the shoals."
+    source "Last Light"
+    destination "Mariner's Rest"
+    reward 1330
+    speaker offer "Captain Sabine Voss"
+    speaker visit "Captain Sabine Voss"
+    speaker complete "Captain Sabine Voss"
+    to offer
+        has "Three Flags at Dusk: done"
+    objective kills 2
+    battlefield "The Black Tide" 10400 5500
+    enemy "Voss's Vanguard"
+    enemy "Voss's Second"
+    on offer
+        conversation
+            `Break a pirate screen that is preventing the scholar's launch from reaching the shoals.`
+            `Captain Sabine Voss studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Captain Sabine Voss lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted The Black Tide Ambush. Break a pirate screen that is preventing the scholar's launch from reaching the shoals."
+    on visit
+        conversation
+            `Captain Sabine Voss receives you at Mariner's Rest. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Captain Sabine Voss thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed The Black Tide Ambush. Received 1330 gold. Break a pirate screen that is preventing the scholar's launch from reaching the shoals."

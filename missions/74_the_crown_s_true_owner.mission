@@ -1,0 +1,38 @@
+mission "The Crown's True Owner"
+    name "The Crown's True Owner"
+    description "Present the stone record to the island councils and decide who may claim the discovery."
+    source "Santa Isabela"
+    destination "Crown's Fall"
+    reward 2175
+    speaker offer "Commodore Anne Bonny"
+    speaker visit "Commodore Anne Bonny"
+    speaker complete "Commodore Anne Bonny"
+    to offer
+        has "The Kingdom Below: done"
+    on offer
+        conversation
+            `Present the stone record to the island councils and decide who may claim the discovery.`
+            `Commodore Anne Bonny studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Commodore Anne Bonny lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted The Crown's True Owner. Present the stone record to the island councils and decide who may claim the discovery."
+    on visit
+        conversation
+            `Commodore Anne Bonny receives you at Crown's Fall. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Commodore Anne Bonny thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed The Crown's True Owner. Received 2175 gold. Present the stone record to the island councils and decide who may claim the discovery."

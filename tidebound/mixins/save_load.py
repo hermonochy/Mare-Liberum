@@ -8,8 +8,45 @@ from ..common import *
 
 
 class SaveLoadMixin:
-    SAVE_FORMAT = "MARE_LIBERUM_VOYAGE"
-    SAVE_VERSION = 2
+    SAVE_FORMAT = "TIDEBOUND_VOYAGE"
+    SAVE_VERSION = 3
+
+    def settings_path(self):
+        return Path(__file__).resolve().parents[2] / "mare_liberum_settings.json"
+
+    def load_user_settings(self):
+        self.text_scale = 1.0
+        path = self.settings_path()
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8"))
+            self.text_scale = max(0.75, min(1.5, float(settings.get("text_scale", 1.0))))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+
+    def save_user_settings(self):
+        path = self.settings_path()
+        data = {
+            "game": "Mare Liberum",
+            "settings_version": 1,
+            "text_scale": round(self.text_scale, 2),
+        }
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    def apply_text_scale(self):
+        scale = max(0.75, min(1.5, float(getattr(self, "text_scale", 1.0))))
+        self.text_scale = scale
+        self.font = pygame.font.SysFont("georgia", max(12, round(30 * scale)))
+        self.small_font = pygame.font.SysFont("georgia", max(11, round(25 * scale)))
+        self.tiny_font = pygame.font.SysFont("georgia", max(10, round(21 * scale)))
+        self.title_font = pygame.font.SysFont("georgia", max(16, round(42 * scale)), bold=True)
+        self.big_font = pygame.font.SysFont("georgia", max(20, round(52 * scale)), bold=True)
+        self.map_font = pygame.font.SysFont("georgia", max(9, round(16 * scale)))
+        self.map_heading_font = pygame.font.SysFont("georgia", max(10, round(18 * scale)), bold=True)
+
+    def adjust_text_scale(self, amount):
+        self.text_scale = max(0.75, min(1.5, round(self.text_scale + amount, 2)))
+        self.apply_text_scale()
+        self.save_user_settings()
 
     def save_directory(self):
         directory = Path(__file__).resolve().parents[2] / "saves"
@@ -50,6 +87,7 @@ class SaveLoadMixin:
                 "gold": self.gold,
                 "journal": list(self.journal),
                 "relics": list(self.relics),
+                "unique_items": list(getattr(self, "unique_items", [])),
                 "world_time": self.world_time,
                 "completed_day_jobs": self.completed_day_jobs,
             },
@@ -121,7 +159,7 @@ class SaveLoadMixin:
         path = Path(path)
         data = json.loads(path.read_text(encoding="utf-8"))
         if data.get("format") != self.SAVE_FORMAT:
-            raise ValueError("This file is not a recognised format.")
+            raise ValueError("This file is not a recognised Mare Liberum voyage.")
         if int(data.get("version", 0)) > self.SAVE_VERSION:
             raise ValueError("This save was made by a newer version of Mare Liberum.")
 
@@ -143,6 +181,7 @@ class SaveLoadMixin:
         self.gold = max(0, int(captain.get("gold", 0)))
         self.journal = list(captain.get("journal", []))[-24:]
         self.relics = list(captain.get("relics", []))
+        self.unique_items = list(captain.get("unique_items", []))
         self.world_time = max(0.0, float(captain.get("world_time", 0.0)))
         self.completed_day_jobs = max(0, int(captain.get("completed_day_jobs", 0)))
 
@@ -312,7 +351,9 @@ class SaveLoadMixin:
         if self.save_dialog_open:
             return False
         if self.menu_mode == "main":
-            options = ["New Voyage", "Load Voyage", "Quit"]
+            options = ["New Voyage", "Load Voyage", "Text & Display Settings", "Quit"]
+        elif self.menu_mode == "settings":
+            options = [f"Text size: {round(self.text_scale * 100)}%", "Smaller text", "Larger text", "Back"]
         elif self.menu_mode == "pause":
             options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Main Menu", "Quit"]
         elif self.menu_mode == "load":
@@ -366,7 +407,9 @@ class SaveLoadMixin:
             return
 
         if self.menu_mode == "main":
-            options = ["New Voyage", "Load Voyage", "Quit"]
+            options = ["New Voyage", "Load Voyage", "Text & Display Settings", "Quit"]
+        elif self.menu_mode == "settings":
+            options = [f"Text size: {round(self.text_scale * 100)}%", "Smaller text", "Larger text", "Back"]
         elif self.menu_mode == "pause":
             options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Main Menu", "Quit"]
         elif self.menu_mode == "load":
@@ -390,6 +433,29 @@ class SaveLoadMixin:
         else:
             return
 
+        if self.menu_mode == "settings":
+            if key in (pygame.K_UP, pygame.K_w):
+                self.menu_selection = (self.menu_selection - 1) % len(options)
+            elif key in (pygame.K_DOWN, pygame.K_s):
+                self.menu_selection = (self.menu_selection + 1) % len(options)
+            elif key in (pygame.K_LEFT, pygame.K_a):
+                self.adjust_text_scale(-0.05)
+            elif key in (pygame.K_RIGHT, pygame.K_d):
+                self.adjust_text_scale(0.05)
+            elif key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                choice = options[self.menu_selection]
+                if choice == "Smaller text":
+                    self.adjust_text_scale(-0.05)
+                elif choice == "Larger text":
+                    self.adjust_text_scale(0.05)
+                elif choice == "Back":
+                    self.menu_mode = "main"
+                    self.menu_selection = 2
+            elif key == pygame.K_ESCAPE:
+                self.menu_mode = "main"
+                self.menu_selection = 2
+            return
+
         if key in (pygame.K_UP, pygame.K_w):
             self.menu_selection = (self.menu_selection - 1) % len(options)
             self.update_menu_scroll(len(options))
@@ -403,6 +469,9 @@ class SaveLoadMixin:
                     self.start_new_voyage()
                 elif choice == "Load Voyage":
                     self.open_load_menu("main")
+                elif choice == "Text & Display Settings":
+                    self.menu_mode = "settings"
+                    self.menu_selection = 1
                 else:
                     self.running = False
             elif self.menu_mode == "pause":
@@ -419,8 +488,15 @@ class SaveLoadMixin:
                     self.running = False
 
     def draw_main_menu(self):
-        self.draw_menu_panel("MARE LIBERUM", "A Caribbean life under sail", ["New Voyage", "Load Voyage", "Quit"],
+        self.draw_menu_panel("MARE LIBERUM", "A Caribbean life under sail", 
+                             ["New Voyage", "Load Voyage", "Text & Display Settings", "Quit"],
                              selected=self.menu_selection, footer="Up / Down: choose    Enter: select")
+
+    def draw_settings_menu(self):
+        options = [f"Text size: {round(self.text_scale * 100)}%", "Smaller text", "Larger text", "Back"]
+        self.draw_menu_panel("TEXT & DISPLAY", "Adjust the size of game text. Your choice is saved automatically.",
+                             options, selected=self.menu_selection,
+                             footer="Left / Right: adjust    Enter: choose    Esc: back")
 
     def draw_pause_menu(self):
         self.draw_menu_panel("PAUSED", "The sea can wait a moment, captain.",

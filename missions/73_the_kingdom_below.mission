@@ -1,0 +1,38 @@
+mission "The Kingdom Below"
+    name "The Kingdom Below"
+    description "Enter the drowned settlement's outer chamber and retrieve the stone record without disturbing its guardians."
+    source "San Aurelio"
+    destination "San Telmo"
+    reward 2110
+    speaker offer "Keeper Orlan"
+    speaker visit "Keeper Orlan"
+    speaker complete "Keeper Orlan"
+    to offer
+        has "A Door in the Reef: done"
+    on offer
+        conversation
+            `Enter the drowned settlement's outer chamber and retrieve the stone record without disturbing its guardians.`
+            `Keeper Orlan studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Keeper Orlan lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted The Kingdom Below. Enter the drowned settlement's outer chamber and retrieve the stone record without disturbing its guardians."
+    on visit
+        conversation
+            `Keeper Orlan receives you at San Telmo. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Keeper Orlan thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed The Kingdom Below. Received 2110 gold. Enter the drowned settlement's outer chamber and retrieve the stone record without disturbing its guardians."

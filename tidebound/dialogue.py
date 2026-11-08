@@ -95,6 +95,22 @@ class Conversation:
             self.game.fail_treasure_guess(node.value)
             self.finish()
             return True
+        if node.command == "curiosities":
+            self.finish()
+            self.game.open_curiosities()
+            return True
+        if node.command == "purchase_unique":
+            self.game.purchase_unique_offer(node.value)
+            self.finish()
+            return True
+        if node.command == "inspect_scam":
+            self.game.inspect_scam_offer(node.value)
+            self.finish()
+            return True
+        if node.command == "learn_secret":
+            self.game.learn_local_secret(node.value)
+            self.finish()
+            return True
         return False
 
     def advance(self):

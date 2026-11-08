@@ -11,16 +11,11 @@ class Game(
 ):
     def __init__(self):
         pygame.init()
-        pygame.display.set_caption("Mare Liberum: Caribbean Pirates")
+        pygame.display.set_caption("Mare Liberum")
         self.screen = pygame.display.set_mode((1280, 800), pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("georgia", 30)
-        self.small_font = pygame.font.SysFont("georgia", 25)
-        self.tiny_font = pygame.font.SysFont("georgia", 21)
-        self.title_font = pygame.font.SysFont("georgia", 42, bold=True)
-        self.big_font = pygame.font.SysFont("georgia", 52, bold=True)
-        self.map_font = pygame.font.SysFont("georgia", 16)
-        self.map_heading_font = pygame.font.SysFont("georgia", 18, bold=True)
+        self.load_user_settings()
+        self.apply_text_scale()
         self.running = True
         self.rng = random.Random(41)
         self.world_time = 0.0
@@ -37,6 +32,7 @@ class Game(
         self.journal_open = False
         self.treasure_chart_open = False
         self.relics = []
+        self.unique_items = []
         self.conversation = None
         self.dialogue_speaker = "Harbourmaster"
         self.docked_port = "Port Royal"

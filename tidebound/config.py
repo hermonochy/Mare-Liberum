@@ -44,6 +44,10 @@ REGIONAL_PORT_DATA = [
     ("Redoubt", 17800, 4500, "Outer Antilles", "A cliffside settlement with an old signal fort and a watchful militia of local sailors."),
     ("Saint's Refuge", 14800, 9700, "Outer Antilles", "A haven for shipwreck survivors, retired corsairs, and anyone who has earned a second chance."),
     ("Last Light", 18000, 9300, "Outer Antilles", "The farthest charted harbour in the chain, where the western horizon seems to swallow the sun."),
+    ("Wreckers' Moon", 2450, 2350, "The Far Shoals", "A crescent island of wreckers, salvagers, and pilots who can read a reef by the colour of its foam."),
+    ("Bellweather Cay", 9000, 9650, "The Far Shoals", "A steep green island whose observatory keeps records of storms, tides, and strange lights offshore."),
+    ("San Aurelio", 11900, 2450, "The Far Shoals", "A quiet Spanish mission port built around a ruined monastery and an archive of forbidden charts."),
+    ("Gallows Key", 14500, 7350, "The Far Shoals", "A remote anchorage where former privateers trade secrets and no flag is trusted for long."),
 ]
 
 SCATTERED_CAY_ANCHORS = [
@@ -51,5 +55,7 @@ SCATTERED_CAY_ANCHORS = [
     (9400, 5550), (10300, 7600), (17900, 1850), (11500, 10300),
     (18400, 7200), (6600, 10400), (8700, 4200), (1100, 9400),
     (15100, 5550), (4300, 9600), (9900, 9700), (16600, 10200),
+    (2300, 1450), (4200, 2650), (7200, 1800), (8700, 8200),
+    (11200, 6500), (12800, 10400), (15400, 2500), (18100, 5600),
 ]
 

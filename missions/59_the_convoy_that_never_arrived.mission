@@ -1,0 +1,38 @@
+mission "The Convoy That Never Arrived"
+    name "The Convoy That Never Arrived"
+    description "Investigate a merchant convoy whose ships vanished without a battle or wreckage."
+    source "Isla Verde"
+    destination "Santa Isabela"
+    reward 1200
+    speaker offer "Harbourmaster Rojas"
+    speaker visit "Harbourmaster Rojas"
+    speaker complete "Harbourmaster Rojas"
+    to offer
+        has "A Name Scratched in Brass: done"
+    on offer
+        conversation
+            `Investigate a merchant convoy whose ships vanished without a battle or wreckage.`
+            `Harbourmaster Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            choice
+                `(I will help uncover what happened.)`
+                    accept
+                `(Tell me what you are not saying.)`
+                    goto details
+                `(I have no wish to be drawn into another quarrel.)`
+                    close
+            label details
+                `Harbourmaster Rojas lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                choice
+                    `(Then I will take the matter in hand.)`
+                        accept
+                    `(Not today.)`
+                        close
+    on accept
+        log "Accepted The Convoy That Never Arrived. Investigate a merchant convoy whose ships vanished without a battle or wreckage."
+    on visit
+        conversation
+            `Harbourmaster Rojas receives you at Santa Isabela. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+    on complete
+        conversation
+            `Harbourmaster Rojas thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+        log "Completed The Convoy That Never Arrived. Received 1200 gold. Investigate a merchant convoy whose ships vanished without a battle or wreckage."
