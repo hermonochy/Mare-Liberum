@@ -35,6 +35,7 @@ class ShipyardFleetMixin:
                 ("hull", "Reinforced hull", "Add 25 points to your flagship's maximum hull strength."),
                 ("rigging", "Fine-cut rigging", "Improve sail power and maximum speed."),
                 ("rudder", "Balanced rudder", "Improve the ship's turning response."),
+                ("cargo", "Expanded cargo hold", "Add 12 cargo units to your flagship's hold."),
             ]
             for key, title, detail in upgrade_info:
                 level = self.upgrades[key]
@@ -96,7 +97,7 @@ class ShipyardFleetMixin:
         return items
 
     def upgrade_cost(self, key):
-        bases = {"cannons": 430, "hull": 360, "rigging": 410, "rudder": 320}
+        bases = {"cannons": 430, "hull": 360, "rigging": 410, "rudder": 320, "cargo": 300}
         return bases[key] + self.upgrades[key] * 310
 
     def execute_shipyard_selection(self):
@@ -111,6 +112,9 @@ class ShipyardFleetMixin:
             cost = stats["cost"]
             if self.gold < cost:
                 self.toast_message(f"The {key} costs {cost} gold. You have {self.gold}.", 3.5)
+                return
+            if self.cargo_load() > self.cargo_capacity_for_ship(key, self.upgrades) + 0.001:
+                self.toast_message(f"Your current cargo will not fit aboard a {key}. Sell some cargo or choose a larger ship first.", 4.0)
                 return
             old_name = self.player_ship_name
             self.gold -= cost
@@ -251,6 +255,7 @@ class ShipyardFleetMixin:
         distance = math.hypot(dx, dy)
         if distance > 34.0:
             desired = math.degrees(math.atan2(dy, dx))
+            desired = self.reef_avoidance_heading(escort.x, escort.y, desired, lookahead=580.0, clearance=140.0)
             difference = angle_difference(desired, escort.heading)
             escort.heading = (escort.heading + clamp(difference, -turn_rate * dt, turn_rate * dt)) % 360.0
             angle = math.radians(escort.heading)
@@ -297,6 +302,9 @@ class ShipyardFleetMixin:
                 if self.fleet_order == "follow" and target_pirate and 145.0 < enemy_distance < 560.0:
                     self.aim_and_fire_fleet_broadside(escort, target_pirate, dt)
 
+            escort.heading = self.reef_avoidance_heading(
+                escort.x, escort.y, escort.heading, lookahead=520.0, clearance=135.0
+            )
             escort.vx *= math.exp(-0.19 * dt)
             escort.vy *= math.exp(-0.19 * dt)
             speed = math.hypot(escort.vx, escort.vy)
@@ -309,6 +317,7 @@ class ShipyardFleetMixin:
             escort.x, escort.y, escort.vx, escort.vy, _ = resolve_land_collision(
                 escort.x, escort.y, escort.vx, escort.vy, 29, land_polygons
             )
+            self.apply_reef_damage(escort, dt, kind="npc", ship_radius=29.0)
 
     def fire_fleet_broadside(self, escort, target):
         bearing = math.degrees(math.atan2(target.y - escort.y, target.x - escort.x))
@@ -331,9 +340,8 @@ class ShipyardFleetMixin:
             vx = broadside[0] * 455 + escort.vx * 0.14
             vy = broadside[1] * 455 + escort.vy * 0.14
             self.projectiles.append(Cannonball(x, y, vx, vy, 1.4, "fleet"))
+            self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
         self.apply_cannon_recoil(escort, broadside[0], broadside[1], 8.0)
-        self.spawn_cannon_smoke(escort.x + broadside[0] * 18, escort.y + broadside[1] * 18,
-                                broadside[0], broadside[1], amount=max(3, gun_count))
         distance_to_player = math.hypot(escort.x - self.ship_x, escort.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.04, 0.25 * (1.0 - distance_to_player / 2700.0)))
         escort.cooldown = SHIP_CLASSES[escort.ship_type]["reload"] + 0.25

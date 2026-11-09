@@ -64,6 +64,8 @@ class MissionMixin:
             y = center_y + math.sin(angle) * radius
             if any(point_in_polygon((x, y), polygon) for polygon in polygons):
                 continue
+            if not self.reef_clear_at(x, y, 100.0):
+                continue
             too_close_to_shore = False
             for polygon in polygons:
                 _, distance = nearest_polygon_edge(x, y, polygon)
@@ -129,6 +131,10 @@ class MissionMixin:
             )
             self.add_journal(f"Warning: only {len(spawned)} of {mission.objective_count} mission ships were placed near {mission.battlefield}.")
 
+    def mission_route_stops(self, mission):
+        """Return the complete ordered list of ports for a multi-call voyage."""
+        return [mission.source] + [stop.port for stop in getattr(mission, "waypoints", [])] + [mission.destination]
+
     def mission_route_distance(self, mission):
         source = self.ports_by_name.get(mission.source)
         destination = self.ports_by_name.get(mission.destination)
@@ -138,6 +144,11 @@ class MissionMixin:
             first_leg = math.hypot(mission.battlefield_x - source.x, mission.battlefield_y - source.y)
             second_leg = math.hypot(destination.x - mission.battlefield_x, destination.y - mission.battlefield_y)
             return first_leg + second_leg
+        if getattr(mission, "waypoints", None):
+            ports = [self.ports_by_name.get(name) for name in self.mission_route_stops(mission)]
+            if any(port is None for port in ports):
+                return 0.0
+            return sum(math.hypot(b.x - a.x, b.y - a.y) for a, b in zip(ports, ports[1:]))
         return math.hypot(destination.x - source.x, destination.y - source.y)
 
     def mission_route_description(self, distance):
@@ -156,7 +167,11 @@ class MissionMixin:
     def mission_route_brief(self, mission):
         distance = self.mission_route_distance(mission)
         description = self.mission_route_description(distance)
-        route = f"The straight-line chart distance is about {distance:,.0f} chart miles: {description}. Allow extra time to skirt reefs and shoals."
+        route = f"The full chart distance is about {distance:,.0f} chart units: {description}. Allow extra time to skirt reefs and shoals."
+        if getattr(mission, "waypoints", None):
+            stops = " → ".join(self.mission_route_stops(mission))
+            calls = "; ".join(f"{stop.port}: {stop.objective}" for stop in mission.waypoints)
+            return f"Route: {stops}. {route} Required calls: {calls}. Each call must be completed in order before the final destination will accept the voyage."
         if mission.objective_type == "kills" and mission.battlefield:
             return f"Route note: {route} The course runs via {mission.battlefield}, then on to {mission.destination}."
         return f"Route note: {route} Your destination is {mission.destination}."
@@ -169,10 +184,41 @@ class MissionMixin:
             if mission.battlefield_x is not None and mission.battlefield_y is not None:
                 return mission.battlefield, mission.battlefield_x, mission.battlefield_y, "battlefield"
             return mission.battlefield or "Enemy waters", self.ship_x, self.ship_y, "battlefield"
+        waypoints = getattr(mission, "waypoints", [])
+        waypoint_index = max(0, int(getattr(self, "mission_waypoint_index", 0)))
+        if waypoint_index < len(waypoints):
+            stop = waypoints[waypoint_index]
+            port = self.ports_by_name.get(stop.port)
+            if port:
+                return port.name, port.x, port.y, "waypoint"
         port = self.ports_by_name.get(mission.destination)
         if port:
             return port.name, port.x, port.y, "port"
         return None
+
+    def navigation_target(self):
+        """Prefer the story objective; otherwise guide toward the nearest active day job."""
+        story_target = self.mission_navigation_target()
+        if story_target:
+            return story_target
+        candidates = []
+        for job in getattr(self, "active_day_jobs", []):
+            if job.stage == "rescue" and not job.rescued and job.target_x is not None and job.target_y is not None:
+                x, y = job.target_x, job.target_y
+                label = f"Rescue · {job.destination}"
+                kind = "rescue"
+            else:
+                port = self.ports_by_name.get(job.destination)
+                if port is None:
+                    continue
+                x, y = port.x, port.y
+                label = job.destination
+                kind = "day_job"
+            candidates.append((math.hypot(x - self.ship_x, y - self.ship_y), label, x, y, kind))
+        if not candidates:
+            return None
+        _, label, x, y, kind = min(candidates, key=lambda entry: entry[0])
+        return label, x, y, kind
 
     def mission_guidance_text(self, mission=None):
         mission = mission or self.active_mission()
@@ -182,6 +228,13 @@ class MissionMixin:
             if self.mission_returning:
                 return f"RETURN TO {mission.destination.upper()}  •  berth there for your debrief"
             return f"SAIL TO {mission.battlefield.upper()}  •  SINK {self.mission_kills}/{mission.objective_count} TARGET SHIPS"
+        waypoints = getattr(mission, "waypoints", [])
+        waypoint_index = max(0, int(getattr(self, "mission_waypoint_index", 0)))
+        if waypoint_index < len(waypoints):
+            stop = waypoints[waypoint_index]
+            return f"SAIL TO {stop.port.upper()}  •  {stop.objective.upper()}  •  PORT CALL {waypoint_index + 1}/{len(waypoints)}"
+        if waypoints:
+            return f"ALL PORT CALLS COMPLETE  •  SAIL TO {mission.destination.upper()} FOR FINAL DELIVERY"
         return f"SAIL TO {mission.destination.upper()}  •  follow the gold route on your chart"
 
     def accept_mission(self, mission):
@@ -193,6 +246,7 @@ class MissionMixin:
         self.mission_states[mission.mission_id] = "active"
         self.active_mission_id = mission.mission_id
         self.mission_kills = 0
+        self.mission_waypoint_index = 0
         self.mission_returning = False
         self.mission_completion_started = False
         self.mission_fleet_spawned = False
@@ -307,6 +361,10 @@ class MissionMixin:
                             f"You have sunk {self.mission_kills} of {active.objective_count} named enemy ships. "
                             f"The gold marker shows the battle waters.\""
                         )
+                elif getattr(active, "waypoints", []):
+                    target = self.mission_navigation_target(active)
+                    next_port = target[0] if target else active.destination
+                    message = f"The harbourmaster taps the marked route. \"Your next required call is {next_port}, captain. {self.mission_guidance_text(active)}. The remaining calls must be made in order before {active.destination}.\""
                 else:
                     message = f"The harbourmaster taps your chart. \"Your business is not finished. Sail to {active.destination}, captain. Follow the gold route on your chart.\""
             else:
@@ -318,7 +376,7 @@ class MissionMixin:
             return
         options = [
             OptionNode(
-                f"[{('SIDE ADVENTURE' if mission.category == 'side' else 'MAIN STORY')}] {mission.name}  —  {mission.destination}  —  {mission.reward} gold  —  {mission.description}",
+                f"[{('SIDE ADVENTURE' if mission.category == 'side' else 'MAIN STORY')}] {mission.name}  —  {' → '.join([mission.source] + [stop.port for stop in getattr(mission, 'waypoints', [])] + [mission.destination])}  —  {mission.reward} gold  —  {mission.description}",
                 [CommandNode("mission_offer", mission.mission_id)],
             )
             for mission in available
@@ -437,6 +495,7 @@ class MissionMixin:
         self.toast_message(f"VOYAGE COMPLETE: {mission.name}  •  +{mission.reward} gold", 8.0)
         self.active_mission_id = None
         self.mission_kills = 0
+        self.mission_waypoint_index = 0
         self.mission_returning = False
         self.mission_completion_started = False
         self.mission_fleet_spawned = False
@@ -447,7 +506,33 @@ class MissionMixin:
 
     def trigger_port_visit(self, port):
         mission = self.active_mission()
-        if not mission or mission.destination != port.name:
+        if not mission:
+            return
+
+        waypoints = getattr(mission, "waypoints", [])
+        waypoint_index = max(0, int(getattr(self, "mission_waypoint_index", 0)))
+        if waypoints and mission.objective_type != "kills" and waypoint_index < len(waypoints):
+            expected = waypoints[waypoint_index]
+            if port.name != expected.port:
+                if port.name == mission.destination:
+                    self.toast_message(
+                        f"You have reached {mission.destination}, but the passengers still need their call at {expected.port}. Return to the marked route first.",
+                        5.5,
+                    )
+                return
+
+            # Record the call immediately on docking so it is never lost if the
+            # player saves or closes the waypoint conversation.
+            self.mission_waypoint_index = waypoint_index + 1
+            entry = f"Voyage waypoint {self.mission_waypoint_index}/{len(waypoints)} completed at {port.name}: {expected.objective}."
+            self.add_journal(entry)
+            self.toast_message(f"PORT CALL COMPLETE · {port.name}  ({self.mission_waypoint_index}/{len(waypoints)})", 5.0)
+            event = f"waypoint_{waypoint_index + 1}"
+            if mission.sections.get(event):
+                self.start_conversation(mission, event)
+            return
+
+        if mission.destination != port.name:
             return
         if mission.objective_type == "kills" and not self.mission_returning:
             return
@@ -492,30 +577,26 @@ class MissionMixin:
         if self.port_attitude(port) == "HOSTILE":
             self.toast_message(f"The harbour guns of {port.name} refuse your entry. Press I near the harbour to seek safe conduct.", 5.0)
             return False
-        # The central berth belongs to the player's flagship while docked.
-        # If a merchant has just arrived there, move it to the nearest free quay.
-        used = {int(getattr(ship, "berth_slot", -1)) for ship in self.traffic_ships
-                if getattr(ship, "berth_port", "") == port.name and getattr(ship, "port_dwell", 0.0) > 0.0}
-        for ship in self.traffic_ships:
-            if getattr(ship, "berth_port", "") == port.name and getattr(ship, "berth_slot", -1) == 2:
-                alternatives = [slot for slot in (0, 1, 3, 4) if slot not in used]
-                if alternatives:
-                    ship.berth_slot = min(alternatives, key=lambda slot: abs(slot - 2))
-                    ship.x, ship.y = self.harbour_berth_position(port, ship.berth_slot)
-                else:
-                    ship.berth_port = ""
-                    ship.berth_slot = -1
-                    ship.port_dwell = 0.0
-                break
+
+        # The player takes the closest genuinely free slot at the moment E is
+        # pressed. NPC ships keep their berth; no slot is reserved for the
+        # flagship and no merchant is displaced to make room for it.
+        slot = self.nearest_available_harbour_slot(port, self.ship_x, self.ship_y)
+        if slot is None:
+            self.toast_message(f"Every berth at {port.name} is occupied. Circle the harbour and try again shortly.", 4.5)
+            return False
+
+        self.player_berth_slot = slot
+        self.last_docked_port_slot = slot
         self.docked_port = port.name
         self.last_docked_port = port.name
         self.oars_deployed = False
         self.ship_heading = port.exit_heading
-        self.ship_x, self.ship_y = self.harbour_berth_position(port, 2)
+        self.ship_x, self.ship_y = self.harbour_berth_position(port, slot)
         self.ship_vx = 0.0
         self.ship_vy = 0.0
         self.near_port = port
-        self.toast_message(f"Made fast at {port.name}. Q: speak to the harbourmaster.", 4.0)
+        self.toast_message(f"Made fast at {port.name}, berth {slot + 1}. Q: speak to the harbourmaster.", 4.0)
         self.trigger_port_visit(port)
         self.complete_day_job_at_port(port)
         return True

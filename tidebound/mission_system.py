@@ -37,6 +37,12 @@ class ChoiceNode:
 
 
 @dataclass
+class MissionWaypoint:
+    port: str
+    objective: str
+
+
+@dataclass
 class Mission:
     mission_id: str
     title: str
@@ -58,6 +64,7 @@ class Mission:
     path: Path
     category: str = "main"
     lead: str = ""
+    waypoints: list = field(default_factory=list)
 
 
 class MissionParser:
@@ -99,6 +106,7 @@ class MissionParser:
         speaker = "Harbourmaster"
         category = "main"
         lead = ""
+        waypoints = []
         section_speakers = {}
         sections = {}
         self.index = 1
@@ -122,9 +130,14 @@ class MissionParser:
                 category = self.quoted(text).lower()
             elif text.startswith("lead "):
                 lead = self.quoted(text)
+            elif text.startswith("waypoint "):
+                values = re.findall(r'"([^"\n]*)"', text)
+                if len(values) < 2:
+                    raise ValueError(f"Waypoint must contain a port and objective in {self.path.name}: {text}")
+                waypoints.append(MissionWaypoint(values[0], values[1]))
             elif text.startswith("speaker "):
                 parts = text.split(None, 2)
-                if len(parts) == 3 and parts[1] in {"offer", "accept", "visit", "complete", "fail"}:
+                if len(parts) == 3 and (parts[1] in {"offer", "accept", "visit", "complete", "fail"} or parts[1].startswith("waypoint_")):
                     section_speakers[parts[1]] = self.quoted(text)
                 else:
                     speaker = self.quoted(text)
@@ -176,6 +189,7 @@ class MissionParser:
             path=self.path,
             category=category,
             lead=lead,
+            waypoints=waypoints,
         )
 
     def parse_nodes(self, lines):

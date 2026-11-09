@@ -10,7 +10,7 @@ mission "The Chartless Light"
     to offer
         has "A Bargain with Black Jack: done"
     objective kills 2
-    battlefield "False Beacon Reach" 16600 2600
+    battlefield "False Beacon Reach" 16953.9 2537.6
     enemy "Rook's Vanguard"
     enemy "Rook's Second"
     on offer

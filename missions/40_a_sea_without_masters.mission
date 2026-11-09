@@ -41,5 +41,5 @@ mission "A Sea Without Masters"
             `The free captains and island councils sign the new articles. The Meridian Company is dissolved, its ports restored, and its crews given the choice to return home or sail under fair contracts.`
     on complete
         conversation
-            `The sea remains wide and dangerous, but no single company or governor can claim it. Your chart now shows twenty-three harbours and five regions open to exploration.`
-        log "Completed A Sea Without Masters. Received 2200 gold. The sea remains wide and dangerous, but no single company or governor can claim it. Your chart now shows twenty-three harbours and five regions open to exploration."
+            `The sea remains wide and dangerous, but no single company or governor can claim it. Your chart now shows thirty-three harbours across six island regions open to exploration.`
+        log "Completed A Sea Without Masters. Received 2200 gold. The sea remains wide and dangerous, but no single company or governor can claim it. Your chart now shows thirty-three harbours across six island regions open to exploration."

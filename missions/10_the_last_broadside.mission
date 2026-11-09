@@ -5,7 +5,7 @@ mission "The Last Broadside"
     source "Port Azure"
     reward 1100
     objective kills 4
-    battlefield "Dead Man's Cay" 2220 2390
+    battlefield "Dead Man's Cay" 2035.1 2786.5
     enemy "The King's Ruin Guard"
     enemy "The Iron Duchess"
     enemy "The Gallows Jack"

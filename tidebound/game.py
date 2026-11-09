@@ -2,13 +2,13 @@ from .common import *
 from .audio import AudioEngine
 from .mixins import (
     TreasureMixin, MissionMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
-    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin,
+    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin,
 )
 
 
 class Game(
     TreasureMixin, MissionMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
-    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin,
+    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin,
 ):
     def __init__(self):
         pygame.init()
@@ -18,6 +18,7 @@ class Game(
         self.clock = pygame.time.Clock()
         self.load_user_settings()
         self.apply_text_scale()
+        self.apply_audio_settings()
         self.running = True
         self.rng = random.Random(41)
         self.world_time = 0.0
@@ -38,6 +39,10 @@ class Game(
         self.conversation = None
         self.dialogue_speaker = "Harbourmaster"
         self.docked_port = "Port Royal"
+        # The player uses an ordinary quay slot like every other vessel; no
+        # harbour slot is permanently reserved for the flagship.
+        self.player_berth_slot = PORT_BERTH_CENTER_SLOT
+        self.last_docked_port_slot = PORT_BERTH_CENTER_SLOT
         self.near_port = None
         self.ship_x = 540.0
         self.ship_y = 825.0
@@ -52,7 +57,7 @@ class Game(
         self.player_ship_name = "The Wayward Gull"
         self.player_livery = 0
         self.ship_surface_cache = {}
-        self.upgrades = {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0}
+        self.upgrades = {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0, "cargo": 0}
         self.player_max_hull = PLAYER_HULL
         self.player_hull = PLAYER_HULL
         self.fleet = []
@@ -160,7 +165,9 @@ class Game(
         ]
         self.add_scattered_cays()
         self.add_faction_ports()
+        self.add_reefs()
         self.expand_world_layout(WORLD_SCALE)
+        self.shipwrecks = self.create_shipwreck_sites()
         self.tree_positions = self.make_tree_positions()
         for site in self.treasure_sites:
             site.trees = self.make_tree_positions_for_polygon(site.polygon, 7)
@@ -189,6 +196,7 @@ class Game(
         self.mission_states = {mission.mission_id: "available" for mission in self.missions}
         self.active_mission_id = None
         self.mission_kills = 0
+        self.mission_waypoint_index = 0
         self.mission_returning = False
         self.mission_completion_started = False
         self.mission_fleet_spawned = False
@@ -223,6 +231,7 @@ class Game(
         self.save_dialog_open = False
         self.save_dialog_return_to_pause = False
         self.save_name_input = ""
+        self.initialise_trade_economy()
 
     def expand_world_layout(self, factor):
         """Enlarge the whole chart coherently: islands, reefs, berths and passages."""
@@ -233,6 +242,14 @@ class Game(
             port.y *= factor
             port.shore_x *= factor
             port.shore_y *= factor
+        for reef in getattr(self, "reefs", []):
+            reef.polygon = [(x * factor, y * factor) for x, y in reef.polygon]
+            reef.center_x *= factor
+            reef.center_y *= factor
+            reef.radius_x *= factor
+            reef.radius_y *= factor
+            reef.bounds = (min(x for x, _ in reef.polygon), min(y for _, y in reef.polygon),
+                           max(x for x, _ in reef.polygon), max(y for _, y in reef.polygon))
         for site in self.treasure_sites:
             site.polygon = [(x * factor, y * factor) for x, y in site.polygon]
             site.chest_x *= factor
@@ -244,24 +261,108 @@ class Game(
         self.camera_x *= factor
         self.camera_y *= factor
         if self.ports:
-            self.ship_x, self.ship_y = self.harbour_berth_position(self.ports[0], 2)
+            self.ship_x, self.ship_y = self.harbour_berth_position(self.ports[0], self.player_berth_slot)
             self.camera_x, self.camera_y = self.ship_x, self.ship_y
 
     def make_regional_island_polygon(self, cx, cy, index):
+        """Build a substantial standalone island for a single-port harbour."""
         shape_rng = random.Random(7319 + index * 977)
-        vertex_count = shape_rng.randint(9, 15)
+        vertex_count = shape_rng.randint(11, 17)
         rotation = shape_rng.uniform(0.0, math.tau)
-        rx = shape_rng.uniform(132.0, 228.0)
-        ry = shape_rng.uniform(88.0, 171.0)
+        # Standalone islands deliberately span several size classes. The
+        # former near-uniform 200–300 unit cays made the four multi-port
+        # landmasses dominate the chart too strongly.
+        size_classes = (
+            (360.0, 480.0, 245.0, 340.0),
+            (520.0, 690.0, 330.0, 470.0),
+            (720.0, 940.0, 440.0, 620.0),
+            (430.0, 570.0, 285.0, 395.0),
+            (820.0, 1050.0, 520.0, 720.0),
+            (315.0, 410.0, 215.0, 295.0),
+            (600.0, 780.0, 380.0, 535.0),
+        )
+        size_class = size_classes[index % len(size_classes)]
+        rx = shape_rng.uniform(size_class[0], size_class[1])
+        ry = shape_rng.uniform(size_class[2], size_class[3])
         points = []
         for point_index in range(vertex_count):
             angle = rotation + math.tau * point_index / vertex_count
-            broad_coast = 1.0 + 0.15 * math.sin(angle * 2.0 + shape_rng.uniform(-0.35, 0.35))
-            small_bays = 1.0 + shape_rng.uniform(-0.17, 0.17)
-            spur = 0.06 * math.sin(angle * 5.0 + index * 0.7)
+            broad_coast = 1.0 + 0.17 * math.sin(angle * 2.0 + shape_rng.uniform(-0.35, 0.35))
+            small_bays = 1.0 + shape_rng.uniform(-0.15, 0.15)
+            spur = 0.07 * math.sin(angle * 5.0 + index * 0.7)
             variation = max(0.68, broad_coast * small_bays + spur)
             points.append((cx + math.cos(angle) * rx * variation, cy + math.sin(angle) * ry * variation))
         return points
+
+    def make_megaisland_polygon(self, cx, cy, rx, ry, index):
+        """Generate a broad, irregular island capable of supporting many ports."""
+        shape_rng = random.Random(84191 + index * 1877)
+        vertex_count = shape_rng.randint(22, 30)
+        rotation = shape_rng.uniform(-0.12, 0.12)
+        points = []
+        for point_index in range(vertex_count):
+            angle = rotation + math.tau * point_index / vertex_count
+            broad_coast = 1.0 + 0.10 * math.sin(angle * 2.0 + index * 0.7)
+            bays = 1.0 + shape_rng.uniform(-0.09, 0.09)
+            long_inlets = 0.06 * math.sin(angle * 5.0 + index)
+            factor = max(0.78, broad_coast * bays + long_inlets)
+            points.append((cx + math.cos(angle) * rx * factor,
+                           cy + math.sin(angle) * ry * factor))
+        return points
+
+    @staticmethod
+    def port_coast_point(polygon, cx, cy, bearing_degrees):
+        angle = math.radians(bearing_degrees)
+        dx, dy = math.cos(angle), math.sin(angle)
+        shore_x, shore_y = max(
+            polygon,
+            key=lambda point: (point[0] - cx) * dx + (point[1] - cy) * dy,
+        )
+        return shore_x, shore_y, dx, dy
+
+    def add_regional_islands_and_ports(self):
+        """Create a varied archipelago: giant, medium and substantial single-port islands."""
+        regional_rows = {row[0]: row for row in REGIONAL_PORT_DATA}
+        faction_rows = {row[0]: row for row in FACTION_PORT_DATA}
+        grouped_names = set()
+
+        for index, group in enumerate(MULTI_PORT_ISLAND_GROUPS):
+            cx, cy = group["center"]
+            rx, ry = group["radius"]
+            polygon = self.make_megaisland_polygon(cx, cy, rx, ry, index)
+            self.land.append(polygon)
+            for port_name, bearing in group["ports"]:
+                if port_name in regional_rows:
+                    _, _, _, region, description = regional_rows[port_name]
+                    faction = REGIONAL_PORT_FACTIONS.get(port_name, "Independent")
+                elif port_name in faction_rows:
+                    _, _, _, region, description, faction = faction_rows[port_name]
+                else:
+                    continue
+                shore_x, shore_y, dx, dy = self.port_coast_point(polygon, cx, cy, bearing)
+                # Long breakwater and outer harbour approach, scaled with the chart.
+                harbour_length = 190.0
+                berth_x = shore_x + dx * harbour_length
+                berth_y = shore_y + dy * harbour_length
+                self.ports.append(Port(
+                    port_name, berth_x, berth_y, shore_x, shore_y,
+                    float(bearing) % 360.0, description, region, faction,
+                ))
+                grouped_names.add(port_name)
+
+        for index, (name, cx, cy, region, description) in enumerate(REGIONAL_PORT_DATA):
+            if name in grouped_names:
+                continue
+            polygon = self.make_regional_island_polygon(cx, cy, index)
+            self.land.append(polygon)
+            westmost = min(polygon, key=lambda point: point[0])
+            shore_x = westmost[0] + 6.0
+            shore_y = westmost[1]
+            berth_x = westmost[0] - 190.0
+            faction = REGIONAL_PORT_FACTIONS.get(name, "Independent")
+            self.ports.append(
+                Port(name, berth_x, shore_y, shore_x, shore_y, 180.0, description, region, faction)
+            )
 
     def make_scattered_cay_polygon(self, cx, cy, index):
         shape_rng = random.Random(42137 + index * 613)
@@ -277,28 +378,19 @@ class Game(
             points.append((cx + math.cos(angle) * rx * variation, cy + math.sin(angle) * ry * variation))
         return points
 
-    def add_regional_islands_and_ports(self):
-        for index, (name, cx, cy, region, description) in enumerate(REGIONAL_PORT_DATA):
-            polygon = self.make_regional_island_polygon(cx, cy, index)
-            self.land.append(polygon)
-            westmost = min(polygon, key=lambda point: point[0])
-            shore_x = westmost[0] + 6.0
-            shore_y = westmost[1]
-            berth_x = westmost[0] - 180.0
-            faction = REGIONAL_PORT_FACTIONS.get(name, "Independent")
-            self.ports.append(
-                Port(name, berth_x, shore_y, shore_x, shore_y, 180.0, description, region, faction)
-            )
-
     def add_faction_ports(self):
         """Place extra faction strongholds on isolated islands without crowding existing harbours."""
         for index, (name, anchor_x, anchor_y, region, description, faction) in enumerate(FACTION_PORT_DATA):
+            if name == "Puerto Escondido":
+                continue  # already placed as a second Spanish harbour on the Outer Antilles island
             placement_rng = random.Random(9900 + index * 137)
             accepted = None
             for attempt in range(900):
                 cx = anchor_x + placement_rng.uniform(-650.0, 650.0)
                 cy = anchor_y + placement_rng.uniform(-500.0, 500.0)
-                if not (350.0 < cx < WORLD_WIDTH - 350.0 and 350.0 < cy < WORLD_HEIGHT - 350.0):
+                base_width = WORLD_WIDTH / WORLD_SCALE
+                base_height = WORLD_HEIGHT / WORLD_SCALE
+                if not (350.0 < cx < base_width - 350.0 and 350.0 < cy < base_height - 350.0):
                     continue
                 polygon = self.make_regional_island_polygon(cx, cy, 100 + index)
                 if any(point_in_polygon((cx, cy), existing) or nearest_polygon_edge(cx, cy, existing)[1] < 520.0 for existing in self.land):

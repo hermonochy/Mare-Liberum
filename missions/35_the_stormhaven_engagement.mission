@@ -5,7 +5,7 @@ mission "The Stormhaven Engagement"
     destination "Stormhaven"
     reward 1320
     objective kills 5
-    battlefield "The Outer Roadstead" 11500 7200
+    battlefield "The Outer Roadstead" 11867.1 7066.4
     enemy "The Outer Roadstead Guard 1"
     enemy "The Outer Roadstead Guard 2"
     enemy "The Outer Roadstead Guard 3"

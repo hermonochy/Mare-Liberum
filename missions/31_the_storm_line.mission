@@ -5,7 +5,7 @@ mission "The Storm Line"
     destination "Last Light"
     reward 1250
     objective kills 5
-    battlefield "The Storm Line" 16400 8200
+    battlefield "The Storm Line" 18215.7 8520.2
     enemy "The Storm Line Guard 1"
     enemy "The Storm Line Guard 2"
     enemy "The Storm Line Guard 3"

@@ -5,7 +5,7 @@ mission "The Meridian Star"
     destination "Santa Isabela"
     reward 980
     objective kills 4
-    battlefield "The Glasswater Trials" 13700 3100
+    battlefield "The Glasswater Trials" 13160.2 4583.0
     enemy "The Glasswater Trials Guard 1"
     enemy "The Glasswater Trials Guard 2"
     enemy "The Glasswater Trials Guard 3"

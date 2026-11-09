@@ -14,7 +14,7 @@ class CameraMixin:
             anchor = (width / 2, height / 2)
         world_anchor = self.screen_to_world(anchor[0], anchor[1])
         old_zoom = self.camera_zoom
-        self.camera_zoom = clamp(self.camera_zoom * amount, 0.55, 2.4)
+        self.camera_zoom = clamp(self.camera_zoom * amount, 0.30, 2.4)
         if abs(self.camera_zoom - old_zoom) < 0.000001:
             return
         self.camera_x = world_anchor[0] - (anchor[0] - width / 2) / self.camera_zoom

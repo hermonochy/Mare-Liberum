@@ -2,9 +2,15 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MISSION_DIR = PROJECT_ROOT / "missions"
-WORLD_SCALE = 1.28
+# V26 is deliberately a much broader chart. Coordinates authored against the
+# original 19,000 x 11,000 chart are multiplied by this factor at startup.
+WORLD_SCALE = 3.2
 WORLD_WIDTH = int(19000 * WORLD_SCALE)
 WORLD_HEIGHT = int(11000 * WORLD_SCALE)
+LEGACY_V25_WORLD_SCALE = 1.28
+PORT_BERTH_COUNT = 9
+PORT_BERTH_CENTER_SLOT = PORT_BERTH_COUNT // 2
+PORT_BERTH_SPACING = 220.0
 PLAYER_RADIUS = 36
 MAX_PLAYER_SPEED = 205.0
 PLAYER_HULL = 100
@@ -62,6 +68,48 @@ REGIONAL_PORT_FACTIONS = {
     "Saint's Refuge": "Independent", "Last Light": "British Crown", "Wreckers' Moon": "Pirate Brotherhood",
     "Bellweather Cay": "Independent", "San Aurelio": "Spanish Crown", "Gallows Key": "Pirate Brotherhood",
 }
+
+# Several named ports now share a single large island. Bearings are measured
+# clockwise from the east in screen/world coordinates (positive Y points south).
+# Every location keeps its own faction, harbour office and mission identity.
+MULTI_PORT_ISLAND_GROUPS = [
+    {
+        "name": "The Windward Grand Isle", "center": (6500, 3700),
+        "radius": (1700, 1300),
+        "ports": [
+            ("Saint Brigid", -115), ("Port Azure", 178),
+            ("Pelican's Rest", 8), ("Cormorant Quay", 92),
+        ],
+    },
+    {
+        "name": "The Leeward Continent", "center": (7000, 7700),
+        "radius": (3100, 2100),
+        "ports": [
+            ("Blackwater Reach", 178), ("San Telmo", 138),
+            ("Mariner's Rest", -82), ("Puerto Cielo", 4),
+            ("Bellweather Cay", 68),
+        ],
+    },
+    {
+        "name": "The Spanish Main", "center": (13300, 2800),
+        "radius": (3000, 1850),
+        "ports": [
+            ("Nueva Esperanza", -145), ("San Aurelio", -82),
+            ("Sugarhook", -25), ("Crown's Fall", 22),
+            ("Port de Lune", 158), ("Santa Isabela", 72),
+        ],
+    },
+    {
+        "name": "The Outer Antilles", "center": (15700, 7750),
+        "radius": (2600, 2700),
+        "ports": [
+            ("Redoubt", -72), ("Mermaid's Rest", -22),
+            ("Last Light", 43), ("Saint's Refuge", 124),
+            ("Stormhaven", 178), ("Gallows Key", -137),
+            ("Puerto Escondido", 78),
+        ],
+    },
+]
 
 FACTION_PORT_DATA = [
     ("Black Flag Anchorage", 18300, 1450, "Outer Antilles", "A hard-bitten pirate harbour tucked among outer reefs. Captains gather here to bargain, refit, and disappear.", "Pirate Brotherhood"),

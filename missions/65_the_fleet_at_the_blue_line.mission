@@ -10,7 +10,7 @@ mission "The Fleet at the Blue Line"
     to offer
         has "The Drowned Crown Coordinates: done"
     objective kills 2
-    battlefield "The Blue Line" 15100 6100
+    battlefield "The Blue Line" 14597.8 5501.5
     enemy "Vale's Vanguard"
     enemy "Vale's Second"
     on offer

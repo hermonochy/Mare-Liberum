@@ -5,7 +5,7 @@ mission "The Meridian Screen"
     destination "Last Light"
     reward 1480
     objective kills 5
-    battlefield "The Last Light Passage" 16100 7600
+    battlefield "The Last Light Passage" 17037.7 5589.1
     enemy "The Last Light Passage Guard 1"
     enemy "The Last Light Passage Guard 2"
     enemy "The Last Light Passage Guard 3"

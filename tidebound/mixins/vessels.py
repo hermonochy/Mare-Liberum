@@ -2,19 +2,20 @@ from ..common import *
 
 
 class VesselsMixin:
-    def spawn_cannon_smoke(self, x, y, direction_x, direction_y, amount=5):
+    def spawn_cannon_smoke(self, x, y, direction_x, direction_y, amount=1):
+        """Spawn a brief, tight powder puff at one gun muzzle."""
         if not hasattr(self, "cannon_smoke"):
             self.cannon_smoke = []
-        for _ in range(amount):
-            life = self.rng.uniform(0.45, 0.82)
+        for _ in range(max(1, int(amount))):
+            life = self.rng.uniform(0.20, 0.34)
             self.cannon_smoke.append({
-                "x": float(x) + self.rng.uniform(-4.0, 4.0),
-                "y": float(y) + self.rng.uniform(-4.0, 4.0),
-                "vx": direction_x * self.rng.uniform(12.0, 30.0) + self.rng.uniform(-12.0, 12.0),
-                "vy": direction_y * self.rng.uniform(12.0, 30.0) + self.rng.uniform(-12.0, 12.0),
+                "x": float(x) + self.rng.uniform(-0.7, 0.7),
+                "y": float(y) + self.rng.uniform(-0.7, 0.7),
+                "vx": direction_x * self.rng.uniform(4.0, 9.0) + self.rng.uniform(-2.5, 2.5),
+                "vy": direction_y * self.rng.uniform(4.0, 9.0) + self.rng.uniform(-2.5, 2.5),
                 "life": life, "max_life": life,
-                "radius": self.rng.uniform(5.0, 9.0),
-                "growth": self.rng.uniform(15.0, 24.0),
+                "radius": self.rng.uniform(1.4, 2.4),
+                "growth": self.rng.uniform(1.2, 2.4),
             })
 
     def update_cannon_smoke(self, dt):
@@ -43,7 +44,7 @@ class VesselsMixin:
 
     def set_cannon_held(self, side, held):
         if held:
-            if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "diplomacy_open", False):
+            if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "market_open", False) or getattr(self, "diplomacy_open", False):
                 return
             if not self.cannon_held[side]:
                 self.cannon_held[side] = True
@@ -87,13 +88,13 @@ class VesselsMixin:
         vy = broadside[1] * 480 + self.ship_vy * 0.18
         self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "player"))
         self.apply_cannon_recoil(self, broadside[0], broadside[1], 12.0 / max(1, gun_count))
-        self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=4)
+        self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
         self.audio.play("cannon_fire", volume=0.30)
         if show_effect:
             self.toast_message("BOOM! Port broadside!" if side < 0 else "BOOM! Starboard broadside!", 1.2)
 
     def fire_broadside(self, side):
-        if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "diplomacy_open", False):
+        if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "market_open", False) or getattr(self, "diplomacy_open", False):
             return
         gun_count = self.ensure_cannon_battery(side)
         for index in range(gun_count):
@@ -167,8 +168,9 @@ class VesselsMixin:
             self.shore_warning = True
         if not collided:
             self.shore_warning = False
+        self.apply_reef_damage(self, dt, kind="player", ship_radius=PLAYER_RADIUS)
         self.near_port = None
-        nearest_distance = 130.0
+        nearest_distance = 185.0
         for port in self.ports:
             distance = math.hypot(self.ship_x - port.x, self.ship_y - port.y)
             if distance < nearest_distance:
@@ -205,6 +207,8 @@ class VesselsMixin:
                 x = self.ship_x + math.cos(angle) * distance
                 y = self.ship_y + math.sin(angle) * distance
                 if any(point_in_polygon((x, y), polygon) for polygon in self.collision_land_polygons()):
+                    continue
+                if not self.reef_clear_at(x, y, 110.0):
                     continue
                 if math.hypot(x - self.ship_x, y - self.ship_y) < 850:
                     continue
@@ -316,6 +320,7 @@ class VesselsMixin:
                 pirate.wander += dt * 0.22
                 desired = pirate.heading + math.sin(pirate.wander) * 17.0
                 thrust = 18.0
+            desired = self.reef_avoidance_heading(pirate.x, pirate.y, desired, lookahead=700.0, clearance=145.0)
             difference = angle_difference(desired, pirate.heading)
             pirate.heading = (pirate.heading + clamp(difference, -43.0 * dt, 43.0 * dt)) % 360.0
             angle = math.radians(pirate.heading)
@@ -332,6 +337,9 @@ class VesselsMixin:
             pirate.x, pirate.y, pirate.vx, pirate.vy, _ = resolve_land_collision(
                 pirate.x, pirate.y, pirate.vx, pirate.vy, 30, self.collision_land_polygons()
             )
+            self.apply_reef_damage(pirate, dt, kind="npc", ship_radius=30.0)
+            if pirate.dead:
+                continue
             if (npc_target is None and not pirate.retreating and not self.docked_port
                     and 160 < distance < 560 and pirate.cooldown <= 0
                     and (pirate.objective_target or getattr(pirate, "player_attitude", "neutral") == "hostile")):
@@ -339,7 +347,7 @@ class VesselsMixin:
 
     def update_port_defences(self, dt):
         """Harbour guns defend against pirates and captains who have made an enemy of the port."""
-        gun_range = 590.0
+        gun_range = 1450.0
         reload_seconds = 1.55
         projectile_speed = 525.0
         cooldowns = getattr(self, "port_defence_cooldowns", None)
@@ -383,11 +391,10 @@ class VesselsMixin:
                 angle = aim + spread
                 vx = math.cos(angle) * projectile_speed
                 vy = math.sin(angle) * projectile_speed
-                self.projectiles.append(Cannonball(
-                    port.x + math.cos(angle) * 17.0,
-                    port.y + math.sin(angle) * 17.0,
-                    vx, vy, 1.45, owner
-                ))
+                muzzle_x = port.x + math.cos(angle) * 17.0
+                muzzle_y = port.y + math.sin(angle) * 17.0
+                self.projectiles.append(Cannonball(muzzle_x, muzzle_y, vx, vy, 1.45, owner))
+                self.spawn_cannon_smoke(muzzle_x, muzzle_y, math.cos(angle), math.sin(angle), amount=1)
             cooldowns[port.name] = reload_seconds
             port_distance = math.hypot(self.ship_x - port.x, self.ship_y - port.y)
             if port_distance < 2400.0:
@@ -417,9 +424,8 @@ class VesselsMixin:
             vx = broadside[0] * 370 + pirate.vx * 0.14
             vy = broadside[1] * 370 + pirate.vy * 0.14
             self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "enemy"))
+            self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
         self.apply_cannon_recoil(pirate, broadside[0], broadside[1], 8.0)
-        self.spawn_cannon_smoke(pirate.x + broadside[0] * 19, pirate.y + broadside[1] * 19,
-                                broadside[0], broadside[1], amount=5)
         distance_to_player = math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.04, 0.27 * (1.0 - distance_to_player / 3000.0)))
         pirate.cooldown = 2.8 + self.rng.random() * 0.7
@@ -518,8 +524,29 @@ class VesselsMixin:
     def player_sunk(self):
         penalty = min(90, self.gold)
         self.gold -= penalty
-        port = min(self.ports, key=lambda item: math.hypot(item.x - self.ship_x, item.y - self.ship_y))
-        self.ship_x, self.ship_y = self.harbour_berth_position(port, 2)
+        berth_options = []
+        for candidate in self.ports:
+            free_slots = [slot for slot in range(PORT_BERTH_COUNT)
+                          if slot not in self.occupied_harbour_slots(candidate)]
+            for slot in free_slots:
+                bx, by = self.harbour_berth_position(candidate, slot)
+                berth_options.append((math.hypot(bx - self.ship_x, by - self.ship_y), candidate, slot))
+        if berth_options:
+            _, port, slot = min(berth_options, key=lambda item: item[0])
+        else:
+            # If every berth in the world is occupied, release the longest-
+            # berthed NPC at the nearest harbour rather than overlap ships.
+            port = min(self.ports, key=lambda item: math.hypot(item.x - self.ship_x, item.y - self.ship_y))
+            berthed = [ship for ship in self.traffic_ships if ship.berth_port == port.name and ship.port_dwell > 0]
+            if berthed:
+                released = max(berthed, key=lambda ship: ship.port_dwell)
+                slot = int(getattr(released, "berth_slot", PORT_BERTH_CENTER_SLOT))
+                released.berth_port, released.berth_slot, released.port_dwell = "", -1, 0.0
+            else:
+                slot = PORT_BERTH_CENTER_SLOT
+        self.player_berth_slot = slot
+        self.last_docked_port_slot = slot
+        self.ship_x, self.ship_y = self.harbour_berth_position(port, slot)
         self.ship_vx = 0.0
         self.ship_vy = 0.0
         self.ship_heading = port.exit_heading
@@ -536,33 +563,18 @@ class VesselsMixin:
             nearest = min((math.hypot(self.ship_x - port.x, self.ship_y - port.y) for port in self.ports), default=None)
             self.audio.update(dt, docked=bool(self.docked_port), near_port_distance=nearest,
                               speed=math.hypot(self.ship_vx, self.ship_vy),
-                              wind_strength=self.wind_strength, important_encounter=False)
+                              wind_strength=self.wind_strength)
             return
         self.world_time += dt
+        self.update_trade_economy(dt)
         self.toast_time = max(0.0, self.toast_time - dt)
         self.mission_result_timer = max(0.0, self.mission_result_timer - dt)
         self.wind_angle = 24.0 + math.sin(self.world_time * 0.035) * 11.0
         self.wind_strength = 0.92 + math.sin(self.world_time * 0.06) * 0.08
         nearest_harbour = min((math.hypot(self.ship_x - port.x, self.ship_y - port.y) for port in self.ports), default=None)
-        active_story = self.active_mission()
-        nearby_threat = any(
-            not pirate.dead and (pirate.objective_target or getattr(pirate, "player_attitude", "neutral") == "hostile")
-            and math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y) < 1050.0
-            for pirate in self.pirates
-        ) or any(
-            ship.hull > 0 and (getattr(ship, "hostile_to_player", False) or getattr(ship, "under_attack", False))
-            and math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) < 1050.0
-            for ship in self.traffic_ships
-        )
-        important_encounter = bool(
-            (self.conversation and getattr(getattr(self.conversation, "mission", None), "category", "") == "main")
-            or (active_story and active_story.category == "main" and active_story.objective_type == "kills" and not self.mission_returning)
-            or nearby_threat
-        )
         self.audio.update(
             dt, docked=bool(self.docked_port), near_port_distance=nearest_harbour,
             speed=math.hypot(self.ship_vx, self.ship_vy), wind_strength=self.wind_strength,
-            important_encounter=important_encounter,
         )
 
         # Ambient shipping and hostile sails keep moving even while the player
@@ -581,7 +593,7 @@ class VesselsMixin:
 
         # Modal harbour/captain interfaces pause player input and fleet orders,
         # not the living sea outside the quay.
-        if self.conversation or self.journal_open or getattr(self, "commander_ledger_open", False) or getattr(self, "diplomacy_open", False) or self.treasure_chart_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "diplomacy_open", False):
+        if self.conversation or self.journal_open or getattr(self, "commander_ledger_open", False) or getattr(self, "diplomacy_open", False) or self.treasure_chart_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "market_open", False) or getattr(self, "diplomacy_open", False):
             self.cannon_held[-1] = False
             self.cannon_held[1] = False
             return

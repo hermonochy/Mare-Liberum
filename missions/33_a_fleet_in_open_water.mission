@@ -6,7 +6,7 @@ mission "A Fleet in Open Water"
     lead "Anne Bonny folds the report and marks Port Azure on your chart. “I am sailing there to meet a convoy master who has seen an unusual concentration of armed ships beyond the trade lanes. Meet me at the harbour when you reach that quarter; we will compare what he has seen with our own reports.”"
     reward 1150
     objective kills 4
-    battlefield "The Blue Expanse" 6200 4200
+    battlefield "The Blue Expanse" 5751.9 4840.0
     enemy "The Blue Expanse Guard 1"
     enemy "The Blue Expanse Guard 2"
     enemy "The Blue Expanse Guard 3"

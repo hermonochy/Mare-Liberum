@@ -7,6 +7,9 @@ class ControlsMixin:
         if self.menu_mode or self.save_dialog_open:
             self.handle_menu_key(key)
             return
+        if getattr(self, "market_open", False):
+            self.handle_trade_market_key(key)
+            return
         if getattr(self, "diplomacy_open", False):
             self.handle_diplomacy_key(key)
             return
@@ -104,11 +107,14 @@ class ControlsMixin:
             self.commander_ledger_scroll = 0
         elif key == pygame.K_i:
             self.open_diplomacy_ledger()
+        elif key == pygame.K_y:
+            self.open_trade_market()
         elif key == pygame.K_t:
             self.treasure_chart_open = True
         elif key == pygame.K_r:
             if not self.try_interact_day_job():
-                self.interact_treasure()
+                if not self.interact_shipwreck():
+                    self.interact_treasure()
         elif key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
             self.zoom(1.12)
         elif key in (pygame.K_MINUS, pygame.K_KP_MINUS):
@@ -165,6 +171,8 @@ class ControlsMixin:
             self.ship_name_input = (self.ship_name_input + allowed)[:24]
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and (self.menu_mode or self.save_dialog_open):
             self.handle_menu_click(event.pos)
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.market_open:
+            self.handle_trade_market_click(event.pos)
         elif event.type == pygame.KEYDOWN:
             self.handle_keydown(event)
         elif event.type == pygame.KEYUP:
@@ -175,20 +183,20 @@ class ControlsMixin:
         elif event.type == pygame.MOUSEBUTTONDOWN and self.job_board_open and event.button == 1:
             self.handle_day_job_board_click(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2, 3):
-            if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open:
+            if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open and not self.market_open:
                 self.camera_dragging = True
                 self.camera_drag_last = event.pos
         elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2, 3):
             self.camera_dragging = False
         elif event.type == pygame.MOUSEMOTION and self.camera_dragging:
-            if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open:
+            if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open and not self.market_open:
                 dx = event.pos[0] - self.camera_drag_last[0]
                 dy = event.pos[1] - self.camera_drag_last[1]
                 self.camera_x -= dx / self.camera_zoom
                 self.camera_y -= dy / self.camera_zoom
                 self.camera_follow = False
                 self.camera_drag_last = event.pos
-        elif event.type == pygame.MOUSEWHEEL and not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open:
+        elif event.type == pygame.MOUSEWHEEL and not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open and not self.market_open:
             anchor = getattr(event, "mouse_pos", None)
             if anchor is None and hasattr(event, "mouse_x") and hasattr(event, "mouse_y"):
                 anchor = (event.mouse_x, event.mouse_y)

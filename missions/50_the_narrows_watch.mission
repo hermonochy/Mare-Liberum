@@ -6,7 +6,7 @@ mission "The Narrows Watch"
     destination "Mariner's Rest"
     reward 520
     objective kills 1
-    battlefield "The Gull Narrows" 16750 5900
+    battlefield "The Gull Narrows" 16888.9 5518.2
     enemy "The Black Needle"
     speaker offer "Warden Sloane"
     speaker visit "Harbourmaster Pell"

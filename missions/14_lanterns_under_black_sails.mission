@@ -5,7 +5,7 @@ mission "Lanterns Under Black Sails"
     destination "Lantern Bay"
     reward 520
     objective kills 2
-    battlefield "The Lantern Shoals" 5580 2450
+    battlefield "The Lantern Shoals" 5514.0 2308.4
     enemy "The Lantern Shoals Guard 1"
     enemy "The Lantern Shoals Guard 2"
     speaker offer "Harbourmaster"

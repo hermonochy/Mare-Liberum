@@ -50,7 +50,10 @@ class TrafficMixin:
 
     def choose_traffic_destination(self, exclude=None):
         choices = [port for port in self.ports if port.name != exclude]
-        return self.rng.choice(choices) if choices else None
+        if not choices:
+            return None
+        weights = [0.65 + float(getattr(self, "faction_economies", {}).get(port.faction, {}).get("prosperity", 50.0)) / 100.0 for port in choices]
+        return self.rng.choices(choices, weights=weights, k=1)[0]
 
     @staticmethod
     def harbour_berth_position(port, slot):
@@ -58,15 +61,44 @@ class TrafficMixin:
         length = max(1.0, math.hypot(axis_x, axis_y))
         axis_x, axis_y = axis_x / length, axis_y / length
         perp_x, perp_y = -axis_y, axis_x
-        offset = (int(slot) - 2) * 120.0
+        offset = (int(slot) - PORT_BERTH_CENTER_SLOT) * PORT_BERTH_SPACING
         return port.x + axis_x * 26.0 + perp_x * offset, port.y + axis_y * 26.0 + perp_y * offset
+
+    def occupied_harbour_slots(self, port):
+        """Return quay slots occupied by the player and berthed NPC vessels."""
+        used = set()
+        if self.docked_port == port.name:
+            player_slot = int(getattr(self, "player_berth_slot", PORT_BERTH_CENTER_SLOT))
+            if player_slot in range(PORT_BERTH_COUNT):
+                used.add(player_slot)
+        for ship in getattr(self, "traffic_ships", []):
+            slot = int(getattr(ship, "berth_slot", -1))
+            if (ship.hull > 0 and getattr(ship, "port_dwell", 0.0) > 0.0
+                    and getattr(ship, "berth_port", "") == port.name
+                    and slot in range(PORT_BERTH_COUNT)):
+                used.add(slot)
+        return used
+
+    def nearest_available_harbour_slot(self, port, x, y, occupied=None):
+        """Find the free berth closest to an approaching ship's current position."""
+        used = self.occupied_harbour_slots(port) if occupied is None else set(occupied)
+        available = [slot for slot in range(PORT_BERTH_COUNT) if slot not in used]
+        if not available:
+            return None
+        return min(
+            available,
+            key=lambda slot: math.hypot(
+                self.harbour_berth_position(port, slot)[0] - x,
+                self.harbour_berth_position(port, slot)[1] - y,
+            ),
+        )
 
 
     def spawn_traffic_ship(self):
         if len(self.traffic_ships) >= 18:
             return False
         roles = list(self.TRAFFIC_ROLES)
-        weights = [42, 23, 14, 15, 6]
+        weights = self.trade_traffic_role_weights() if hasattr(self, "trade_traffic_role_weights") else [42, 23, 14, 15, 6]
         role = self.rng.choices(roles, weights=weights, k=1)[0]
         profile = self.TRAFFIC_ROLES[role]
         destination = self.choose_traffic_destination()
@@ -79,6 +111,8 @@ class TrafficMixin:
             if math.hypot(x - self.ship_x, y - self.ship_y) < 620.0:
                 continue
             if any(point_in_polygon((x, y), polygon) for polygon in self.collision_land_polygons()):
+                continue
+            if not self.reef_clear_at(x, y, 105.0):
                 continue
             if any(nearest_polygon_edge(x, y, polygon)[1] < 86.0 for polygon in self.land):
                 continue
@@ -517,9 +551,10 @@ class TrafficMixin:
             offset = (index - (shot_count - 1) / 2.0) * 12.0
             spread = (index - (shot_count - 1) / 2.0) * 0.018
             aim = angle + spread
+            muzzle_x = attacker.x + math.cos(forward) * offset + math.cos(broadside) * 18.0
+            muzzle_y = attacker.y + math.sin(forward) * offset + math.sin(broadside) * 18.0
             self.projectiles.append(Cannonball(
-                attacker.x + math.cos(forward) * offset + math.cos(broadside) * 18.0,
-                attacker.y + math.sin(forward) * offset + math.sin(broadside) * 18.0,
+                muzzle_x, muzzle_y,
                 math.cos(aim) * speed + attacker.vx * 0.12,
                 math.sin(aim) * speed + attacker.vy * 0.12,
                 1.7,
@@ -528,10 +563,8 @@ class TrafficMixin:
                 "pirate" if isinstance(attacker, PirateShip) else getattr(attacker, "role", ""),
                 getattr(attacker, "fleet_id", ""),
             ))
+            self.spawn_cannon_smoke(muzzle_x, muzzle_y, math.cos(broadside), math.sin(broadside), amount=1)
         self.apply_cannon_recoil(attacker, math.cos(broadside), math.sin(broadside), 8.5)
-        self.spawn_cannon_smoke(attacker.x + math.cos(broadside) * 19,
-                                attacker.y + math.sin(broadside) * 19,
-                                math.cos(broadside), math.sin(broadside), amount=max(3, shot_count))
         distance_to_player = math.hypot(attacker.x - self.ship_x, attacker.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.03, 0.24 * (1.0 - distance_to_player / 3200.0)))
         return True
@@ -592,11 +625,10 @@ class TrafficMixin:
 
         land_polygons = self.collision_land_polygons()
         occupied_berths = {}
-        if self.docked_port:
-            occupied_berths.setdefault(self.docked_port, set()).add(2)
-        for ship in self.traffic_ships:
-            if ship.hull > 0 and getattr(ship, "port_dwell", 0.0) > 0.0 and getattr(ship, "berth_port", ""):
-                occupied_berths.setdefault(ship.berth_port, set()).add(int(getattr(ship, "berth_slot", -1)))
+        for port in self.ports:
+            slots = self.occupied_harbour_slots(port)
+            if slots:
+                occupied_berths[port.name] = slots
 
         for ship in list(self.traffic_ships):
             if ship.hull <= 0:
@@ -637,9 +669,9 @@ class TrafficMixin:
             distance = math.hypot(dx, dy)
             if combat_target is None and not ship.retreating and distance < 205.0:
                 used = occupied_berths.setdefault(destination.name, set())
-                available = [slot for slot in (0, 1, 2, 3, 4) if slot not in used]
+                available = [slot for slot in range(PORT_BERTH_COUNT) if slot not in used]
                 if available:
-                    slot = min(available, key=lambda value: abs(value - 2) + self.rng.random() * 0.2)
+                    slot = min(available, key=lambda value: abs(value - PORT_BERTH_CENTER_SLOT) + self.rng.random() * 0.2)
                     used.add(slot)
                     ship.berth_port = destination.name
                     ship.berth_slot = slot
@@ -678,6 +710,7 @@ class TrafficMixin:
                 point = self.fleet_formation_point(ship)
                 if point and not ship.retreating:
                     desired = math.degrees(math.atan2(point[1]-ship.y, point[0]-ship.x))
+            desired = self.reef_avoidance_heading(ship.x, ship.y, desired, lookahead=720.0, clearance=145.0)
             difference = angle_difference(desired, ship.heading)
             turn_rate = 25.0 if ship.role == "whaler" else (38.0 if combat_target is not None else 34.0)
             ship.heading = (ship.heading + clamp(difference, -turn_rate * dt, turn_rate * dt)) % 360.0
@@ -703,6 +736,7 @@ class TrafficMixin:
                 ship.heading = (old_heading + self.rng.choice([-1, 1]) * self.rng.uniform(48.0, 82.0)) % 360.0
                 ship.vx *= 0.42
                 ship.vy *= 0.42
+            self.apply_reef_damage(ship, dt, kind="npc", ship_radius=self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0))
 
     def _ship_collision_bodies(self):
         bodies = []

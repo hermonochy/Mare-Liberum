@@ -9,28 +9,42 @@ from ..common import *
 
 class SaveLoadMixin:
     SAVE_FORMAT = "TIDEBOUND_VOYAGE"
-    SAVE_VERSION = 6
+    SAVE_VERSION = 11
 
     def settings_path(self):
         return Path(__file__).resolve().parents[2] / "mare_liberum_settings.json"
 
     def load_user_settings(self):
         self.text_scale = 1.0
+        self.effects_volume = 1.0
+        self.ambience_volume = 1.0
         path = self.settings_path()
         try:
             settings = json.loads(path.read_text(encoding="utf-8"))
             self.text_scale = max(0.75, min(1.5, float(settings.get("text_scale", 1.0))))
+            self.effects_volume = max(0.0, min(1.0, float(settings.get("effects_volume", 1.0))))
+            self.ambience_volume = max(0.0, min(1.0, float(settings.get("ambience_volume", 1.0))))
         except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            # A missing or malformed preference file should never stop a voyage.
             pass
 
     def save_user_settings(self):
         path = self.settings_path()
         data = {
             "game": "Mare Liberum",
-            "settings_version": 1,
+            "settings_version": 2,
             "text_scale": round(self.text_scale, 2),
+            "effects_volume": round(self.effects_volume, 2),
+            "ambience_volume": round(self.ambience_volume, 2),
         }
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        try:
+            temporary = path.with_suffix(path.suffix + ".tmp")
+            temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            temporary.replace(path)
+            return True
+        except OSError:
+            # Read-only installs or restricted folders should not interrupt play.
+            return False
 
     def apply_text_scale(self):
         scale = max(0.75, min(1.5, float(getattr(self, "text_scale", 1.0))))
@@ -47,6 +61,27 @@ class SaveLoadMixin:
         self.text_scale = max(0.75, min(1.5, round(self.text_scale + amount, 2)))
         self.apply_text_scale()
         self.save_user_settings()
+
+    def apply_audio_settings(self):
+        audio = getattr(self, "audio", None)
+        if audio is not None:
+            audio.set_volumes(self.effects_volume, self.ambience_volume)
+
+    def adjust_audio_volume(self, setting, amount):
+        attribute = "effects_volume" if setting == "effects" else "ambience_volume"
+        value = max(0.0, min(1.0, round(getattr(self, attribute, 1.0) + amount, 2)))
+        setattr(self, attribute, value)
+        self.apply_audio_settings()
+        self.save_user_settings()
+
+    def reset_user_settings(self):
+        self.text_scale = 1.0
+        self.effects_volume = 1.0
+        self.ambience_volume = 1.0
+        self.apply_text_scale()
+        self.apply_audio_settings()
+        self.save_user_settings()
+        self.toast_message("Display and sound settings restored to their defaults.", 3.5)
 
     def save_directory(self):
         directory = Path(__file__).resolve().parents[2] / "saves"
@@ -106,12 +141,15 @@ class SaveLoadMixin:
             "last_berth": {
                 "port": port.name,
                 "region": port.region,
-                "note": "Loading this save places the flagship at this berth, even if it was saved while sailing.",
+                "slot": int(getattr(self, "player_berth_slot", getattr(self, "last_docked_port_slot", PORT_BERTH_CENTER_SLOT)))
+                        if self.docked_port == port.name else int(getattr(self, "last_docked_port_slot", PORT_BERTH_CENTER_SLOT)),
+                "note": "Loading this save places the flagship in its last occupied harbour slot, even if it was saved while sailing.",
             },
             "story": {
                 "mission_states": dict(self.mission_states),
                 "active_mission_id": self.active_mission_id,
                 "mission_kills": self.mission_kills,
+                "mission_waypoint_index": int(getattr(self, "mission_waypoint_index", 0)),
                 "mission_returning": self.mission_returning,
                 "mission_fleet_spawned": self.mission_fleet_spawned,
                 "mission_completion_started": self.mission_completion_started,
@@ -127,9 +165,20 @@ class SaveLoadMixin:
                 }
                 for site in self.treasure_sites
             ],
+            "shipwrecks": [
+                {
+                    "id": site.wreck_id,
+                    "discovered": site.discovered,
+                    "surface_salvaged": site.surface_salvaged,
+                    "deep_attempted": site.deep_attempted,
+                    "rare_found": site.rare_found,
+                }
+                for site in self.shipwrecks
+            ],
             "fleet": [asdict(ship) for ship in self.fleet],
             "pirate_ships": [asdict(ship) for ship in self.pirates],
             "other_ships": [asdict(ship) for ship in self.traffic_ships],
+            "trade": self.trade_state_for_save(),
             "day_work": {
                 "serial": self.day_job_serial,
                 "active_jobs": [asdict(job) for job in self.active_day_jobs],
@@ -177,16 +226,21 @@ class SaveLoadMixin:
         if port is None:
             raise ValueError(f"The saved harbour '{berth.get('port', 'unknown')}' is not present in this game version.")
 
-        # V25 enlarged the chart layout. Migrate saved NPC coordinates and
-        # world-space job targets from older charts while the player is safely
-        # returned to the same named harbour below.
+        # V26 expands the V25 chart from 1.28x to 3.2x. V6 saves already
+        # contain V25-scaled coordinates; older saves predate that expansion.
+        # Scale NPC positions/velocities and job targets to the new chart while
+        # the flagship itself is safely returned to its named harbour below.
         save_version = int(data.get("version", 0))
-        if save_version < 6:
+        if save_version < 7:
+            if save_version < 6:
+                coordinate_scale = WORLD_SCALE
+            else:
+                coordinate_scale = WORLD_SCALE / LEGACY_V25_WORLD_SCALE
             for collection_name in ("pirate_ships", "other_ships"):
                 for entry in data.get(collection_name, []):
                     for coordinate in ("x", "y", "vx", "vy"):
                         if entry.get(coordinate) is not None:
-                            entry[coordinate] = float(entry[coordinate]) * WORLD_SCALE
+                            entry[coordinate] = float(entry[coordinate]) * coordinate_scale
             day_work_migration = data.get("day_work", {})
             job_groups = [day_work_migration.get("active_jobs", [])]
             job_groups.extend(day_work_migration.get("port_boards", {}).values())
@@ -194,12 +248,17 @@ class SaveLoadMixin:
                 for entry in group:
                     for coordinate in ("target_x", "target_y"):
                         if entry.get(coordinate) is not None:
-                            entry[coordinate] = float(entry[coordinate]) * WORLD_SCALE
+                            entry[coordinate] = float(entry[coordinate]) * coordinate_scale
 
+        saved_player_slot = int(berth.get("slot", PORT_BERTH_CENTER_SLOT))
+        if saved_player_slot not in range(PORT_BERTH_COUNT):
+            saved_player_slot = PORT_BERTH_CENTER_SLOT
+        self.player_berth_slot = saved_player_slot
+        self.last_docked_port_slot = saved_player_slot
         self.last_docked_port = port.name
         self.docked_port = port.name
         self.near_port = port
-        self.ship_x, self.ship_y = self.harbour_berth_position(port, 2)
+        self.ship_x, self.ship_y = self.harbour_berth_position(port, self.player_berth_slot)
         self.ship_heading = float(port.exit_heading)
         self.ship_vx = self.ship_vy = 0.0
         self.gold = max(0, int(captain.get("gold", 0)))
@@ -216,7 +275,7 @@ class SaveLoadMixin:
             self.current_ship = "Sloop"
         self.player_livery = max(0, min(len(SHIP_LIVERIES) - 1, int(ship.get("livery", 0))))
         self.upgrades = {key: max(0, int(value)) for key, value in ship.get("upgrades", {}).items()}
-        for key in ("cannons", "hull", "rigging", "rudder"):
+        for key in ("cannons", "hull", "rigging", "rudder", "cargo"):
             self.upgrades.setdefault(key, 0)
         self.player_max_hull = max(1, int(ship.get("maximum_hull", PLAYER_HULL)))
         self.player_hull = max(1, min(self.player_max_hull, int(ship.get("hull", self.player_max_hull))))
@@ -233,6 +292,9 @@ class SaveLoadMixin:
         if self.active_mission_id not in self.mission_states:
             self.active_mission_id = None
         self.mission_kills = max(0, int(story.get("mission_kills", 0)))
+        active_record = next((item for item in self.missions if item.mission_id == self.active_mission_id), None)
+        maximum_waypoint = len(getattr(active_record, "waypoints", [])) if active_record else 0
+        self.mission_waypoint_index = max(0, min(maximum_waypoint, int(story.get("mission_waypoint_index", 0))))
         self.mission_returning = bool(story.get("mission_returning", False))
         self.mission_fleet_spawned = bool(story.get("mission_fleet_spawned", False))
         self.mission_completion_started = bool(story.get("mission_completion_started", False))
@@ -247,6 +309,15 @@ class SaveLoadMixin:
             site.revealed = bool(flags.get("island_revealed", False))
             site.dug = bool(flags.get("chest_claimed", False))
 
+        # V28 introduces persistent shipwreck discovery and salvage state.
+        wreck_flags = {entry.get("id"): entry for entry in data.get("shipwrecks", [])}
+        for site in self.shipwrecks:
+            flags = wreck_flags.get(site.wreck_id, {})
+            site.discovered = bool(flags.get("discovered", False))
+            site.surface_salvaged = bool(flags.get("surface_salvaged", False))
+            site.deep_attempted = bool(flags.get("deep_attempted", False))
+            site.rare_found = bool(flags.get("rare_found", False))
+
         self.fleet = [FleetShip(**entry) for entry in data.get("fleet", [])]
         formation = "gather" if self.fleet_order == "gather" else "follow"
         for index, escort in enumerate(self.fleet):
@@ -255,6 +326,59 @@ class SaveLoadMixin:
             escort.anchor_x, escort.anchor_y = escort.x, escort.y
         self.pirates = [PirateShip(**entry) for entry in data.get("pirate_ships", [])]
         self.traffic_ships = [TrafficShip(**entry) for entry in data.get("other_ships", [])]
+        # Re-seat traffic ships using the current quay geometry and keep the
+        # player's actual saved slot clear without reserving a fixed quay position.
+        occupied_saved_berths = {}
+        for npc_ship in self.traffic_ships:
+            if npc_ship.hull <= 0 or npc_ship.port_dwell <= 0.0 or not npc_ship.berth_port:
+                continue
+            berth_port = self.ports_by_name.get(npc_ship.berth_port)
+            if berth_port is None:
+                npc_ship.berth_port = ""
+                npc_ship.berth_slot = -1
+                npc_ship.port_dwell = 0.0
+                continue
+            used_slots = occupied_saved_berths.setdefault(berth_port.name, set())
+            requested_slot = int(getattr(npc_ship, "berth_slot", -1))
+            player_reserved = (berth_port.name == port.name and requested_slot == self.player_berth_slot)
+            if requested_slot not in range(PORT_BERTH_COUNT) or requested_slot in used_slots or player_reserved:
+                alternatives = [slot for slot in range(PORT_BERTH_COUNT)
+                                if slot not in used_slots
+                                and not (berth_port.name == port.name and slot == self.player_berth_slot)]
+                if not alternatives:
+                    npc_ship.berth_port = ""
+                    npc_ship.berth_slot = -1
+                    npc_ship.port_dwell = 0.0
+                    continue
+                requested_slot = min(alternatives, key=lambda slot: abs(slot - PORT_BERTH_CENTER_SLOT))
+                npc_ship.berth_slot = requested_slot
+            used_slots.add(requested_slot)
+            npc_ship.x, npc_ship.y = self.harbour_berth_position(berth_port, requested_slot)
+            npc_ship.vx = npc_ship.vy = 0.0
+
+        # V26 saves predate reef hazards. Re-seat any saved NPC caught inside a
+        # newly charted shoal into the nearest safe patch of open water.
+        for npc in self.pirates:
+            if npc.dead:
+                continue
+            if not self.reef_clear_at(npc.x, npc.y, 90.0):
+                safe = self.find_safe_water_position(npc.x, npc.y, clearance=105.0)
+                if safe:
+                    npc.x, npc.y = safe
+                    npc.vx = npc.vy = 0.0
+                else:
+                    npc.dead = True
+                    npc.hull = 0
+        for npc in self.traffic_ships:
+            if npc.hull <= 0 or (npc.port_dwell > 0.0 and npc.berth_port):
+                continue
+            if not self.reef_clear_at(npc.x, npc.y, 90.0):
+                safe = self.find_safe_water_position(npc.x, npc.y, clearance=105.0)
+                if safe:
+                    npc.x, npc.y = safe
+                    npc.vx = npc.vy = 0.0
+                else:
+                    npc.hull = 0
         self.commander_records = dict(world.get("commander_records", {}))
         self.commander_fleets = dict(world.get("commander_fleets", {}))
         saved_diplomacy = world.get("diplomacy", {})
@@ -273,6 +397,7 @@ class SaveLoadMixin:
         }
         self.port_standings = dict(saved_diplomacy.get("port_standings", {}))
         self.refresh_port_standings()
+        self.restore_trade_state(data.get("trade", {}))
         # Migrate V19 saves: generate dossiers for any already-formed NPC fleets.
         migrated_groups = {}
         for npc in self.pirates + self.traffic_ships:
@@ -311,7 +436,7 @@ class SaveLoadMixin:
             for port in self.ports
         }
         self.port_defence_notice_timer = 0.0
-        self.camera_zoom = max(0.55, min(2.4, float(world.get("camera_zoom", 1.0))))
+        self.camera_zoom = max(0.30, min(2.4, float(world.get("camera_zoom", 1.0))))
         if "random_state" in world:
             def restore_tuple(value):
                 if isinstance(value, list):
@@ -394,11 +519,11 @@ class SaveLoadMixin:
         if self.save_dialog_open:
             return False
         if self.menu_mode == "main":
-            options = ["New Voyage", "Load Voyage", "Text & Display Settings", "Quit"]
+            options = ["New Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Quit"]
         elif self.menu_mode == "settings":
-            options = [f"Text size: {round(self.text_scale * 100)}%", "Smaller text", "Larger text", "Back"]
+            options = self.settings_menu_options()
         elif self.menu_mode == "pause":
-            options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Main Menu", "Quit"]
+            options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Main Menu", "Quit"]
         elif self.menu_mode == "load":
             options = self.save_files()
         else:
@@ -407,7 +532,11 @@ class SaveLoadMixin:
         for offset, rect in enumerate(rects):
             if rect.collidepoint(position):
                 self.menu_selection = start + offset
-                self.handle_menu_key(pygame.K_RETURN)
+                if self.menu_mode == "settings" and self.menu_selection in (0, 1, 2):
+                    direction = -0.05 if position[0] < rect.centerx else 0.05
+                    self.adjust_selected_setting(direction)
+                else:
+                    self.handle_menu_key(pygame.K_RETURN)
                 return True
         return True
 
@@ -449,12 +578,26 @@ class SaveLoadMixin:
             self.menu_mode = None
             return
 
+        if self.menu_mode == "guide":
+            if key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_g):
+                self.menu_mode = self.guide_return_mode or "main"
+                return
+            if key in (pygame.K_LEFT, pygame.K_a):
+                self.guide_page_index = (self.guide_page_index - 1) % len(self.guide_pages())
+            elif key in (pygame.K_RIGHT, pygame.K_d):
+                self.guide_page_index = (self.guide_page_index + 1) % len(self.guide_pages())
+            elif key in (pygame.K_UP, pygame.K_w):
+                self.guide_scroll = max(0, self.guide_scroll - 1)
+            elif key in (pygame.K_DOWN, pygame.K_s):
+                self.guide_scroll += 1
+            return
+
         if self.menu_mode == "main":
-            options = ["New Voyage", "Load Voyage", "Text & Display Settings", "Quit"]
+            options = ["New Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Quit"]
         elif self.menu_mode == "settings":
-            options = [f"Text size: {round(self.text_scale * 100)}%", "Smaller text", "Larger text", "Back"]
+            options = self.settings_menu_options()
         elif self.menu_mode == "pause":
-            options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Main Menu", "Quit"]
+            options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Main Menu", "Quit"]
         elif self.menu_mode == "load":
             options = self.save_files()
             if key == pygame.K_ESCAPE:
@@ -482,21 +625,19 @@ class SaveLoadMixin:
             elif key in (pygame.K_DOWN, pygame.K_s):
                 self.menu_selection = (self.menu_selection + 1) % len(options)
             elif key in (pygame.K_LEFT, pygame.K_a):
-                self.adjust_text_scale(-0.05)
+                self.adjust_selected_setting(-0.05)
             elif key in (pygame.K_RIGHT, pygame.K_d):
-                self.adjust_text_scale(0.05)
+                self.adjust_selected_setting(0.05)
             elif key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 choice = options[self.menu_selection]
-                if choice == "Smaller text":
-                    self.adjust_text_scale(-0.05)
-                elif choice == "Larger text":
-                    self.adjust_text_scale(0.05)
+                if self.menu_selection in (0, 1, 2):
+                    self.adjust_selected_setting(0.05)
+                elif choice == "Reset defaults":
+                    self.reset_user_settings()
                 elif choice == "Back":
-                    self.menu_mode = "main"
-                    self.menu_selection = 2
+                    self.close_settings_menu()
             elif key == pygame.K_ESCAPE:
-                self.menu_mode = "main"
-                self.menu_selection = 2
+                self.close_settings_menu()
             return
 
         if key in (pygame.K_UP, pygame.K_w):
@@ -512,9 +653,10 @@ class SaveLoadMixin:
                     self.start_new_voyage()
                 elif choice == "Load Voyage":
                     self.open_load_menu("main")
-                elif choice == "Text & Display Settings":
-                    self.menu_mode = "settings"
-                    self.menu_selection = 1
+                elif choice == "Captain's Guide":
+                    self.open_guide("main")
+                elif choice == "Text & Sound Settings":
+                    self.open_settings("main")
                 else:
                     self.running = False
             elif self.menu_mode == "pause":
@@ -524,27 +666,133 @@ class SaveLoadMixin:
                     self.begin_save_dialog(return_to_pause=True)
                 elif choice == "Load Voyage":
                     self.open_load_menu("pause")
+                elif choice == "Captain's Guide":
+                    self.open_guide("pause")
+                elif choice == "Text & Sound Settings":
+                    self.open_settings("pause")
                 elif choice == "Main Menu":
                     self.menu_mode = "main"
                     self.menu_selection = 0
                 else:
                     self.running = False
 
+    def settings_menu_options(self):
+        return [
+            f"Text size: {round(self.text_scale * 100)}%",
+            f"Sound effects: {round(self.effects_volume * 100)}%",
+            f"Sea ambience: {round(self.ambience_volume * 100)}%",
+            "Reset defaults",
+            "Back",
+        ]
+
+    def adjust_selected_setting(self, amount):
+        if self.menu_selection == 0:
+            self.adjust_text_scale(amount)
+        elif self.menu_selection == 1:
+            self.adjust_audio_volume("effects", amount)
+        elif self.menu_selection == 2:
+            self.adjust_audio_volume("ambience", amount)
+
+    def open_settings(self, return_mode="main"):
+        self.settings_return_mode = return_mode
+        self.menu_mode = "settings"
+        self.menu_selection = 0
+
+    def close_settings_menu(self):
+        return_mode = getattr(self, "settings_return_mode", "main") or "main"
+        self.menu_mode = return_mode
+        self.menu_selection = 3 if return_mode == "main" else 4
+
+    def open_guide(self, return_mode="main"):
+        self.guide_return_mode = return_mode
+        self.guide_page_index = 0
+        self.guide_scroll = 0
+        self.menu_mode = "guide"
+
+    def guide_pages(self):
+        return [
+            ("GETTING UNDER WAY", [
+                "Your first voyage begins at Port Royal. The old captain nearby introduces the basics; talk to him with Q while docked.",
+                "W sets more sail; S reefs it. A and D steer. O deploys oars when the wind is unhelpful. Momentum matters, so slow down before entering a harbour.",
+                "E casts off or takes the nearest available harbour berth. When close to a pier, the prompt tells you when docking is possible.",
+                "Use the mouse wheel to zoom around the pointer, drag the chart to look around, and press C to centre the view on your ship.",
+            ]),
+            ("COMBAT & YOUR FLEET", [
+                "Hold Z to fire the port-side guns; hold X for starboard. Keep the enemy on the correct side of your ship and allow each gun time to reload.",
+                "Powder smoke, recoil and impact sounds help show when a broadside has fired or landed. Watch your hull indicator and repair at a shipyard.",
+                "Your escorts obey F (fight), H (hold fire), G (gather) and V (follow). Hold fire is useful around neutral traffic and friendly convoys.",
+                "A stray cannonball can turn a friendly ship hostile. Its faction and surviving squadron may remember the attack, so check your target before firing.",
+            ]),
+            ("CHARTS & DISCOVERIES", [
+                "M opens the full atlas. Gold route markers show your active story objective; discovered wrecks and reefs are marked on the chart.",
+                "Some voyages require several port calls. Dock at each marked waypoint in order; the compass and gold marker advance after every completed stop. Reaching the final port too early will not complete the contract.",
+                "Red shaded water marks reefs. Give them room: crossing a reef damages hull, and NPC captains try to steer clear of them.",
+                "Approach a shipwreck and press R to inspect it. Surface cargo is safer; deep salvage can be more rewarding but may damage your ship.",
+                "Bottles, treasure charts and riddles can lead to hidden cays. Press T to review charts you have recovered; use R at the marked beach.",
+            ]),
+            ("PEOPLE, PORTS & SAVES", [
+                "Q opens local conversations. Not every conversation is a job: people may offer rumours, introductions, unusual goods, secrets or dishonest bargains.",
+                "The harbour office has authored stories and an ordinary job board. Several routine jobs can be active together; the main story is tracked separately.",
+                "B opens the shipyard. Y opens the port market: compare changing prices, buy and sell cargo, and plan profitable routes. Your hold has a fixed capacity, improved by cargo refits.",
+                "I opens faction diplomacy; N follows named admirals, pirate captains and merchant commanders. Supplying scarce goods can help a faction, while contraband may anger customs officers.",
+                "J opens your journal. F5 saves a named voyage at your last docked port, even while at sea. Esc or F9 pauses; Load Voyage offers your saved slots.",
+            ]),
+        ]
+
     def draw_main_menu(self):
         self.draw_menu_panel("MARE LIBERUM", "A Caribbean life under sail", 
-                             ["New Voyage", "Load Voyage", "Text & Display Settings", "Quit"],
+                             ["New Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Quit"],
                              selected=self.menu_selection, footer="Up / Down: choose    Enter: select")
 
     def draw_settings_menu(self):
-        options = [f"Text size: {round(self.text_scale * 100)}%", "Smaller text", "Larger text", "Back"]
-        self.draw_menu_panel("TEXT & DISPLAY", "Adjust the size of game text. Your choice is saved automatically.",
-                             options, selected=self.menu_selection,
-                             footer="Left / Right: adjust    Enter: choose    Esc: back")
+        self.draw_menu_panel("TEXT & SOUND", "Choose comfortable text and sound levels. Changes are saved automatically.",
+                             self.settings_menu_options(), selected=self.menu_selection,
+                             footer="Select a level; use Left / Right or click either side of its row    Esc: back")
 
     def draw_pause_menu(self):
         self.draw_menu_panel("PAUSED", "The sea can wait a moment, captain.",
-                             ["Resume Sailing", "Save Voyage", "Load Voyage", "Main Menu", "Quit"],
-                             selected=self.menu_selection, footer="Esc / F9: pause menu    Enter: select")
+                             ["Resume Sailing", "Save Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Main Menu", "Quit"],
+                             selected=self.menu_selection, footer="Esc / F9: resume    Enter: select")
+
+    def draw_guide_menu(self):
+        width, height = self.screen.get_size()
+        shade = pygame.Surface((width, height), pygame.SRCALPHA)
+        shade.fill((8, 17, 21, 220))
+        self.screen.blit(shade, (0, 0))
+        panel_width = min(980, width - 48)
+        panel_height = min(690, height - 44)
+        panel = pygame.Rect((width - panel_width) // 2, (height - panel_height) // 2, panel_width, panel_height)
+        pygame.draw.rect(self.screen, (35, 24, 18), panel.inflate(12, 12), border_radius=12)
+        pygame.draw.rect(self.screen, (111, 72, 41), panel, border_radius=9)
+        pygame.draw.rect(self.screen, (229, 199, 145), panel.inflate(-8, -8), 2, border_radius=7)
+        pages = self.guide_pages()
+        page_index = max(0, min(self.guide_page_index, len(pages) - 1))
+        title, paragraphs = pages[page_index]
+        heading = fit_text_surface(self.big_font, "CAPTAIN'S GUIDE", (248, 220, 169), panel.width - 70, 58)
+        self.screen.blit(heading, heading.get_rect(center=(panel.centerx, panel.y + 52)))
+        subtitle = fit_text_surface(self.small_font, title, (246, 210, 151), panel.width - 70, 32)
+        self.screen.blit(subtitle, subtitle.get_rect(center=(panel.centerx, panel.y + 105)))
+        pygame.draw.line(self.screen, (151, 111, 69), (panel.x + 32, panel.y + 132), (panel.right - 32, panel.y + 132), 2)
+        content = pygame.Rect(panel.x + 38, panel.y + 154, panel.width - 76, panel.height - 215)
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(content)
+        font = self.small_font
+        line_step = max(24, font.get_linesize() + 6)
+        rows = []
+        for paragraph in paragraphs:
+            rows.extend(wrap_text(font, paragraph, content.width - 18))
+            rows.append("")
+        max_rows = max(1, content.height // line_step)
+        self.guide_scroll = max(0, min(self.guide_scroll, max(0, len(rows) - max_rows)))
+        for row_index, line in enumerate(rows[self.guide_scroll:self.guide_scroll + max_rows]):
+            y = content.y + row_index * line_step
+            if line:
+                surf = fit_text_surface(font, line, (245, 232, 202), content.width - 18, line_step - 2)
+                self.screen.blit(surf, (content.x + 8, y))
+        self.screen.set_clip(previous_clip)
+        footer = f"Page {page_index + 1} of {len(pages)}    Left / Right: sections    Up / Down: scroll    Esc / Enter: back"
+        foot = fit_text_surface(self.tiny_font, footer, (225, 205, 169), panel.width - 50, 25)
+        self.screen.blit(foot, foot.get_rect(center=(panel.centerx, panel.bottom - 28)))
 
     def draw_load_menu(self):
         saves = self.save_files()

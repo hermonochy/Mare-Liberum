@@ -95,6 +95,14 @@ class Conversation:
             self.game.fail_treasure_guess(node.value)
             self.finish()
             return True
+        if node.command == "wreck_surface":
+            self.game.salvage_wreck_surface(node.value)
+            self.finish()
+            return True
+        if node.command == "wreck_deep":
+            self.game.salvage_wreck_deep(node.value)
+            self.finish()
+            return True
         if node.command == "curiosities":
             self.finish()
             self.game.open_curiosities()

@@ -1,0 +1,47 @@
+mission "The Bell Family's Passage"
+    category "side"
+    name "The Bell Family's Passage"
+    description "Carry Elias Bell and his daughter from Port Royal to San Telmo, calling at Havana and Tortuga to collect the rest of their party."
+    source "Port Royal"
+    waypoint "Havana" "Collect Tomas Bell and his travelling trunk."
+    waypoint "Tortuga" "Collect Maria Bell and two former shipmates."
+    destination "San Telmo"
+    reward 980
+    to offer
+        has "An Old Captain's Farewell"
+    objective route
+    speaker offer "Elias Bell"
+    speaker waypoint_1 "Tomas Bell"
+    speaker waypoint_2 "Maria Bell"
+    speaker visit "Harbourmaster of San Telmo"
+    speaker complete "Elias Bell"
+    on offer
+        conversation
+            `Elias Bell, a broad-shouldered cooper with a worried expression, waits beside two travel chests. His daughter is studying the harbour while he speaks.`
+            `"My family is scattered by work and bad luck, captain. We mean to settle in San Telmo, but I will not leave without the others. Tomas is in Havana. My daughter Maria is staying with friends in Tortuga, and two old shipmates have promised to join us there."`
+            `He offers a careful purse. "Take us all the way to San Telmo. You must make the calls in order: Havana first, then Tortuga, and only then our new home. We will pay for the whole passage, not each little leg."`
+            choice
+                `"I'll take you all. Make ready to sail."`
+                    accept
+                `"I cannot promise that many harbour calls."`
+                    close
+    on accept
+        log "Accepted The Bell Family's Passage. The required route is Port Royal → Havana → Tortuga → San Telmo. The two intermediate port calls must be made in order."
+    on waypoint_1
+        conversation
+            `Tomas Bell is waiting on the Havana quay with a sea chest and a roll of cooper's tools. He checks the ship's name, then grins when he sees his father aboard.`
+            `"I thought he might change his mind. Thank you for coming, captain. Tortuga next, then? My sister will be glad to see a familiar sail."`
+    on waypoint_2
+        conversation
+            `Maria Bell stands beneath a striped awning in Tortuga. Two weathered sailors wait beside her with a pair of canvas bags.`
+            `"At last! These are my father's old shipmates, Ben and Luis. They have been arguing about which of them knows the better route to San Telmo. I expect you will settle that before the day is out."`
+            `The family is now together. Their chests and passengers are aboard; San Telmo is the final call.`
+    on visit
+        conversation
+            `The harbourmaster of San Telmo checks the passenger list and waves the Bell family ashore. Elias counts the chests twice, then turns to you with visible relief.`
+            `"You made every call and brought us here together. That is worth more than a fast passage. Let us settle the fare, captain."`
+    on complete
+        conversation
+            `Elias pays the agreed fare and presses an additional purse into your hand. "A family is a cargo that cannot be replaced. You carried ours safely, and we will remember it."`
+            `Tomas offers to repair a cracked rail on your ship the next time you call at San Telmo. Maria gives you a folded note with the names of three trustworthy chandlers along the southern route.`
+        log "The Bell family reached San Telmo together. Tomas offered future ship repairs, and Maria shared a list of reliable chandlers."

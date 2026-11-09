@@ -53,6 +53,40 @@ class RenderingMixin:
                     end_y = sy + int(math.sin(math.radians(angle)) * radius * 2)
                     pygame.draw.line(self.screen, (88, 142, 67), (sx + radius, sy), (end_x, end_y), max(1, int(2 * self.camera_zoom)))
 
+    def draw_reefs(self):
+        """Draw translucent red shoal zones above the water and below ships/UI."""
+        if not getattr(self, "reefs", None):
+            return
+        overlay_size = self.screen.get_size()
+        overlay = getattr(self, "_reef_overlay_surface", None)
+        if overlay is None or overlay.get_size() != overlay_size:
+            overlay = pygame.Surface(overlay_size, pygame.SRCALPHA)
+            self._reef_overlay_surface = overlay
+        overlay.fill((0, 0, 0, 0))
+        for reef in self.reefs:
+            points = self.polygon_to_screen(reef.polygon)
+            xs = [p[0] for p in points]
+            ys = [p[1] for p in points]
+            if max(xs) < -24 or min(xs) > self.screen.get_width() + 24 or max(ys) < -24 or min(ys) > self.screen.get_height() + 24:
+                continue
+            pygame.draw.polygon(overlay, (197, 43, 48, 66), points)
+            pygame.draw.lines(overlay, (236, 86, 77, 175), True, points, max(1, int(2 * self.camera_zoom)))
+            # A broken inner contour makes the hazard read as a shoal, not land.
+            center_x = sum(x for x, _ in points) / len(points)
+            center_y = sum(y for _, y in points) / len(points)
+            inner = [(int(center_x + (x - center_x) * 0.76),
+                      int(center_y + (y - center_y) * 0.76)) for x, y in points]
+            pygame.draw.lines(overlay, (255, 137, 113, 100), True, inner, max(1, int(self.camera_zoom)))
+        self.screen.blit(overlay, (0, 0))
+        if self.camera_zoom >= 0.78:
+            for reef in self.reefs:
+                sx, sy = self.world_to_screen(reef.center_x, reef.center_y)
+                if -80 <= sx <= self.screen.get_width() + 80 and -40 <= sy <= self.screen.get_height() + 40:
+                    label = fit_text_surface(self.tiny_font, "REEF", (255, 220, 203), 76, 20)
+                    label_rect = label.get_rect(center=(sx, sy))
+                    pygame.draw.rect(self.screen, (105, 28, 31), label_rect.inflate(8, 4), border_radius=3)
+                    self.screen.blit(label, label_rect)
+
     def draw_treasure_features(self):
         for site in self.treasure_sites:
             if not site.map_found:
@@ -92,26 +126,58 @@ class RenderingMixin:
                     pygame.draw.line(self.screen, (92, 57, 36), (chest_pos[0] - 23, chest_pos[1] - 7), (chest_pos[0] + 19, chest_pos[1] + 8), 6)
                     pygame.draw.line(self.screen, (177, 145, 98), (chest_pos[0] - 8, chest_pos[1] - 2), (chest_pos[0] - 3, chest_pos[1] + 1), 3)
 
+    def draw_shipwrecks(self):
+        """Draw discovered wreck silhouettes as debris embedded in the sea."""
+        for site in getattr(self, "shipwrecks", []):
+            if not site.discovered:
+                continue
+            sx, sy = self.world_to_screen(site.x, site.y)
+            if sx < -90 or sx > self.screen.get_width() + 90 or sy < -70 or sy > self.screen.get_height() + 70:
+                continue
+            angle = math.radians(site.heading)
+            cos_a, sin_a = math.cos(angle), math.sin(angle)
+            hull_local = [(-25, -7), (-17, -13), (20, -10), (14, -2), (22, 7), (-14, 11), (-24, 3)]
+            hull_points = []
+            for lx, ly in hull_local:
+                hull_points.append((int(sx + (lx * cos_a - ly * sin_a) * self.camera_zoom),
+                                    int(sy + (lx * sin_a + ly * cos_a) * self.camera_zoom)))
+            hull_color = (67, 48, 34) if not site.fully_salvaged else (89, 75, 60)
+            pygame.draw.polygon(self.screen, hull_color, hull_points)
+            pygame.draw.lines(self.screen, (153, 113, 68), True, hull_points, max(1, int(2 * self.camera_zoom)))
+            mast_a = (sx + int(-9 * cos_a * self.camera_zoom), sy + int(-9 * sin_a * self.camera_zoom))
+            mast_b = (sx + int(27 * cos_a * self.camera_zoom), sy + int(27 * sin_a * self.camera_zoom))
+            pygame.draw.line(self.screen, (91, 65, 42), mast_a, mast_b, max(1, int(3 * self.camera_zoom)))
+            for offset in (-15, 4, 17):
+                px = sx + int((offset * cos_a - 13 * sin_a) * self.camera_zoom)
+                py = sy + int((offset * sin_a + 13 * cos_a) * self.camera_zoom)
+                pygame.draw.line(self.screen, (133, 99, 62), (px - 4, py - 3), (px + 5, py + 4), max(1, int(2 * self.camera_zoom)))
+            if self.camera_zoom >= 0.64:
+                label_text = "SALVAGED WRECK" if site.fully_salvaged else "SHIPWRECK"
+                label = fit_text_surface(self.tiny_font, label_text, (248, 222, 174), 145, 21)
+                label_rect = label.get_rect(center=(sx, sy - max(23, int(31 * self.camera_zoom))))
+                pygame.draw.rect(self.screen, (43, 35, 27), label_rect.inflate(8, 4), border_radius=3)
+                self.screen.blit(label, label_rect)
+
     def draw_port(self, port):
         pier_start = self.world_to_screen(port.shore_x, port.shore_y)
         pier_end = self.world_to_screen(port.x, port.y)
         pygame.draw.line(self.screen, (76, 49, 33), pier_start, pier_end, max(5, int(14 * self.camera_zoom)))
         pygame.draw.line(self.screen, (155, 112, 70), pier_start, pier_end, max(2, int(8 * self.camera_zoom)))
-        # A broad outer quay with five separate alongside berths. The short
-        # finger piers are wide enough for several vessels to lie alongside.
+        # A broad outer quay with nine alongside berths. Each finger pier
+        # has enough separation for a full-sized vessel and its rigging.
         axis_x, axis_y = port.x - port.shore_x, port.y - port.shore_y
         axis_len = max(1.0, math.hypot(axis_x, axis_y))
         axis_x, axis_y = axis_x / axis_len, axis_y / axis_len
         perp_x, perp_y = -axis_y, axis_x
-        for berth_slot in range(5):
-            offset = (berth_slot - 2) * 120.0
+        for berth_slot in range(PORT_BERTH_COUNT):
+            offset = (berth_slot - PORT_BERTH_CENTER_SLOT) * PORT_BERTH_SPACING
             bx = port.x + perp_x * offset
             by = port.y + perp_y * offset
-            berth_start = self.world_to_screen(bx - axis_x * 24.0, by - axis_y * 24.0)
-            berth_end = self.world_to_screen(bx + axis_x * 55.0, by + axis_y * 55.0)
+            berth_start = self.world_to_screen(bx - axis_x * 45.0, by - axis_y * 45.0)
+            berth_end = self.world_to_screen(bx + axis_x * 100.0, by + axis_y * 100.0)
             pygame.draw.line(self.screen, (76, 49, 33), berth_start, berth_end, max(4, int(10 * self.camera_zoom)))
             pygame.draw.line(self.screen, (155, 112, 70), berth_start, berth_end, max(2, int(5 * self.camera_zoom)))
-            cleat = self.world_to_screen(bx + axis_x * 55.0, by + axis_y * 55.0)
+            cleat = self.world_to_screen(bx + axis_x * 100.0, by + axis_y * 100.0)
             pygame.draw.circle(self.screen, (213, 187, 139), cleat, max(2, int(3 * self.camera_zoom)))
         if self.camera_zoom > 0.7:
             dx = port.x - port.shore_x
@@ -362,7 +428,9 @@ class RenderingMixin:
         self.update_camera()
         self.draw_ocean()
         self.draw_islands()
+        self.draw_reefs()
         self.draw_treasure_features()
+        self.draw_shipwrecks()
         self.draw_day_job_target()
         for port in self.ports:
             self.draw_port(port)
@@ -400,6 +468,32 @@ class RenderingMixin:
         self.draw_cannon_smoke()
         self.draw_cannonballs()
 
+    def draw_navigation_compass(self):
+        target = self.navigation_target()
+        if not target:
+            return
+        target_name, target_x, target_y, target_kind = target
+        dx, dy = target_x - self.ship_x, target_y - self.ship_y
+        distance = math.hypot(dx, dy)
+        bearing = math.degrees(math.atan2(dy, dx)) % 360.0
+        relative = math.radians(angle_difference(bearing, self.ship_heading))
+        directions = ("E", "SE", "S", "SW", "W", "NW", "N", "NE")
+        cardinal = directions[int((bearing + 22.5) // 45.0) % 8]
+        width = self.screen.get_width()
+        box = pygame.Rect(width // 2 - 150, 16, 300, 58)
+        pygame.draw.rect(self.screen, (37, 27, 20), box.inflate(6, 6), border_radius=6)
+        pygame.draw.rect(self.screen, (110, 76, 46), box, border_radius=6)
+        pygame.draw.rect(self.screen, (220, 187, 126), box.inflate(-5, -5), 1, border_radius=5)
+        arrow_cx, arrow_cy = box.x + 27, box.centery
+        tip = (int(arrow_cx + math.sin(relative) * 16), int(arrow_cy - math.cos(relative) * 16))
+        left = (int(arrow_cx + math.sin(relative + 2.45) * 11), int(arrow_cy - math.cos(relative + 2.45) * 11))
+        right = (int(arrow_cx + math.sin(relative - 2.45) * 11), int(arrow_cy - math.cos(relative - 2.45) * 11))
+        pygame.draw.polygon(self.screen, (246, 210, 139), [tip, left, right])
+        title = fit_text_surface(self.tiny_font, f"COURSE TO {target_name.upper()}", (249, 224, 178), box.width - 54, 22)
+        detail = fit_text_surface(self.tiny_font, f"{distance:,.0f} chart units  ·  {cardinal}", (235, 216, 184), box.width - 54, 20)
+        self.screen.blit(title, (box.x + 48, box.y + 7))
+        self.screen.blit(detail, (box.x + 48, box.y + 31))
+
     def draw_mission_waypoint(self):
         target = self.mission_navigation_target()
         if not target:
@@ -412,7 +506,7 @@ class RenderingMixin:
             pygame.draw.circle(self.screen, color, (sx, sy), max(10, int(pulse * self.camera_zoom)), max(2, int(3 * self.camera_zoom)))
             pygame.draw.line(self.screen, color, (sx - 13, sy), (sx + 13, sy), max(2, int(3 * self.camera_zoom)))
             pygame.draw.line(self.screen, color, (sx, sy - 13), (sx, sy + 13), max(2, int(3 * self.camera_zoom)))
-            caption = "BATTLE WATERS" if target_kind == "battlefield" else "MISSION PORT"
+            caption = "BATTLE WATERS" if target_kind == "battlefield" else "NEXT PORT CALL" if target_kind == "waypoint" else "MISSION PORT"
             label = fit_text_surface(self.tiny_font, f"{caption}: {target_name.upper()}", (255, 229, 176), 270, 25)
             label_rect = label.get_rect(center=(sx, sy - max(31, int(38 * self.camera_zoom))))
             pygame.draw.rect(self.screen, (39, 29, 21), label_rect.inflate(10, 5), border_radius=3)
@@ -420,7 +514,7 @@ class RenderingMixin:
 
     def draw_hud(self):
         width, height = self.screen.get_size()
-        panel = pygame.Rect(18, 16, 480, 196)
+        panel = pygame.Rect(18, 16, 480, 222)
         pygame.draw.rect(self.screen, (38, 25, 19), panel.inflate(6, 6), border_radius=7)
         pygame.draw.rect(self.screen, (120, 77, 43), panel, border_radius=6)
         pygame.draw.rect(self.screen, (221, 185, 122), panel.inflate(-6, -6), 2, border_radius=5)
@@ -443,6 +537,8 @@ class RenderingMixin:
         fleet_line = fit_text_surface(self.tiny_font, f"{self.current_ship}  |  Escorts: {len(self.fleet)}  |  Orders: {order_display}", (255, 236, 193), panel.width - 32, 23)
         self.screen.blit(ship_line, (panel.x + 16, panel.y + 147))
         self.screen.blit(fleet_line, (panel.x + 16, panel.y + 171))
+        cargo_text = fit_text_surface(self.tiny_font, f"Cargo: {self.cargo_load():.1f} / {self.cargo_capacity():.0f} units", (255, 236, 193), panel.width - 32, 22)
+        self.screen.blit(cargo_text, (panel.x + 16, panel.y + 194))
         right_x = width - 285
         info = pygame.Rect(right_x, 16, 267, 160)
         pygame.draw.rect(self.screen, (38, 25, 19), info.inflate(6, 6), border_radius=7)
@@ -462,6 +558,7 @@ class RenderingMixin:
         tip = (arrow_center[0] + int(math.cos(direction) * 15), arrow_center[1] + int(math.sin(direction) * 15))
         pygame.draw.line(self.screen, (245, 226, 182), arrow_center, tip, 3)
         pygame.draw.circle(self.screen, (245, 226, 182), tip, 3)
+        self.draw_navigation_compass()
         self.draw_mini_map()
         if self.mission_result_timer > 0:
             result_width = min(680, width - 48)
@@ -504,7 +601,7 @@ class RenderingMixin:
                 self.screen.blit(fitted_line, (day_box.x + 14, day_box.y + 35 + line_index * 24))
         if self.near_port and not self.docked_port:
             faction_name = getattr(self.near_port, "faction", "Independent")
-            prompt = fit_text_surface(self.small_font, f"E  Come alongside {self.near_port.name} · {faction_name}", (255, 239, 198), width - 54, 34)
+            prompt = fit_text_surface(self.small_font, f"E  Take nearest open berth at {self.near_port.name} · {faction_name}", (255, 239, 198), width - 54, 34)
             box = prompt.get_rect(center=(width // 2, height - 35)).inflate(25, 13)
             pygame.draw.rect(self.screen, (36, 29, 21), box, border_radius=5)
             self.screen.blit(prompt, prompt.get_rect(center=box.center))
@@ -512,7 +609,7 @@ class RenderingMixin:
             port_record = self.ports_by_name.get(self.docked_port)
             faction_name = getattr(port_record, "faction", "Independent")
             standing = self.faction_attitude(faction_name)
-            prompt_text = f"{self.docked_port} · {faction_name} ({standing})  |  E: cast off   Q: harbourmaster   B: shipyard   I: diplomacy"
+            prompt_text = f"{self.docked_port} · {faction_name} ({standing})  |  E: cast off   Q: harbourmaster   B: shipyard   Y: market   I: diplomacy"
             prompt = fit_text_surface(self.small_font, prompt_text, (255, 239, 198), width - 54, 34)
             box = prompt.get_rect(center=(width // 2, height - 35)).inflate(25, 13)
             pygame.draw.rect(self.screen, (36, 29, 21), box, border_radius=5)
@@ -520,10 +617,15 @@ class RenderingMixin:
         if not self.docked_port:
             bottle = self.nearest_unfound_bottle(130.0)
             site = self.nearest_treasure_shore(230.0)
+            wreck = self.nearest_shipwreck(230.0)
             prompt_text = None
             rescue_distance = self.day_job_rescue_distance()
             if rescue_distance <= 180:
                 prompt_text = "R  Bring the stranded crew aboard"
+            elif wreck and not wreck.fully_salvaged:
+                prompt_text = f"R  Investigate the wreck of {wreck.name}"
+            elif wreck and wreck.fully_salvaged:
+                prompt_text = f"The wreck of {wreck.name} has been salvaged"
             elif bottle:
                 prompt_text = "R  Recover the bottle and its treasure chart"
             elif site and site.map_found and not site.dug:
@@ -568,6 +670,13 @@ class RenderingMixin:
             py = inner.y + int((port.y - top) * sy)
             if inner.collidepoint(px, py):
                 pygame.draw.circle(self.screen, FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (243, 210, 139)), (px, py), 3)
+        for wreck in getattr(self, "shipwrecks", []):
+            if wreck.discovered:
+                wx = inner.x + int((wreck.x - left) * sx)
+                wy = inner.y + int((wreck.y - top) * sy)
+                if inner.collidepoint(wx, wy):
+                    pygame.draw.line(self.screen, (237, 207, 150), (wx - 3, wy - 3), (wx + 3, wy + 3), 2)
+                    pygame.draw.line(self.screen, (237, 207, 150), (wx - 3, wy + 3), (wx + 3, wy - 3), 2)
         for pirate in self.pirates:
             if not pirate.dead:
                 px = inner.x + int((pirate.x - left) * sx)
@@ -672,6 +781,12 @@ class RenderingMixin:
             if site.revealed:
                 points = [(chart.x + int(x * sx), chart.y + int(y * sy)) for x, y in site.polygon]
                 pygame.draw.polygon(self.screen, (102, 143, 85), points)
+        reef_overlay = pygame.Surface((chart.width, chart.height), pygame.SRCALPHA)
+        for reef in getattr(self, "reefs", []):
+            points = [(int(x * sx), int(y * sy)) for x, y in reef.polygon]
+            pygame.draw.polygon(reef_overlay, (225, 55, 55, 92), points)
+            pygame.draw.lines(reef_overlay, (255, 133, 117, 195), True, points, 1)
+        self.screen.blit(reef_overlay, chart.topleft)
 
         regions = [
             ("OLD CARIBBEAN", "Old Caribbean", (1450 * WORLD_SCALE, 1850 * WORLD_SCALE)),
@@ -707,6 +822,13 @@ class RenderingMixin:
             pygame.draw.circle(self.screen, faction_colour, (px, py), 4)
             number = fit_text_surface(self.map_font, f"{index:02d}", (255, 245, 215), 24, 20)
             self.screen.blit(number, (px + 4, py - 9))
+        for wreck in getattr(self, "shipwrecks", []):
+            if wreck.discovered:
+                wx = chart.x + int(wreck.x * sx)
+                wy = chart.y + int(wreck.y * sy)
+                if chart.collidepoint(wx, wy):
+                    pygame.draw.line(self.screen, (247, 219, 165), (wx - 4, wy - 4), (wx + 4, wy + 4), 2)
+                    pygame.draw.line(self.screen, (247, 219, 165), (wx - 4, wy + 4), (wx + 4, wy - 4), 2)
 
         ship_point = (chart.x + int(self.ship_x * sx), chart.y + int(self.ship_y * sy))
         if chart.collidepoint(ship_point):
@@ -737,7 +859,8 @@ class RenderingMixin:
             columns[target_col].append((region_name, ports_in_region))
             heights[target_col] += 1 + len(ports_in_region)
         active = self.active_mission()
-        target_port = active.destination if active and self.mission_returning else (active.source if active else None)
+        navigation_target = self.mission_navigation_target(active) if active else None
+        target_port = navigation_target[0] if navigation_target and navigation_target[3] in {"port", "waypoint"} else None
         col_gap = 8
         col_width = (legend.width - 30 - col_gap) // 2
         content_top_y = legend.y + 36
@@ -764,49 +887,42 @@ class RenderingMixin:
         player_status = "YOUR SHIP: ON CHART" if chart.collidepoint(ship_point) else "YOUR SHIP: BEYOND THE CHART"
         status = fit_text_surface(self.map_font, player_status, (255, 227, 172), chart.width - 16, 20)
         self.screen.blit(status, (chart.x + 8, chart.bottom + 8))
-        footer_text = f"M / Esc: close  •  {len(self.ports)} ports  •  Faction colours mark each harbour  •  Open ocean beyond the chart"
+        footer_text = f"M / Esc: close  •  {len(self.ports)} ports  •  Red patches = reefs  •  Gold crosses = discovered shipwrecks  •  Faction colours mark harbours"
         footer = fit_text_surface(self.map_font, footer_text, (248, 226, 188), box.width - 40, 22)
         self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 12)))
 
     def draw_help(self):
         width, height = self.screen.get_size()
-        box = pygame.Rect(width - 470, height - 630, 450, 610)
-        pygame.draw.rect(self.screen, (35, 26, 21), box, border_radius=6)
-        pygame.draw.rect(self.screen, (146, 104, 64), box, 2, border_radius=6)
+        box_width = min(560, max(300, width - 32))
+        box_height = min(370, max(250, height - 32))
+        box = pygame.Rect(width - box_width - 16, height - box_height - 16, box_width, box_height)
+        pygame.draw.rect(self.screen, (35, 26, 21), box, border_radius=7)
+        pygame.draw.rect(self.screen, (146, 104, 64), box, 2, border_radius=7)
         heading = fit_text_surface(self.small_font, "CAPTAIN'S ORDERS", (248, 221, 172), box.width - 28, 27)
-        self.screen.blit(heading, (box.x + 14, box.y + 10))
+        self.screen.blit(heading, heading.get_rect(center=(box.centerx, box.y + 18)))
+        pygame.draw.line(self.screen, (130, 95, 61), (box.x + 14, box.y + 39), (box.right - 14, box.y + 39), 1)
         lines = [
-            "W / S   Trim or reef sails",
-            "O       Ship / stow the oars",
-            "A / D   Work the rudder",
-            "Hold Z   Port battery; staggered reloads",
-            "Hold X   Starboard battery; staggered reloads",
-            "E       Dock / cast off",
-            "Q       Harbour office / multi-job board",
-            "M       Open the full sea chart",
-            "R       Rescue / recover maps / dig for treasure",
-            "B       Open the shipyard in port",
-            "F       Fleet: fight nearby pirates",
-            "H       Fleet: hold fire, keep formation",
-            "G       Fleet: gather around your ship",
-            "V       Fleet: follow in formation",
-            "T       Open treasure charts",
-            "Wheel   Zoom at mouse pointer",
-            "Mouse drag   Pan the chart",
-            "C       Centre on your ship",
-            "J       Captain's log",
-            "N       Admirals' & captains' ledger",
-            "I       Faction relations & diplomacy",
-            "F5      Save a named voyage",
-            "Esc/F9  Pause, save or load",
-            "F1      Show / hide these orders",
+            "W / S  Set / reef sails", "A / D  Steer", "O  Deploy / stow oars",
+            "Hold Z / X  Port / starboard guns", "E  Dock / cast off", "Q  Harbour office / jobs",
+            "R  Interact / salvage / treasure", "B  Shipyard (in port)",
+            "F / H / G / V  Escort orders", "M  Full sea chart", "C  Centre camera",
+            "Wheel / drag  Zoom / pan", "J  Captain's journal", "T  Treasure charts",
+            "N  Commanders' ledger", "I  Faction diplomacy", "F5  Save voyage", "Y  Trade market (in port)",
+            "Esc / F9  Pause menu", "F1  Hide these orders",
+            "Red water  Reef hazard", "Gold marker  Story objective", "Gold cross  Discovered wreck",
         ]
-        help_row = min(24, max(18, (box.height - 70) // len(lines)))
+        split = (len(lines) + 1) // 2
+        columns = (lines[:split], lines[split:])
+        gap = 14
+        col_width = (box.width - 36 - gap) // 2
+        row_height = max(18, min(25, (box.height - 60) // split))
         previous_clip = self.screen.get_clip()
         self.screen.set_clip(box)
-        for index, line in enumerate(lines):
-            rendered = fit_text_surface(self.tiny_font, line, (235, 222, 194), box.width - 28, help_row - 1)
-            self.screen.blit(rendered, (box.x + 14, box.y + 48 + index * help_row))
+        for col_index, column in enumerate(columns):
+            x = box.x + 14 + col_index * (col_width + gap)
+            for row_index, line in enumerate(column):
+                rendered = fit_text_surface(self.tiny_font, line, (235, 222, 194), col_width, row_height - 1)
+                self.screen.blit(rendered, (x, box.y + 49 + row_index * row_height))
         self.screen.set_clip(previous_clip)
 
     def draw_toast(self):
@@ -1072,10 +1188,15 @@ class RenderingMixin:
         selected_score = self.faction_standing(selected_faction)
         detail = fit_text_surface(self.small_font,
             f"{selected_faction}: {self.relation_label(selected_score)}. Friendly ≥ +30; hostile ≤ -30.",
-            (81, 57, 37), box.width - 50, 26)
-        self.screen.blit(detail, (box.x + 26, box.bottom - 115))
+            (81, 57, 37), box.width - 50, 25)
+        self.screen.blit(detail, (box.x + 26, box.bottom - 143))
+        econ = self.faction_economy_summary(selected_faction)
+        economy_line = (f"Treasury {econ['treasury']:,}g  ·  Balance {econ['trade_balance']:+,}g  ·  "
+                        f"Prosperity {econ['prosperity']:.0f}/100  ·  Shortages {econ['shortage_pressure']:.0f}%")
+        economy_surface = fit_text_surface(self.tiny_font, economy_line, (89, 83, 51), box.width - 50, 22)
+        self.screen.blit(economy_surface, (box.x + 26, box.bottom - 113))
         hint = fit_text_surface(self.tiny_font, self.diplomatic_action_hint(), (101, 73, 46), box.width - 50, 23)
-        self.screen.blit(hint, (box.x + 26, box.bottom - 83))
+        self.screen.blit(hint, (box.x + 26, box.bottom - 82))
         footer = fit_text_surface(self.small_font, "Up/Down: select faction   ·   P: request safe conduct   ·   G: give harbour gift   ·   I / Esc: close",
                                   (104, 74, 48), box.width - 42, 25)
         self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 13)))
@@ -1164,6 +1285,10 @@ class RenderingMixin:
             self.draw_settings_menu()
             pygame.display.flip()
             return
+        if self.menu_mode == "guide":
+            self.draw_guide_menu()
+            pygame.display.flip()
+            return
         if self.save_dialog_open:
             self.draw_save_dialog()
             pygame.display.flip()
@@ -1187,4 +1312,6 @@ class RenderingMixin:
             self.draw_world_map()
         if self.job_board_open:
             self.draw_job_board()
+        if getattr(self, "market_open", False):
+            self.draw_trade_market()
         pygame.display.flip()

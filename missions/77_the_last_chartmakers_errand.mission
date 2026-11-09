@@ -1,0 +1,46 @@
+mission "The Last Chartmaker's Errand"
+    category "side"
+    name "The Last Chartmaker's Errand"
+    description "Carry a fragile chart folio from Bellweather Cay to San Aurelio, calling at Wreckers' Moon and Gallows Key to obtain two missing annotations."
+    source "Bellweather Cay"
+    waypoint "Wreckers' Moon" "Get Marda Quill's original soundings for the western passage."
+    waypoint "Gallows Key" "Have Silas Rook authenticate the privateer mark on the chart."
+    destination "San Aurelio"
+    reward 1160
+    to offer
+        has "A Scholar Without a Flag"
+    objective route
+    speaker offer "Keeper Orlan"
+    speaker waypoint_1 "Marda Quill"
+    speaker waypoint_2 "Silas Rook"
+    speaker visit "Brother Mateo"
+    speaker complete "Keeper Orlan"
+    on offer
+        conversation
+            `Keeper Orlan has spread a water-stained chart across the observatory table. Two sections have been cut away with a very sharp knife.`
+            `"The missing marks are not decoration. One is a set of soundings kept by Marda Quill at Wreckers' Moon. The other is a privateer mark that Silas Rook at Gallows Key can identify. Take the folio to San Aurelio when both annotations are restored. Brother Mateo has agreed to keep it safe."`
+            `The keeper ties the folio in oilcloth. "The calls matter. Wreckers' Moon first, Gallows Key second, San Aurelio last. A chart with only half its truth is worse than no chart at all."`
+            choice
+                `"I'll carry it and make each call in order."`
+                    accept
+                `"I have other business to attend to."`
+                    close
+    on accept
+        log "Accepted The Last Chartmaker's Errand. Follow Bellweather Cay → Wreckers' Moon → Gallows Key → San Aurelio, restoring the chart at each stop."
+    on waypoint_1
+        conversation
+            `Marda Quill compares the folio with a battered notebook kept in a tarred leather case. She copies a set of soundings into the margin and marks a safe approach through the shoals.`
+            `"There. I would not take a heavy ship through that water, but a careful captain will find room. Silas at Gallows Key will know the mark you are missing."`
+    on waypoint_2
+        conversation
+            `Silas Rook turns the chart towards the light and gives a low whistle. He adds a small black pennant beside the soundings.`
+            `"That mark belonged to the old Grey Gull privateers. It means the passage was watched, not owned. Take it to San Aurelio. Mateo will know why the old monastery kept a copy."`
+    on visit
+        conversation
+            `Brother Mateo receives the folio with both hands. He checks Marda's soundings, then the privateer mark, and finally nods.`
+            `"The annotations agree. This is the missing approach to the western archive. You have brought the pieces together without losing a single one."`
+    on complete
+        conversation
+            `Keeper Orlan's purse is heavier than you expected. "A chart is a promise made between one navigator and the next. You have helped keep this one honest."`
+            `He gives you a copied note describing a quiet anchorage where pilots can shelter when the trade winds turn violent.`
+        log "The chart folio was restored and delivered to San Aurelio. Keeper Orlan rewarded the voyage and shared a safe anchorage note."

@@ -14,6 +14,17 @@ class Port:
     faction: str = "Independent"
 
 @dataclass
+class Reef:
+    name: str
+    polygon: list
+    center_x: float
+    center_y: float
+    radius_x: float
+    radius_y: float
+    bounds: tuple
+
+
+@dataclass
 class PirateShip:
     name: str
     x: float
@@ -140,3 +151,29 @@ class DayJob:
     target_y: float = None
     stage: str = "offered"
     rescued: bool = False
+
+
+@dataclass
+class ShipwreckSite:
+    wreck_id: str
+    name: str
+    x: float
+    y: float
+    heading: float
+    vessel_name: str
+    age_description: str
+    description: str
+    hazard_description: str
+    risk_level: int
+    surface_gold: int
+    deep_gold: int
+    rare_discovery: str
+    rare_chance: float
+    discovered: bool = False
+    surface_salvaged: bool = False
+    deep_attempted: bool = False
+    rare_found: bool = False
+
+    @property
+    def fully_salvaged(self):
+        return self.surface_salvaged and self.deep_attempted

@@ -5,7 +5,7 @@ mission "The Cane Wharf Raid"
     destination "Sugarhook"
     reward 820
     objective kills 3
-    battlefield "Sugarhook Roads" 15700 1750
+    battlefield "Sugarhook Roads" 15780.9 1448.1
     enemy "Sugarhook Roads Guard 1"
     enemy "Sugarhook Roads Guard 2"
     enemy "Sugarhook Roads Guard 3"

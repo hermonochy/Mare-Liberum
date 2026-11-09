@@ -5,7 +5,7 @@ mission "The Guns of Redoubt"
     destination "Redoubt"
     reward 1050
     objective kills 4
-    battlefield "Redoubt Soundings" 15000 8200
+    battlefield "Redoubt Soundings" 15181.1 10270.2
     enemy "Redoubt Soundings Guard 1"
     enemy "Redoubt Soundings Guard 2"
     enemy "Redoubt Soundings Guard 3"
