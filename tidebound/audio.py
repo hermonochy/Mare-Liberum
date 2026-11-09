@@ -4,6 +4,14 @@ import random
 
 import pygame
 
+from .config import (
+    AUDIO_CHANNEL_COUNT, AUDIO_DOCKED_WIND_VOLUME, AUDIO_HARBOUR_AUDIBLE_DISTANCE,
+    AUDIO_HARBOUR_MAX_VOLUME, AUDIO_INITIAL_SAIL_INTERVAL, AUDIO_LOOP_CHANNELS,
+    AUDIO_MIXER_OPTIONS, AUDIO_SAIL_INTERVAL, AUDIO_SAIL_SPEED_THRESHOLD,
+    AUDIO_SAIL_WIND_THRESHOLD, AUDIO_SOUND_NAMES, AUDIO_WAVES_DOCKED_VOLUME,
+    AUDIO_WAVES_UNDERWAY_VOLUME, AUDIO_WIND_VOLUME_BASE, AUDIO_WIND_VOLUME_RANGE,
+)
+
 
 class AudioEngine:
     def __init__(self, audio_directory):
@@ -14,22 +22,18 @@ class AudioEngine:
         self.loop_base_targets = {}
         self.effects_volume = 1.0
         self.ambience_volume = 1.0
-        self._sail_timer = random.uniform(4.0, 8.0)
+        self._sail_timer = random.uniform(*AUDIO_INITIAL_SAIL_INTERVAL)
         try:
             if not pygame.mixer.get_init():
-                pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-            pygame.mixer.set_num_channels(max(24, pygame.mixer.get_num_channels()))
+                pygame.mixer.init(**AUDIO_MIXER_OPTIONS)
+            pygame.mixer.set_num_channels(max(AUDIO_CHANNEL_COUNT, pygame.mixer.get_num_channels()))
             self.enabled = True
-            for index, name in enumerate(("wind_at_sea", "rolling_waves", "harbour_ambience")):
+            for index, name in enumerate(AUDIO_LOOP_CHANNELS):
                 self.loop_channels[name] = pygame.mixer.Channel(index)
             directory = Path(audio_directory)
             # These four sound categories are intentionally excluded from
             # this release following player feedback.
-            sound_names = (
-                "wind_at_sea", "rolling_waves", "sails_flapping",
-                "cannon_fire", "cannon_impact", "harbour_ambience",
-            )
-            for name in sound_names:
+            for name in AUDIO_SOUND_NAMES:
                 path = directory / f"{name}.wav"
                 if path.is_file():
                     self.sounds[name] = pygame.mixer.Sound(str(path))
@@ -109,21 +113,21 @@ class AudioEngine:
                wind_strength=1.0):
         if not self.enabled:
             return
-        wind_volume = 0.13 + max(0.0, min(1.0, wind_strength)) * 0.12
-        self._loop_volume("wind_at_sea", wind_volume if not docked else 0.085)
-        self._loop_volume("rolling_waves", 0.20 if not docked else 0.13)
+        wind_volume = AUDIO_WIND_VOLUME_BASE + max(0.0, min(1.0, wind_strength)) * AUDIO_WIND_VOLUME_RANGE
+        self._loop_volume("wind_at_sea", wind_volume if not docked else AUDIO_DOCKED_WIND_VOLUME)
+        self._loop_volume("rolling_waves", AUDIO_WAVES_UNDERWAY_VOLUME if not docked else AUDIO_WAVES_DOCKED_VOLUME)
 
         harbour_factor = 1.0 if docked else 0.0
-        if near_port_distance is not None and near_port_distance < 1800.0:
-            harbour_factor = max(harbour_factor, 1.0 - near_port_distance / 1800.0)
-        self._loop_volume("harbour_ambience", 0.31 * harbour_factor)
+        if near_port_distance is not None and near_port_distance < AUDIO_HARBOUR_AUDIBLE_DISTANCE:
+            harbour_factor = max(harbour_factor, 1.0 - near_port_distance / AUDIO_HARBOUR_AUDIBLE_DISTANCE)
+        self._loop_volume("harbour_ambience", AUDIO_HARBOUR_MAX_VOLUME * harbour_factor)
 
-        underway = not docked and speed > 8.0
+        underway = not docked and speed > AUDIO_SAIL_SPEED_THRESHOLD
         if underway:
             self._sail_timer -= dt
-            if self._sail_timer <= 0.0 and wind_strength > 0.45:
+            if self._sail_timer <= 0.0 and wind_strength > AUDIO_SAIL_WIND_THRESHOLD:
                 self.play("sails_flapping", 0.08 + 0.11 * wind_strength)
-                self._sail_timer = random.uniform(5.0, 12.0)
+                self._sail_timer = random.uniform(*AUDIO_SAIL_INTERVAL)
         else:
             self._sail_timer = min(self._sail_timer, 2.5)
 

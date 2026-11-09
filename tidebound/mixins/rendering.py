@@ -386,22 +386,115 @@ class RenderingMixin:
             cache.pop(next(iter(cache)))
         return surface
 
-    def draw_ship(self, x, y, heading, player=True, hull=None, max_hull=None, allied=False, rowing=False, ship_type="Sloop", faction=""):
+    def draw_ship(self, x, y, heading, player=True, hull=None, max_hull=None, allied=False, rowing=False, ship_type="Sloop", faction="", hit_flash=0.0, sinking_progress=0.0, damage_marks=None):
+        """Render a vessel with progressive battle scars and a sinking animation."""
+        progress = max(0.0, min(1.0, float(sinking_progress)))
         base = self.create_ship_surface(player, allied, rowing, ship_type, faction)
-        scaled_w = max(28, int(base.get_width() * self.camera_zoom))
-        scaled_h = max(22, int(base.get_height() * self.camera_zoom))
+        sink_scale = 1.0 - 0.36 * progress
+        scaled_w = max(22, int(base.get_width() * self.camera_zoom * sink_scale))
+        scaled_h = max(18, int(base.get_height() * self.camera_zoom * sink_scale))
         if scaled_w != base.get_width() or scaled_h != base.get_height():
             base = pygame.transform.smoothscale(base, (scaled_w, scaled_h))
-        rotated = pygame.transform.rotate(base, -heading)
-        pos = self.world_to_screen(x, y)
+        render_heading = heading + math.sin(progress * math.pi) * 28.0
+        rotated = pygame.transform.rotate(base, -render_heading)
+        if progress > 0.0:
+            rotated.set_alpha(max(0, int(255 * (1.0 - progress))))
+        drift_x = math.cos(math.radians(heading)) * progress * 14.0
+        drift_y = math.sin(math.radians(heading)) * progress * 14.0 + progress * 35.0
+        pos = self.world_to_screen(x + drift_x, y + drift_y)
         rect = rotated.get_rect(center=pos)
+        if progress > 0.02:
+            ring = max(8, int((21.0 + progress * 18.0) * self.camera_zoom))
+            pygame.draw.ellipse(self.screen, (177, 211, 207), (pos[0] - ring * 1.6, pos[1] - ring * 0.42,
+                                                                  ring * 3.2, ring * 0.84), max(1, int(2 * self.camera_zoom)))
+            pygame.draw.ellipse(self.screen, (220, 229, 211), (pos[0] - ring * 1.12, pos[1] - ring * 0.27,
+                                                                  ring * 2.24, ring * 0.54), 1)
         self.screen.blit(rotated, rect)
-        if not player and hull is not None and max_hull:
+
+        if progress < 0.72 and hull is not None and max_hull:
+            ratio = max(0.0, min(1.0, float(hull) / max(1.0, float(max_hull))))
+            self.draw_ship_damage_marks(x, y, heading, ratio, hit_flash, damage_marks)
+        if not player and hull is not None and max_hull and progress <= 0.02:
             bar_w = max(24, int(42 * self.camera_zoom))
             bar = pygame.Rect(pos[0] - bar_w // 2, pos[1] - int(38 * self.camera_zoom), bar_w, 5)
             pygame.draw.rect(self.screen, (40, 28, 27), bar)
             fill = pygame.Rect(bar.x, bar.y, int(bar.width * max(0, hull) / max_hull), bar.height)
             pygame.draw.rect(self.screen, (70, 171, 126) if allied else (171, 52, 40), fill)
+
+    def draw_ship_damage_marks(self, x, y, heading, hull_ratio, hit_flash=0.0, damage_marks=None):
+        """Scorch holes and splinter cracks accumulate as a ship loses hull."""
+        if hull_ratio >= 0.90 and hit_flash <= 0.0 and not damage_marks:
+            return
+        angle = math.radians(heading)
+        positions = []
+        if hull_ratio < 0.90:
+            positions.append((-13.0, -5.0))
+        if hull_ratio < 0.70:
+            positions.extend([(7.0, 6.0), (20.0, -2.0)])
+        if hull_ratio < 0.43:
+            positions.extend([(-3.0, 9.0), (25.0, 5.0)])
+        for index, (local_x, local_y) in enumerate(positions):
+            world_x = x + math.cos(angle) * local_x - math.sin(angle) * local_y
+            world_y = y + math.sin(angle) * local_x + math.cos(angle) * local_y
+            point = self.world_to_screen(world_x, world_y)
+            radius = max(2, int((3.2 + index * 0.30) * self.camera_zoom))
+            pygame.draw.circle(self.screen, (35, 25, 21), point, radius + 1)
+            pygame.draw.circle(self.screen, (105, 55, 35), point, max(1, radius - 1))
+            if hull_ratio < 0.43 and index in (1, 3):
+                endpoint = self.world_to_screen(world_x + math.cos(angle) * 8.0,
+                                                world_y + math.sin(angle) * 8.0)
+                pygame.draw.line(self.screen, (42, 29, 23), point, endpoint, max(1, int(1.5 * self.camera_zoom)))
+
+        # Individual cannon impacts leave persistent scars at their actual
+        # strike positions, rather than only changing a generic damage level.
+        for mark in (damage_marks or [])[-18:]:
+            local_x = float(mark.get("x", 0.0))
+            local_y = float(mark.get("y", 0.0))
+            world_x = x + math.cos(angle) * local_x - math.sin(angle) * local_y
+            world_y = y + math.sin(angle) * local_x + math.cos(angle) * local_y
+            point = self.world_to_screen(world_x, world_y)
+            radius = max(2, int(float(mark.get("size", 3.0)) * self.camera_zoom))
+            pygame.draw.circle(self.screen, (27, 22, 19), point, radius + 1)
+            pygame.draw.circle(self.screen, (112, 62, 39), point, max(1, radius - 1))
+            crack_angle = angle + float(mark.get("angle", 0.0))
+            crack_length = float(mark.get("length", 10.0))
+            end_world = (world_x + math.cos(crack_angle) * crack_length,
+                         world_y + math.sin(crack_angle) * crack_length)
+            end_point = self.world_to_screen(*end_world)
+            pygame.draw.line(self.screen, (37, 25, 20), point, end_point,
+                             max(1, int(1.6 * self.camera_zoom)))
+            branch_world = (world_x + math.cos(crack_angle + 0.85) * crack_length * 0.52,
+                            world_y + math.sin(crack_angle + 0.85) * crack_length * 0.52)
+            pygame.draw.line(self.screen, (54, 34, 25), point, self.world_to_screen(*branch_world),
+                             max(1, int(self.camera_zoom)))
+        if hit_flash > 0.0:
+            radius = max(10, int(30 * self.camera_zoom))
+            pygame.draw.circle(self.screen, (244, 205, 126), self.world_to_screen(x, y), radius, max(1, int(2 * self.camera_zoom)))
+
+    def draw_floating_debris(self):
+        for piece in getattr(self, "floating_debris", []):
+            sx, sy = self.world_to_screen(piece["x"], piece["y"])
+            if sx < -60 or sy < -60 or sx > self.screen.get_width() + 60 or sy > self.screen.get_height() + 60:
+                continue
+            fade = min(1.0, max(0.0, piece.get("life", 0.0) / 10.0))
+            angle = float(piece.get("angle", 0.0))
+            dx, dy = math.cos(angle), math.sin(angle)
+            px, py = -dy, dx
+            length = max(3.0, float(piece.get("length", 15.0)) * self.camera_zoom)
+            width = max(2.0, float(piece.get("width", 5.0)) * self.camera_zoom)
+            points = [
+                (int(sx - dx * length * 0.5 - px * width * 0.5), int(sy - dy * length * 0.5 - py * width * 0.5)),
+                (int(sx + dx * length * 0.5 - px * width * 0.5), int(sy + dy * length * 0.5 - py * width * 0.5)),
+                (int(sx + dx * length * 0.5 + px * width * 0.5), int(sy + dy * length * 0.5 + py * width * 0.5)),
+                (int(sx - dx * length * 0.5 + px * width * 0.5), int(sy - dy * length * 0.5 + py * width * 0.5)),
+            ]
+            color = (159, 111, 67) if not piece.get("cloth") else (115, 91, 68)
+            if fade < 0.25:
+                color = tuple(int(channel * fade + 22 * (1.0 - fade)) for channel in color)
+            pygame.draw.polygon(self.screen, color, points)
+            pygame.draw.lines(self.screen, (77, 55, 39), True, points, 1)
+            if not piece.get("cloth"):
+                pygame.draw.line(self.screen, (198, 151, 96), points[0], points[2], 1)
 
     def draw_cannon_smoke(self):
         for puff in self.cannon_smoke:
@@ -436,35 +529,56 @@ class RenderingMixin:
             self.draw_port(port)
         self.draw_mission_waypoint()
         for escort in self.fleet:
-            self.draw_ship(escort.x, escort.y, escort.heading, False, escort.hull, escort.max_hull, allied=True, ship_type=escort.ship_type)
-            label_pos = self.world_to_screen(escort.x, escort.y - 56)
-            label = self.tiny_font.render(escort.name, True, (210, 237, 220))
-            label_rect = label.get_rect(center=label_pos)
-            pygame.draw.rect(self.screen, (25, 48, 42), label_rect.inflate(8, 4), border_radius=3)
-            self.screen.blit(label, label_rect)
+            if escort.hull > 0 or getattr(escort, "sinking", False):
+                progress = min(1.0, escort.sink_elapsed / 5.0) if getattr(escort, "sinking", False) else 0.0
+                self.draw_ship(escort.x, escort.y, escort.heading, False, escort.hull, escort.max_hull,
+                               allied=True, ship_type=escort.ship_type, hit_flash=getattr(escort, "hit_flash", 0.0),
+                               sinking_progress=progress, damage_marks=getattr(escort, "damage_marks", []))
+                if progress < 0.85:
+                    label_pos = self.world_to_screen(escort.x, escort.y - 56)
+                    label = self.tiny_font.render(escort.name, True, (210, 237, 220))
+                    label_rect = label.get_rect(center=label_pos)
+                    pygame.draw.rect(self.screen, (25, 48, 42), label_rect.inflate(8, 4), border_radius=3)
+                    self.screen.blit(label, label_rect)
         for traffic in self.traffic_ships:
-            if traffic.hull > 0:
-                self.draw_ship(traffic.x, traffic.y, traffic.heading, False, traffic.hull, traffic.max_hull, ship_type=traffic.ship_type, faction=traffic.role)
-                if self.camera_zoom > 0.82:
+            if traffic.hull > 0 or getattr(traffic, "sinking", False):
+                progress = min(1.0, traffic.sink_elapsed / 5.0) if getattr(traffic, "sinking", False) else 0.0
+                self.draw_ship(traffic.x, traffic.y, traffic.heading, False, traffic.hull, traffic.max_hull,
+                               ship_type=traffic.ship_type, faction=traffic.role,
+                               hit_flash=getattr(traffic, "hit_flash", 0.0), sinking_progress=progress,
+                               damage_marks=getattr(traffic, "damage_marks", []))
+                if self.camera_zoom > 0.82 and progress < 0.85:
                     label_pos = self.world_to_screen(traffic.x, traffic.y - 54)
                     label = self.tiny_font.render(f"{traffic.name} · {traffic.role.title()}", True, (234, 229, 196))
                     label_rect = label.get_rect(center=label_pos)
                     pygame.draw.rect(self.screen, (29, 47, 53), label_rect.inflate(8, 4), border_radius=3)
                     self.screen.blit(label, label_rect)
         for pirate in self.pirates:
-            if not pirate.dead:
-                self.draw_ship(pirate.x, pirate.y, pirate.heading, False, pirate.hull, pirate.max_hull, ship_type=pirate.ship_type)
-                if pirate.objective_target:
+            if not pirate.dead or getattr(pirate, "sinking", False):
+                progress = min(1.0, pirate.sink_elapsed / 5.0) if getattr(pirate, "sinking", False) else 0.0
+                self.draw_ship(pirate.x, pirate.y, pirate.heading, False, pirate.hull, pirate.max_hull,
+                               ship_type=pirate.ship_type, hit_flash=getattr(pirate, "hit_flash", 0.0),
+                               sinking_progress=progress, damage_marks=getattr(pirate, "damage_marks", []))
+                if pirate.objective_target and progress < 0.85:
                     target_pos = self.world_to_screen(pirate.x, pirate.y)
                     pygame.draw.circle(self.screen, (255, 185, 92), target_pos, max(17, int(27 * self.camera_zoom)), max(2, int(3 * self.camera_zoom)))
-                if self.camera_zoom > 0.72:
+                if self.camera_zoom > 0.72 and progress < 0.85:
                     label_pos = self.world_to_screen(pirate.x, pirate.y - 52)
                     label_color = (255, 191, 113) if pirate.objective_target else (255, 224, 185)
                     label = self.tiny_font.render(pirate.name, True, label_color)
                     label_rect = label.get_rect(center=label_pos)
                     pygame.draw.rect(self.screen, (37, 28, 24), label_rect.inflate(8, 4), border_radius=3)
                     self.screen.blit(label, label_rect)
-        self.draw_ship(self.ship_x, self.ship_y, self.ship_heading, True, rowing=self.oars_deployed, ship_type=self.current_ship)
+        if self.player_sinking_active:
+            self.draw_ship(self.ship_x, self.ship_y, self.ship_heading, True, self.player_hull, self.player_max_hull,
+                           rowing=False, ship_type=self.current_ship,
+                           sinking_progress=min(1.0, self.player_sink_elapsed / 5.4),
+                           damage_marks=self.player_damage_marks)
+        elif not self.player_lost:
+            self.draw_ship(self.ship_x, self.ship_y, self.ship_heading, True, self.player_hull, self.player_max_hull,
+                           rowing=self.oars_deployed, ship_type=self.current_ship, hit_flash=self.player_hit_flash,
+                           damage_marks=self.player_damage_marks)
+        self.draw_floating_debris()
         self.draw_cannon_smoke()
         self.draw_cannonballs()
 
@@ -1165,7 +1279,7 @@ class RenderingMixin:
         self.screen.blit(title, (box.x + 24, box.y + 18))
         subtitle = fit_text_surface(self.small_font, "Factions remember your deeds. Their ports and captains respond to your standing.", (96, 68, 44), box.width - 52, 27)
         self.screen.blit(subtitle, (box.x + 26, box.y + 76))
-        factions = list(self.FACTION_NAMES)
+        factions = list(FACTION_NAMES)
         row_top = box.y + 116
         for index, faction in enumerate(factions):
             row = pygame.Rect(box.x + 22, row_top + index * 51, box.width - 44, 45)
@@ -1287,6 +1401,16 @@ class RenderingMixin:
             return
         if self.menu_mode == "guide":
             self.draw_guide_menu()
+            pygame.display.flip()
+            return
+        if self.menu_mode == "game_over":
+            self.draw_menu_panel(
+                "YOUR SHIP IS LOST",
+                "The flagship has sunk. This voyage is over; choose a saved captain's log to sail again.",
+                ["Load Last Save", "Choose a Save", "Return to Main Menu", "Quit"],
+                selected=self.menu_selection,
+                footer="Your last save has not been changed. Enter: select",
+            )
             pygame.display.flip()
             return
         if self.save_dialog_open:

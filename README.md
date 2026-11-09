@@ -1,183 +1,148 @@
 # Mare Liberum
-### A Caribbean life under sail — Version 32
 
-Take command of a small sailing ship and make your name across a living Caribbean. Trade, explore, hunt for buried treasure, take work from harbourmasters, build a fleet, or become the captain that every admiral fears. The sea carries on whether you are watching it or not: merchants cross between ports, pirate squadrons hunt prizes, and naval commanders fight battles of their own.
+A top-down Caribbean sailing adventure built with Python and Pygame. Take command of a small vessel, cross a dangerous archipelago, and make your fortune among rival crowns, merchant leagues and pirate brotherhoods.
 
-Mare Liberum is a single-player, top-down sailing adventure made with Python and Pygame.
+Sail between busy harbours and remote cays. Follow a long-running story, take on local work, trade goods between changing markets, hunt for treasure, explore shipwrecks, or build a fleet of your own. The sea is alive with merchant convoys, naval patrols and pirate squadrons—and they have business with one another whether you are nearby or not.
 
 ## Getting started
 
-You will need **Python 3.10 or newer**.
+### Requirements
 
-1. Extract the downloaded game folder.
-2. Open a terminal or command prompt in that folder.
-3. Install the required game library:
+- Python 3.10 or newer
+- Pygame 2.5 or newer
 
-   ```bash
-   python -m pip install -r requirements.txt
-   ```
+### Install
 
-4. Start the game:
+Download or clone the project, then open a terminal in the project directory.
 
-   ```bash
-   python main.py
-   ```
+Create and activate a virtual environment.
 
-On some systems, use `python3` instead of `python`.
+**Windows (PowerShell)**
 
-The game opens at the main menu. Choose **New Voyage** to begin, **Load Voyage** to continue one of your saved captains, or open the **Captain's Guide** for a short in-game guide to sailing, combat, navigation, ports and saving. The guide is also available from the pause menu while you play.
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+**macOS / Linux**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install the game dependency:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+## Running the game
+
+Start the game from the project directory:
+
+```bash
+python main.py
+```
+
+On systems where Python is invoked as `python3`, use `python3 main.py` instead.
+
+The main menu lets you begin a new voyage, load a saved voyage, adjust display and sound settings, open the Captain's Guide, or quit.
 
 ## Your first voyage
 
-Your adventure begins at Port Royal in a modest sloop. An old captain at the harbour has one last favour to ask. Hear him out: his conversation introduces sailing, rowing, harbour work, treasure, cannon fire and the other ways to make a living at sea.
+You begin in Port Royal aboard a modest sloop. An introductory encounter with an old captain introduces the basics of sailing, harbour work, trading, treasure and combat through conversation. Speak with the harbour office to hear local news, meet people, find work and learn about the next leads in the story.
 
-You do not have to follow the main story every time you reach port. Speak with people, look over the local work, visit the shipyard, or simply cast off and see what lies beyond the next island.
+There is no single way to spend your time. Follow the main story, accept optional adventures, carry passengers between several ports, earn money through trade, salvage wrecks, or simply explore. Many conversations are not job offers: people may share rumours, introduce a useful contact, offer a rare item, or try to sell you something of questionable value.
 
-## Sound and atmosphere
+## How to play
 
-Mare Liberum includes an original soundscape: offshore wind and rolling waves, flapping canvas, broadside cannon fire and cannonball impacts, plus a low harbour murmur. The current sound mix deliberately leaves out seabirds, wooden hull creaks, port-activity noise and important-encounter music. Sound starts automatically when the voyage begins; the game will still run if the computer has no available audio device.
+### Sailing and navigation
 
-Cannon discharges now push the firing vessel back slightly. A small, short-lived powder puff appears at each individual gun muzzle, rather than blooming from one fixed point on the ship. The recoil is subtle but visible in the ship's movement, especially during a full broadside.
+Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. When the wind is unfavourable, deploy the oars with **O**. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches.
 
+The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag to pan, and press **C** to centre the view on your ship.
 
-## Comfort and presentation settings
+Approach a harbour slowly and press **E** to take the nearest available berth. The nine quay slots are shared with visiting ships; no berth is permanently reserved for the player. If the harbour is full, wait for a vessel to leave and try again. Press **E** while docked to cast off.
 
-Open **Text & Sound Settings** from the main menu to adjust the text size, cannon and other sound effects, and the sea ambience independently. Changes are remembered automatically between launches. You can move through the options with Up and Down, adjust the selected level with Left and Right, or click the left half of a setting row to lower it or the right half to raise it. Choose **Reset defaults** at any time to restore the original levels. Setting a sound level to 0% mutes that category without disabling the rest of the game.
+Watch for reefs. Their warning areas are marked in translucent red on the chart and in the world. Crossing a reef damages the hull, with greater danger at speed. NPC ships try to steer around reefs, but a battle or a poor approach can still put them in danger.
 
-When a story voyage is active, a small course indicator near the top of the screen shows the current target, approximate chart distance, compass direction and a pointer relative to your ship's heading. When there is no story voyage active, it can guide you toward the nearest unfinished harbour job instead. The Captain's Orders help panel has also been made more compact so it covers less of the sailing view; press **F1** to hide or show it.
+### Ports, people and local work
 
-## Reefs and safe navigation
+While docked, press **Q** to speak with the harbour office and local characters. Conversations can reveal story leads, rumours, new contacts, unusual purchases and scams as well as ordinary work. The harbour job board offers repeatable tasks such as cargo deliveries, letters, passenger passages and rescues. Several routine jobs can be active at the same time.
 
-The chart now marks real coral reefs and rocky shoals with translucent red warning patches. These are navigational hazards, not decoration: sailing across a reef scrapes and damages your hull, and remaining in the shallows can wreck a ship. Give the red areas a wide berth and plan a route around them. Merchantmen, patrols, pirates and your own escorts also try to steer around reefs, although close-quarters fighting or a badly chosen course can still put an NPC vessel in danger. Ships are kept clear of reef patches when they spawn, and harbour approaches and berths remain navigable.
+Some authored missions have several required port calls. Follow the route in order: collect passengers, documents or other items at each waypoint, then continue to the final destination. The compass and journal show the next required stop. Visiting the final port early will not complete a mission if an intermediate call remains outstanding.
 
-## A world with its own affairs
+Use **B** while docked to visit the shipyard. You can repair and refit your vessel, change its name and appearance, buy another ship, expand its cargo hold and recruit escorts.
 
-Explore a vast Caribbean chart with six island regions, 33 ports, remote cays, 20 marked reefs and genuinely long open-water passages. The world chart is now 2.5 times wider and taller than the V25 chart. The four principal multi-port islands now have distinct proportions, from a more compact island chain to broad sprawling landmasses. Secondary islands also vary substantially: some are modest cays, while others are large enough to dominate a local stretch of sea and support their own harbour. The ports are divided among the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and independent settlements. Each harbour displays its faction colours on the world map and its flag. The chart extends beyond its island chains, so you can sail out into the blue rather than run into an invisible edge. Ports have their own character, local rumours and people to meet. Their expanded quays have nine shared alongside berths, and merchantmen or patrol ships may stop briefly in harbour instead of simply sailing through. When you press **E** near a pier, your ship takes the open berth nearest to its current position; no slot belongs permanently to the player. If all nine are occupied, wait offshore and try again after a ship leaves. Their flags and atlas markers show which power controls each harbour: the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood or independent communities.
+### Trading and cargo
 
-New faction strongholds include Black Flag Anchorage (Pirate Brotherhood), King's Sounding (British Crown), Puerto Escondido (Spanish Crown), La Compagnie (French Crown), St Anne's Exchange (Merchant League), and Free Sailors' Haven (Independent). Each has its own local atmosphere and appears in the chart under its faction colours.
+Press **Y** while docked to open the market. Fifteen goods are traded across the ports, including foodstuffs, spirits, tobacco, spices, ship supplies, tools, gunpowder, silver and contraband. Prices differ by harbour and change as local stock, demand, production, consumption and trade activity change.
 
-The world is active even when your ship is safely berthed:
+Buy where goods are plentiful and sell where they are scarce. The market shows indicative trade-route opportunities and estimated returns, but a price forecast is not a promise: the market may move while you are at sea. Cargo occupies hold space, and each ship class has a different capacity. Cargo-hold refits increase that capacity. The market screen shows your manifest, remaining space and purchase costs.
 
-- Merchantmen, fishing boats, mail packets, whalers and naval patrols travel between ports.
-- Some ships sail alone; others gather into merchant convoys, naval squadrons or pirate bands.
-- NPC fleets can find enemies, coordinate attacks, exchange broadsides, lose ships and retreat without the player taking part.
-- Coastal batteries defend ports against nearby pirate vessels. Pirate Brotherhood harbours do not automatically fire on ships flying the black flag unless your standing with the Brotherhood has turned hostile.
-- Named admirals, pirate captains and merchant commanders develop reputations through victories, losses and retreats. Open the **Admirals' & Captains' Ledger** with **N** to follow their careers.
-- The six factions remember your conduct. Harbours and NPC fleets can regard you as friendly, neutral or hostile, and named commanders can develop personal grudges of their own.
+Trading affects more than your purse. Supplying wanted goods can ease shortages and improve a faction's prosperity and its attitude towards you. Buying up scarce stock, selling contraband or disrupting a trade route can have the opposite effect. Prosperity and shortages also influence merchant activity around the islands.
 
-## Stories, rumours and people
+### Combat and your fleet
 
-The campaign includes an introductory voyage, a long original Caribbean storyline, a sequel about a lost expedition and the Drowned Kingdom, and optional side adventures. The stories involve rival powers, pirate captains, naval officers, merchants, scholars and island communities.
+Hold **Z** to fire the port-side battery or **X** to fire starboard. Your guns fire in broadsides; after the first volley, individual cannons reload independently. Cannon impacts leave visible scorch and splinter damage. Smoke puffs originate at the firing guns, and a broadside gives the ship a brief recoil.
 
-Some contracts now involve **multi-port voyages** rather than a single passage. You may be asked to collect passengers or cargo at several intermediate harbours before making the final delivery. The course indicator, gold chart marker and Captain's Log always identify the next required stop. Port calls must be made in order; reaching the final harbour early will not complete the contract. Each completed stop is recorded immediately and is preserved in your save. Examples include *The Bell Family's Passage* (collect relatives in Havana and Tortuga before delivering them to San Telmo) and *The Last Chartmaker's Errand* (restore a chart at Wreckers' Moon and Gallows Key before delivering it to San Aurelio).
+Your escorts can fight alongside you. Give them orders with **F** to fight, **H** to hold fire, **G** to gather around the flagship, or **V** to follow in formation. Firing on a normally friendly vessel turns it hostile; its surviving squadron may join the fight, and the attack can damage your standing with its faction.
 
-Not every conversation is a mission. Depending on the person and place, talking may let you:
+NPC fleets can form around named commanders. Merchant convoys, pirate bands and navy squadrons coordinate movement and attacks, may retreat when badly damaged, and build reputations through victories, losses and retreats. Pirates, merchants and naval ships can fight each other without the player's involvement.
 
-- Hear a rumour or learn the name of someone worth seeking out.
-- Discover a hidden location, shipwreck, old chart or piece of local history.
-- Buy a rare keepsake or unusual piece of equipment.
-- Meet a useful contact or uncover a new lead.
-- Take a chance on a dubious bargain — some sellers are honest, and some are not.
-- Accept a story adventure or ordinary harbour work.
+Ships show progressive battle damage. A vessel that loses all its hull sinks, leaving floating wreckage that eventually disperses. Losing your flagship ends the current voyage. After the sinking sequence, load a saved voyage to continue; progress made since that save is lost. The game does not create a rescue save when your ship sinks.
 
-The journal keeps track of important discoveries and leads.
+### Factions and diplomacy
 
-## Make your fortune
+The six powers are the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and Independent settlements. Open the diplomacy ledger with **I** to see your standing with each faction. Relationships range from hostile through neutral to friendly and are shaped by your actions: completing work, supplying scarce goods, attacking ships, sinking convoys and making gifts all have consequences.
 
-There is more than one way to earn a living:
+Ports may refuse entry when their faction considers you hostile, and coastal guns can defend their approaches. You can offer a gift while docked at a faction's port or request safe conduct to repair a hostile relationship. Individual admirals and pirate captains can also remember personal encounters. Press **N** to inspect the Admirals' & Captains' Ledger.
 
-- **Harbour work:** carry cargo, deliver letters, transport passengers or rescue stranded sailors. Several ordinary jobs can be active at once.
-- **Side adventures:** take on self-contained stories when you want a change from the main campaign.
-- **Treasure hunting:** find bottles and charts, interpret riddles, locate hidden cays and dig up buried chests.
-- **Trade and salvage:** buy low, sell where demand is strong, and make use of opportunities you discover.
-- **Combat:** defend yourself, fight pirates, or take part in story battles.
+### Treasure, wrecks and discoveries
 
+Treasure maps lead to hidden cays and buried chests. Press **T** to review charts you have found, and use **R** when you reach a marked location to investigate or dig.
 
-## Trading, cargo and the island economies
+Eighteen shipwrecks lie along the sea routes. Approach a wreck and press **R** to investigate. Surface salvage is generally safer and yields more modest cargo; a dive into the flooded hull can bring greater rewards, rare keepsakes and historical discoveries, but unstable timbers, powder stores, rigging and currents can injure your ship or salvage party. Each salvage opportunity can only be attempted once.
 
-Every harbour has its own market. Press **Y** while docked to open it. Fifteen commodities are traded, from sugar, rum, coffee and salt fish to ship timber, sailcloth, iron tools, gunpowder, silver and contraband. Prices are not fixed: each port has its own stocks, local production and demand. Stocks are replenished or consumed as the world economy turns, and prices respond when you or other market activity change local supply. A warehouse full of a commodity usually offers a lower price; a scarce good wanted by the settlement can command much more.
-
-Use the market to compare the **buy** and **sell** prices before committing your gold. Select a commodity with Up and Down, choose a quantity with Left and Right (1, 5 or MAX), then press **B** or **Enter** to buy, or **S** to sell. You can also click a commodity and the market buttons. The market's route suggestions compare prices at other ports and estimate a per-unit return after an allowance for voyage distance. They are forecasts, not guarantees: supply, demand and prices continue to change while you sail.
-
-Cargo takes up space in your ship's hold. Different hulls carry different loads: a sloop has a modest hold, a schooner or brigantine carries more, and the frigate trades some cargo room for its fighting role. The **Expanded cargo hold** refit in the shipyard adds 12 units per level, up to three levels. The HUD and market screen show how much space is occupied and how much remains. A shipyard will not let you exchange into a smaller vessel if your cargo will not fit aboard.
-
-Trade also changes the fortunes of the factions. Buying from a harbour brings income to its trade network but can leave its warehouses short. Selling a wanted cargo can ease shortages and improve local prosperity; delivering a scarce shipment can also improve your standing with that faction. Large contraband sales in British, Spanish or French ports attract customs attention. Faction prosperity and shortages are tracked in the diplomacy ledger, and prosperous markets draw more merchant traffic while trade-strained factions see less activity. Your cargo, average purchase costs, realised profits, port markets and faction economies are all retained in your `.tide` save.
-
-## Shipwrecks and salvage
-
-Eighteen explorable shipwrecks lie in the open-water routes between islands. They become visible as you sail close enough to recognise the broken spars and hulls; discovered wrecks are recorded in your journal and marked on the mini-map and world atlas.
-
-Bring your ship close and press **R** to investigate. Most wrecks offer two separate opportunities: recover floating cargo and useful fittings from the surface, then decide whether to send a salvage party into the flooded hull. The safer surface recovery is modest but dependable. Deeper salvage can yield substantially more gold and, occasionally, a rare keepsake or historical discovery.
-
-Wrecks are not all alike. Some are relatively safe coastal craft; others carry unstable gun decks, powder stores, tangled rigging or dangerous currents. A hazardous dive can damage your flagship and reduce the amount of cargo recovered. Each stage can be attempted only once, so choose carefully. Discovery, recovered cargo and rare finds are preserved in your voyage save.
-
-## Sailing and combat
-
-Sailing uses wind, momentum and steering rather than instant movement. Set your sails with **W** and **S**, steer with **A** and **D**, and deploy oars with **O** when the wind is against you.
-
-Cannons fire in broadsides. Hold **Z** to fire the port battery or **X** to fire starboard. The first volley is together; after that, individual guns reload and fire on their own timing. Keep your distance, watch your heading and avoid letting an enemy sit on your unprotected side. Take care with your aim: a cannonball from your flagship or escort fleet that strikes a normally friendly vessel makes that ship—and its surviving squadron, if it has one—hostile to you. It will turn and fire back, and the vessel's faction will remember the attack. Repeated incidents can sour relations across that faction.
-
-## Factions and diplomacy
-
-Open the **Ledger of Flags & Treaties** with **I**. It shows your standing with the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and Independent settlements. Standing ranges from -100 to +100: at +30 or above a faction is **friendly**; from -29 to +29 it is **neutral**; at -30 or below it is **hostile**.
-
-Your actions matter. Completing work and story contracts improves relations with the people who commissioned or received the work. Sinking pirate vessels earns goodwill with several trading and naval powers, but makes the Pirate Brotherhood less forgiving. Firing on a merchantman, patrol ship or pirate vessel damages relations with its faction; sinking it makes matters worse. Named fleet commanders can also remember attacks on their own ships.
-
-Friendly ships will not treat you as an enemy. Neutral traffic generally leaves you alone, while hostile faction vessels may attack when encountered. Neutral and friendly pirate captains do not attack you unless you or your fleet have personally provoked them; a captain you personally attack remembers the insult, even before the whole Brotherhood turns hostile. Harbours belonging to a hostile faction refuse ordinary docking, and their batteries may warn you away if you approach too closely.
-
-Diplomacy offers ways to repair a damaged relationship. Sail close to a hostile harbour and open the diplomacy ledger; select its faction and press **P** to pay reparations for safe conduct (the amount reflects how badly relations have deteriorated). While docked at a faction's harbour, select that faction and press **G** to present a 150-gold gift, improving its standing by 8 points. Safe conduct restores the faction to neutral, but individual captains you personally wronged may still remember you.
-
-Ships collide and push one another apart. A damaged ship can be repaired at a shipyard.
-
-## Your ship and fleet
-
-Visit a shipyard while docked to buy ships, repair your flagship, improve its hull, guns, rigging and rudder, and change its name or colours. Recruit escorts and build a personal fleet. There is no fixed escort-count limit.
-
-Give your escorts orders:
-
-- **F** — Fight
-- **H** — Hold fire
-- **G** — Gather around the flagship
-- **V** — Follow in formation
-
-Your wealth and growing fleet can attract attention. A well-equipped flagship, valuable cargo, gold, relics and numerous escorts may bring more pirate interest.
+The journal, opened with **J**, records story leads, discoveries and important events.
 
 ## Controls
 
-| Key | Action |
-|---|---|
-| **W / S** | Set sails / reef sails |
-| **A / D** | Steer |
-| **O** | Deploy / stow oars |
-| **Hold Z / X** | Fire port / starboard cannons |
-| **E** | Take the nearest available harbour berth / cast off |
-| **Q** | Speak with the harbour office while docked |
-| **B** | Open the shipyard while docked |
-| **Y** | Open the port market while docked |
-| **F / H / G / V** | Command your escort fleet |
-| **R** | Interact with people, treasure, shipwrecks and salvage sites |
-| **T** | View treasure charts |
-| **M** | Open the world atlas |
-| **C** | Return the camera to your ship |
-| **Mouse wheel** | Zoom toward the pointer |
-| **Mouse drag** | Pan the camera |
-| **J** | Open the captain's journal |
-| **N** | Open the Admirals' & Captains' Ledger |
-| **I** | Open the faction relations and diplomacy ledger |
-| **F1** | Show help |
-| **F5** | Save your voyage |
-| **Esc / F9** | Open the pause menu |
+| Action | Control |
+| --- | --- |
+| Set sails / reduce sail | **W / S** |
+| Steer | **A / D** |
+| Deploy / stow oars | **O** |
+| Fire port / starboard cannons | Hold **Z / X** |
+| Dock at nearest available berth / cast off | **E** |
+| Speak with harbour office | **Q** (while docked) |
+| Open shipyard | **B** (while docked) |
+| Open trading market | **Y** (while docked) |
+| Escort fleet: fight / hold fire / gather / follow | **F / H / G / V** |
+| Interact with jobs, treasure and wrecks | **R** |
+| View treasure charts | **T** |
+| Open world atlas | **M** |
+| Centre camera on ship | **C** |
+| Zoom in / out | Mouse wheel or **+ / -** |
+| Pan camera | Drag with mouse |
+| Open captain's journal | **J** |
+| Open Admirals' & Captains' Ledger | **N** |
+| Open diplomacy ledger | **I** |
+| Show / hide Captain's Orders | **F1** |
+| Save voyage | **F5** |
+| Pause menu | **Esc / F9** |
 
-In harbour conversations, read the available choices carefully. Some are introductions, rumours or purchases rather than jobs. The job board lets you select and accept multiple ordinary jobs.
+## Saving your voyage
 
-## Save your voyage
+Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a new save. You can keep multiple named voyages.
 
-Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a save. You can keep multiple voyages, each with its own name.
+A save records your last harbour and the actual berth you occupied. You can save while sailing; loading returns your flagship safely to that last berth, with your fleet and voyage progress restored. Gold, ship and refits, cargo, markets, active and completed missions, intermediate mission stops, jobs, treasure, wreck discoveries, faction economies, diplomacy and commander records are all stored in the human-readable `.tide` save file.
 
-A save records the last port and the actual quay slot where you docked. You can save while out at sea; when you load that save, your flagship returns safely to that same berth, with your escorts nearby. At each harbour, press **E** while close to the pier and moving slowly; the ship takes the unoccupied slot nearest its current position. No berth is permanently reserved for the player. If every slot is full, circle the harbour and try again after another vessel leaves. Your story progress, ship, gold, fleet, cargo manifest, market prices, faction economies, treasure, jobs, discoveries, faction standings, harbour attitudes and commanders' personal opinions are preserved.
+Save regularly before a dangerous voyage. If your flagship sinks, only a voyage you previously saved can be restored.
 
-Text size is adjustable, and the interface now scales or fits labels to their panels so enlarged text stays within its allotted space. The game also remembers your text-size preference automatically. Existing V31 and earlier supported `.tide` saves can be loaded; older voyages receive fresh markets and an empty cargo hold. V31 saves that do not record a berth slot load into the traditional centre position, with any NPC occupying it moved to another open slot. The game migrates older ship positions and job destinations to the expanded chart; active multi-port contracts also retain their completed port calls; saves without diplomacy records receive sensible initial faction standings. From the main menu, open **Text & Display Settings** and choose **Smaller text** or **Larger text**. The setting is retained the next time you play.
+## Settings
 
-## A note for captains
+Open **Text & Display Settings** from the main menu or pause menu to adjust text size, sound effects and sea ambience. The preferences are saved automatically and apply the next time you play. Sound can be disabled or reduced independently for effects and ambience.
 
-Mare Liberum is an adventure about making your own way. Follow the story, chase rumours, build a trading fleet, hunt treasure, or sail beyond the known routes. You are not expected to take every job or fight every battle. Sometimes the most interesting thing in port is simply the person sitting quietly by the window.
+The Captain's Guide is available from the main menu and pause menu. It contains a shorter in-game reference for sailing, combat, charts, discoveries and harbour life.

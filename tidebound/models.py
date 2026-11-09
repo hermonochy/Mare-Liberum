@@ -51,6 +51,11 @@ class PirateShip:
     player_attitude: str = "hostile"
     player_incident_recorded: bool = False
     player_provoked: bool = False
+    sinking: bool = False
+    sink_elapsed: float = 0.0
+    sink_cause: str = ""
+    hit_flash: float = 0.0
+    damage_marks: list = field(default_factory=list)
 
 @dataclass
 class FleetShip:
@@ -66,6 +71,11 @@ class FleetShip:
     cooldown: float = 1.0
     anchor_x: float = 0.0
     anchor_y: float = 0.0
+    sinking: bool = False
+    sink_elapsed: float = 0.0
+    sink_cause: str = ""
+    hit_flash: float = 0.0
+    damage_marks: list = field(default_factory=list)
 
 
 @dataclass
@@ -100,6 +110,11 @@ class TrafficShip:
     berth_port: str = ""
     berth_slot: int = -1
     port_dwell: float = 0.0
+    sinking: bool = False
+    sink_elapsed: float = 0.0
+    sink_cause: str = ""
+    hit_flash: float = 0.0
+    damage_marks: list = field(default_factory=list)
 
 @dataclass
 class Cannonball:

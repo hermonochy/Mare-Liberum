@@ -8,22 +8,19 @@ from ..common import *
 
 
 class SaveLoadMixin:
-    SAVE_FORMAT = "TIDEBOUND_VOYAGE"
-    SAVE_VERSION = 11
-
     def settings_path(self):
-        return Path(__file__).resolve().parents[2] / "mare_liberum_settings.json"
+        return PROJECT_ROOT / SETTINGS_FILE_NAME
 
     def load_user_settings(self):
-        self.text_scale = 1.0
-        self.effects_volume = 1.0
-        self.ambience_volume = 1.0
+        self.text_scale = DEFAULT_TEXT_SCALE
+        self.effects_volume = DEFAULT_EFFECTS_VOLUME
+        self.ambience_volume = DEFAULT_AMBIENCE_VOLUME
         path = self.settings_path()
         try:
             settings = json.loads(path.read_text(encoding="utf-8"))
-            self.text_scale = max(0.75, min(1.5, float(settings.get("text_scale", 1.0))))
-            self.effects_volume = max(0.0, min(1.0, float(settings.get("effects_volume", 1.0))))
-            self.ambience_volume = max(0.0, min(1.0, float(settings.get("ambience_volume", 1.0))))
+            self.text_scale = max(MIN_TEXT_SCALE, min(MAX_TEXT_SCALE, float(settings.get("text_scale", DEFAULT_TEXT_SCALE))))
+            self.effects_volume = max(0.0, min(1.0, float(settings.get("effects_volume", DEFAULT_EFFECTS_VOLUME))))
+            self.ambience_volume = max(0.0, min(1.0, float(settings.get("ambience_volume", DEFAULT_AMBIENCE_VOLUME))))
         except (OSError, ValueError, TypeError, json.JSONDecodeError):
             # A missing or malformed preference file should never stop a voyage.
             pass
@@ -31,8 +28,6 @@ class SaveLoadMixin:
     def save_user_settings(self):
         path = self.settings_path()
         data = {
-            "game": "Mare Liberum",
-            "settings_version": 2,
             "text_scale": round(self.text_scale, 2),
             "effects_volume": round(self.effects_volume, 2),
             "ambience_volume": round(self.ambience_volume, 2),
@@ -47,18 +42,18 @@ class SaveLoadMixin:
             return False
 
     def apply_text_scale(self):
-        scale = max(0.75, min(1.5, float(getattr(self, "text_scale", 1.0))))
+        scale = max(MIN_TEXT_SCALE, min(MAX_TEXT_SCALE, float(getattr(self, "text_scale", DEFAULT_TEXT_SCALE))))
         self.text_scale = scale
-        self.font = pygame.font.SysFont("georgia", max(12, round(30 * scale)))
-        self.small_font = pygame.font.SysFont("georgia", max(11, round(25 * scale)))
-        self.tiny_font = pygame.font.SysFont("georgia", max(10, round(21 * scale)))
-        self.title_font = pygame.font.SysFont("georgia", max(16, round(42 * scale)), bold=True)
-        self.big_font = pygame.font.SysFont("georgia", max(20, round(52 * scale)), bold=True)
-        self.map_font = pygame.font.SysFont("georgia", max(9, round(16 * scale)))
-        self.map_heading_font = pygame.font.SysFont("georgia", max(10, round(18 * scale)), bold=True)
+        self.font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["normal"], round(FONT_BASE_SIZES["normal"] * scale)))
+        self.small_font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["small"], round(FONT_BASE_SIZES["small"] * scale)))
+        self.tiny_font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["tiny"], round(FONT_BASE_SIZES["tiny"] * scale)))
+        self.title_font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["title"], round(FONT_BASE_SIZES["title"] * scale)), bold=True)
+        self.big_font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["big"], round(FONT_BASE_SIZES["big"] * scale)), bold=True)
+        self.map_font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["map"], round(FONT_BASE_SIZES["map"] * scale)))
+        self.map_heading_font = pygame.font.SysFont(FONT_FAMILY, max(FONT_MIN_SIZES["map_heading"], round(FONT_BASE_SIZES["map_heading"] * scale)), bold=True)
 
     def adjust_text_scale(self, amount):
-        self.text_scale = max(0.75, min(1.5, round(self.text_scale + amount, 2)))
+        self.text_scale = max(MIN_TEXT_SCALE, min(MAX_TEXT_SCALE, round(self.text_scale + amount, 2)))
         self.apply_text_scale()
         self.save_user_settings()
 
@@ -69,15 +64,15 @@ class SaveLoadMixin:
 
     def adjust_audio_volume(self, setting, amount):
         attribute = "effects_volume" if setting == "effects" else "ambience_volume"
-        value = max(0.0, min(1.0, round(getattr(self, attribute, 1.0) + amount, 2)))
+        value = max(0.0, min(1.0, round(getattr(self, attribute, DEFAULT_EFFECTS_VOLUME) + amount, 2)))
         setattr(self, attribute, value)
         self.apply_audio_settings()
         self.save_user_settings()
 
     def reset_user_settings(self):
-        self.text_scale = 1.0
-        self.effects_volume = 1.0
-        self.ambience_volume = 1.0
+        self.text_scale = DEFAULT_TEXT_SCALE
+        self.effects_volume = DEFAULT_EFFECTS_VOLUME
+        self.ambience_volume = DEFAULT_AMBIENCE_VOLUME
         self.apply_text_scale()
         self.apply_audio_settings()
         self.save_user_settings()
@@ -89,7 +84,7 @@ class SaveLoadMixin:
         return directory
 
     def save_files(self):
-        files = list(self.save_directory().glob("*.tide"))
+        files = list(self.save_directory().glob(f"*{SAVE_FILE_EXTENSION}"))
         return sorted(files, key=lambda path: path.stat().st_mtime, reverse=True)
 
     def default_save_name(self):
@@ -105,18 +100,19 @@ class SaveLoadMixin:
         return cleaned[:36] or "Unnamed Voyage"
 
     def save_game(self, slot_name):
+        if getattr(self, "player_sinking_active", False) or getattr(self, "player_lost", False):
+            raise ValueError("A sinking or lost flagship cannot create a new save. Load a previous voyage instead.")
         last_port_name = getattr(self, "last_docked_port", None) or self.docked_port
         port = self.ports_by_name.get(last_port_name)
         if port is None:
             raise ValueError("No previous harbour is recorded. Dock at a port before saving.")
 
         safe_name = self.clean_save_name(slot_name)
-        path = self.save_directory() / f"{safe_name}.tide"
+        path = self.save_directory() / f"{safe_name}{SAVE_FILE_EXTENSION}"
         timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
         data = {
-            "format": self.SAVE_FORMAT,
-            "version": self.SAVE_VERSION,
-            "description": "Human-readable Mare Liberum voyage record. Values may be edited while the game is closed.",
+            "format": SAVE_FORMAT_IDENTIFIER,
+            "description": "Human-readable Mare Liberum voyage record.",
             "saved_at": timestamp,
             "captain": {
                 "gold": self.gold,
@@ -133,6 +129,7 @@ class SaveLoadMixin:
                 "upgrades": dict(self.upgrades),
                 "hull": self.player_hull,
                 "maximum_hull": self.player_max_hull,
+                "damage_marks": list(getattr(self, "player_damage_marks", [])),
                 "sail_setting": self.sail_setting,
                 "oars_deployed": self.oars_deployed,
                 "fleet_order": self.fleet_order,
@@ -197,6 +194,7 @@ class SaveLoadMixin:
                 "random_state": json.loads(json.dumps(self.rng.getstate())),
                 "commander_records": getattr(self, "commander_records", {}),
                 "commander_fleets": getattr(self, "commander_fleets", {}),
+                "floating_debris": list(getattr(self, "floating_debris", [])),
                 "diplomacy": {
                     "faction_relations": dict(getattr(self, "faction_relations", {})),
                     "port_standings": dict(getattr(self, "port_standings", {})),
@@ -212,47 +210,30 @@ class SaveLoadMixin:
     def load_game_file(self, path):
         path = Path(path)
         data = json.loads(path.read_text(encoding="utf-8"))
-        if data.get("format") != self.SAVE_FORMAT:
-            raise ValueError("This file is not a recognised Mare Liberum voyage.")
-        if int(data.get("version", 0)) > self.SAVE_VERSION:
-            raise ValueError("This save was made by a newer version of Mare Liberum.")
+        if not isinstance(data, dict) or data.get("format") != SAVE_FORMAT_IDENTIFIER:
+            raise ValueError("This file is not a Mare Liberum voyage save.")
+        required_sections = (
+            "captain", "ship", "last_berth", "story", "treasure", "shipwrecks",
+            "fleet", "pirate_ships", "other_ships", "trade", "day_work", "world",
+        )
+        missing = [section for section in required_sections if section not in data]
+        if missing:
+            raise ValueError("The voyage save is incomplete: " + ", ".join(missing))
 
-        captain = data.get("captain", {})
-        ship = data.get("ship", {})
-        story = data.get("story", {})
-        world = data.get("world", {})
-        berth = data.get("last_berth", {})
-        port = self.ports_by_name.get(berth.get("port"))
+        captain = data["captain"]
+        ship = data["ship"]
+        story = data["story"]
+        world = data["world"]
+        berth = data["last_berth"]
+        if "port" not in berth or "slot" not in berth:
+            raise ValueError("The voyage save does not record a valid harbour berth.")
+        port = self.ports_by_name.get(berth["port"])
         if port is None:
-            raise ValueError(f"The saved harbour '{berth.get('port', 'unknown')}' is not present in this game version.")
+            raise ValueError(f"The saved harbour '{berth['port']}' is not present on this chart.")
 
-        # V26 expands the V25 chart from 1.28x to 3.2x. V6 saves already
-        # contain V25-scaled coordinates; older saves predate that expansion.
-        # Scale NPC positions/velocities and job targets to the new chart while
-        # the flagship itself is safely returned to its named harbour below.
-        save_version = int(data.get("version", 0))
-        if save_version < 7:
-            if save_version < 6:
-                coordinate_scale = WORLD_SCALE
-            else:
-                coordinate_scale = WORLD_SCALE / LEGACY_V25_WORLD_SCALE
-            for collection_name in ("pirate_ships", "other_ships"):
-                for entry in data.get(collection_name, []):
-                    for coordinate in ("x", "y", "vx", "vy"):
-                        if entry.get(coordinate) is not None:
-                            entry[coordinate] = float(entry[coordinate]) * coordinate_scale
-            day_work_migration = data.get("day_work", {})
-            job_groups = [day_work_migration.get("active_jobs", [])]
-            job_groups.extend(day_work_migration.get("port_boards", {}).values())
-            for group in job_groups:
-                for entry in group:
-                    for coordinate in ("target_x", "target_y"):
-                        if entry.get(coordinate) is not None:
-                            entry[coordinate] = float(entry[coordinate]) * coordinate_scale
-
-        saved_player_slot = int(berth.get("slot", PORT_BERTH_CENTER_SLOT))
+        saved_player_slot = int(berth["slot"])
         if saved_player_slot not in range(PORT_BERTH_COUNT):
-            saved_player_slot = PORT_BERTH_CENTER_SLOT
+            raise ValueError("The saved harbour berth is outside the available quay slots.")
         self.player_berth_slot = saved_player_slot
         self.last_docked_port_slot = saved_player_slot
         self.last_docked_port = port.name
@@ -302,15 +283,14 @@ class SaveLoadMixin:
         self.mission_result_reward = max(0, int(story.get("mission_result_reward", 0)))
         self.mission_result_timer = 0.0
 
-        treasure_flags = {entry.get("id"): entry for entry in data.get("treasure", [])}
+        treasure_flags = {entry.get("id"): entry for entry in data["treasure"]}
         for site in self.treasure_sites:
             flags = treasure_flags.get(site.treasure_id, {})
             site.map_found = bool(flags.get("map_found", False))
             site.revealed = bool(flags.get("island_revealed", False))
             site.dug = bool(flags.get("chest_claimed", False))
 
-        # V28 introduces persistent shipwreck discovery and salvage state.
-        wreck_flags = {entry.get("id"): entry for entry in data.get("shipwrecks", [])}
+        wreck_flags = {entry["id"]: entry for entry in data["shipwrecks"]}
         for site in self.shipwrecks:
             flags = wreck_flags.get(site.wreck_id, {})
             site.discovered = bool(flags.get("discovered", False))
@@ -318,14 +298,45 @@ class SaveLoadMixin:
             site.deep_attempted = bool(flags.get("deep_attempted", False))
             site.rare_found = bool(flags.get("rare_found", False))
 
-        self.fleet = [FleetShip(**entry) for entry in data.get("fleet", [])]
+        self.player_hit_flash = 0.0
+        self.player_damage_marks = []
+        for mark in ship.get("damage_marks", [])[-18:]:
+            try:
+                self.player_damage_marks.append({
+                    "x": max(-48.0, min(48.0, float(mark.get("x", 0.0)))),
+                    "y": max(-27.0, min(27.0, float(mark.get("y", 0.0)))),
+                    "angle": float(mark.get("angle", 0.0)),
+                    "length": max(3.0, min(20.0, float(mark.get("length", 10.0)))),
+                    "size": max(1.5, min(6.0, float(mark.get("size", 3.0)))),
+                })
+            except (AttributeError, TypeError, ValueError):
+                continue
+        self.player_sinking_active = False
+        self.player_sink_elapsed = 0.0
+        self.player_lost = False
+        self.floating_debris = []
+        for piece in world.get("floating_debris", []):
+            try:
+                self.floating_debris.append({
+                    "x": float(piece["x"]), "y": float(piece["y"]),
+                    "vx": float(piece.get("vx", 0.0)), "vy": float(piece.get("vy", 0.0)),
+                    "angle": float(piece.get("angle", 0.0)), "spin": float(piece.get("spin", 0.0)),
+                    "length": max(3.0, float(piece.get("length", 15.0))),
+                    "width": max(2.0, float(piece.get("width", 5.0))),
+                    "cloth": bool(piece.get("cloth", False)),
+                    "life": max(0.0, float(piece.get("life", 0.0))),
+                    "max_life": max(1.0, float(piece.get("max_life", 58.0))),
+                })
+            except (KeyError, TypeError, ValueError):
+                continue
+        self.fleet = [FleetShip(**entry) for entry in data["fleet"]]
         formation = "gather" if self.fleet_order == "gather" else "follow"
         for index, escort in enumerate(self.fleet):
             escort.x, escort.y = self.fleet_formation_target(index, len(self.fleet), formation)
             escort.vx = escort.vy = 0.0
             escort.anchor_x, escort.anchor_y = escort.x, escort.y
-        self.pirates = [PirateShip(**entry) for entry in data.get("pirate_ships", [])]
-        self.traffic_ships = [TrafficShip(**entry) for entry in data.get("other_ships", [])]
+        self.pirates = [PirateShip(**entry) for entry in data["pirate_ships"]]
+        self.traffic_ships = [TrafficShip(**entry) for entry in data["other_ships"]]
         # Re-seat traffic ships using the current quay geometry and keep the
         # player's actual saved slot clear without reserving a fixed quay position.
         occupied_saved_berths = {}
@@ -356,8 +367,7 @@ class SaveLoadMixin:
             npc_ship.x, npc_ship.y = self.harbour_berth_position(berth_port, requested_slot)
             npc_ship.vx = npc_ship.vy = 0.0
 
-        # V26 saves predate reef hazards. Re-seat any saved NPC caught inside a
-        # newly charted shoal into the nearest safe patch of open water.
+        # Keep saved traffic clear of reefs if a save was made during a close pass.
         for npc in self.pirates:
             if npc.dead:
                 continue
@@ -379,70 +389,48 @@ class SaveLoadMixin:
                     npc.vx = npc.vy = 0.0
                 else:
                     npc.hull = 0
-        self.commander_records = dict(world.get("commander_records", {}))
-        self.commander_fleets = dict(world.get("commander_fleets", {}))
-        saved_diplomacy = world.get("diplomacy", {})
-        default_relations = {
-            "British Crown": 5, "Spanish Crown": 0, "French Crown": 0,
-            "Merchant League": 8, "Pirate Brotherhood": -5, "Independent": 12,
-        }
-        default_relations.update(saved_diplomacy.get("faction_relations", {}))
+        self.commander_records = dict(world["commander_records"])
+        self.commander_fleets = dict(world["commander_fleets"])
+        saved_diplomacy = world["diplomacy"]
         self.faction_relations = {
-            faction: self.clamp_relation(default_relations.get(faction, 0))
-            for faction in self.FACTION_NAMES
+            faction: self.clamp_relation(saved_diplomacy["faction_relations"][faction])
+            for faction in FACTION_NAMES
         }
         self.commander_relations = {
             str(name): self.clamp_relation(value)
-            for name, value in saved_diplomacy.get("commander_relations", {}).items()
+            for name, value in saved_diplomacy["commander_relations"].items()
         }
-        self.port_standings = dict(saved_diplomacy.get("port_standings", {}))
+        self.port_standings = dict(saved_diplomacy["port_standings"])
         self.refresh_port_standings()
-        self.restore_trade_state(data.get("trade", {}))
-        # Migrate V19 saves: generate dossiers for any already-formed NPC fleets.
-        migrated_groups = {}
-        for npc in self.pirates + self.traffic_ships:
-            commander = getattr(npc, "commander_name", "")
-            if commander:
-                faction = "pirate" if isinstance(npc, PirateShip) else npc.role
-                self.ensure_commander_record(commander, faction)
-                fid = getattr(npc, "fleet_id", "")
-                if fid:
-                    migrated_groups.setdefault(fid, []).append(npc)
-        for fid, members in migrated_groups.items():
-            leader = min(members, key=lambda member: getattr(member, "formation_slot", 0))
-            faction = "pirate" if isinstance(leader, PirateShip) else leader.role
-            self.commander_fleet_state(fid, leader.commander_name, faction, len(members))
-            for npc in members:
-                npc.fleet_size = max(getattr(npc, "fleet_size", 1), len(members))
+        self.restore_trade_state(data["trade"])
         self.commander_ledger_open = False
         self.commander_ledger_scroll = 0
         self.diplomacy_open = False
 
-        day_work = data.get("day_work", {})
-        self.day_job_serial = max(1, int(day_work.get("serial", 1)))
-        self.active_day_jobs = [DayJob(**entry) for entry in day_work.get("active_jobs", [])]
+        day_work = data["day_work"]
+        self.day_job_serial = max(1, int(day_work["serial"]))
+        self.active_day_jobs = [DayJob(**entry) for entry in day_work["active_jobs"]]
         self.day_job_offers = {
             port_name: [DayJob(**entry) for entry in jobs]
-            for port_name, jobs in day_work.get("port_boards", {}).items()
+            for port_name, jobs in day_work["port_boards"].items()
             if port_name in self.ports_by_name
         }
-        self.reinforcement_number = max(1, int(world.get("reinforcement_number", 1)))
-        self.reinforcement_timer = max(1.0, float(world.get("reinforcement_timer", 30.0)))
-        self.traffic_spawn_timer = max(1.0, float(world.get("traffic_spawn_timer", 20.0)))
-        self.traffic_serial = max(1, int(world.get("traffic_serial", 1)))
-        saved_defence = world.get("port_defence_cooldowns", {})
+        self.reinforcement_number = max(1, int(world["reinforcement_number"]))
+        self.reinforcement_timer = max(1.0, float(world["reinforcement_timer"]))
+        self.traffic_spawn_timer = max(1.0, float(world["traffic_spawn_timer"]))
+        self.traffic_serial = max(1, int(world["traffic_serial"]))
+        saved_defence = world["port_defence_cooldowns"]
         self.port_defence_cooldowns = {
             port.name: max(0.0, float(saved_defence.get(port.name, 0.25)))
             for port in self.ports
         }
         self.port_defence_notice_timer = 0.0
         self.camera_zoom = max(0.30, min(2.4, float(world.get("camera_zoom", 1.0))))
-        if "random_state" in world:
-            def restore_tuple(value):
-                if isinstance(value, list):
-                    return tuple(restore_tuple(item) for item in value)
-                return value
-            self.rng.setstate(restore_tuple(world["random_state"]))
+        def restore_tuple(value):
+            if isinstance(value, list):
+                return tuple(restore_tuple(item) for item in value)
+            return value
+        self.rng.setstate(restore_tuple(world["random_state"]))
         self.refresh_npc_attitudes()
 
         self.projectiles = []
@@ -524,6 +512,8 @@ class SaveLoadMixin:
             options = self.settings_menu_options()
         elif self.menu_mode == "pause":
             options = ["Resume Sailing", "Save Voyage", "Load Voyage", "Captain's Guide", "Text & Sound Settings", "Main Menu", "Quit"]
+        elif self.menu_mode == "game_over":
+            options = ["Load Last Save", "Choose a Save", "Return to Main Menu", "Quit"]
         elif self.menu_mode == "load":
             options = self.save_files()
         else:
@@ -564,6 +554,23 @@ class SaveLoadMixin:
         self.save_dialog_open = False
         self.add_journal(f"Loaded voyage '{saves[index].stem}' from {self.last_docked_port}.")
 
+    def load_last_save(self):
+        saves = self.save_files()
+        if not saves:
+            self.toast_message("There is no saved voyage to return to. Choose New Voyage or return to the main menu.", 5.0)
+            return False
+        latest = saves[0]
+        try:
+            self.load_game_file(latest)
+        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+            self.toast_message(f"Could not load your last saved voyage: {error}", 6.0)
+            return False
+        self.menu_mode = None
+        self.save_dialog_open = False
+        self.add_journal(f"After losing the flagship, you returned to the last saved voyage '{latest.stem}' at {self.last_docked_port}.")
+        self.toast_message(f"Last saved voyage restored: {latest.stem}.", 5.0)
+        return True
+
     def handle_menu_key(self, key):
         if self.save_dialog_open:
             if key == pygame.K_ESCAPE:
@@ -572,6 +579,26 @@ class SaveLoadMixin:
                 self.save_name_input = self.save_name_input[:-1]
             elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self.finish_save_dialog()
+            return
+
+        if self.menu_mode == "game_over":
+            options = ["Load Last Save", "Choose a Save", "Return to Main Menu", "Quit"]
+            if key in (pygame.K_UP, pygame.K_w):
+                self.menu_selection = (self.menu_selection - 1) % len(options)
+            elif key in (pygame.K_DOWN, pygame.K_s):
+                self.menu_selection = (self.menu_selection + 1) % len(options)
+            elif key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                choice = options[self.menu_selection]
+                if choice == "Load Last Save":
+                    self.load_last_save()
+                elif choice == "Choose a Save":
+                    self.open_load_menu("game_over")
+                elif choice == "Return to Main Menu":
+                    self.menu_mode = "main"
+                    self.menu_selection = 0
+                    self.menu_scroll = 0
+                else:
+                    self.running = False
             return
 
         if self.menu_mode == "pause" and key in (pygame.K_ESCAPE, pygame.K_F9):

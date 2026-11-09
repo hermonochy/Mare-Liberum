@@ -1,5 +1,5 @@
 {
-  "game": "Mare Liberum",
-  "settings_version": 1,
-  "text_scale": 1.5
+  "text_scale": 1.0,
+  "effects_volume": 1.0,
+  "ambience_volume": 1.0
 }

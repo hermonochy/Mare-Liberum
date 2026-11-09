@@ -14,17 +14,17 @@ class Game(
         pygame.init()
         self.audio = AudioEngine(PROJECT_ROOT / "assets" / "audio")
         pygame.display.set_caption("Mare Liberum")
-        self.screen = pygame.display.set_mode((1280, 800), pygame.RESIZABLE)
+        self.screen = pygame.display.set_mode(GAME_WINDOW_SIZE, pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
         self.load_user_settings()
         self.apply_text_scale()
         self.apply_audio_settings()
         self.running = True
-        self.rng = random.Random(41)
+        self.rng = random.Random(STARTING_RANDOM_SEED)
         self.world_time = 0.0
-        self.camera_zoom = 1.0
-        self.camera_x = 540.0
-        self.camera_y = 825.0
+        self.camera_zoom = STARTING_CAMERA_ZOOM
+        self.camera_x = STARTING_SHIP_POSITION[0]
+        self.camera_y = STARTING_SHIP_POSITION[1]
         self.camera_follow = True
         self.world_map_open = False
         self.camera_dragging = False
@@ -38,131 +38,54 @@ class Game(
         self.unique_items = []
         self.conversation = None
         self.dialogue_speaker = "Harbourmaster"
-        self.docked_port = "Port Royal"
+        self.docked_port = STARTING_PORT_NAME
         # The player uses an ordinary quay slot like every other vessel; no
         # harbour slot is permanently reserved for the flagship.
         self.player_berth_slot = PORT_BERTH_CENTER_SLOT
         self.last_docked_port_slot = PORT_BERTH_CENTER_SLOT
         self.near_port = None
-        self.ship_x = 540.0
-        self.ship_y = 825.0
-        self.ship_heading = 90.0
+        self.ship_x, self.ship_y = STARTING_SHIP_POSITION
+        self.ship_heading = STARTING_SHIP_HEADING
         self.ship_vx = 0.0
         self.ship_vy = 0.0
-        self.sail_setting = 0.72
+        self.sail_setting = STARTING_SAIL_SETTING
         self.oars_deployed = False
-        self.wind_angle = 24.0
-        self.wind_strength = 1.0
-        self.current_ship = "Sloop"
-        self.player_ship_name = "The Wayward Gull"
-        self.player_livery = 0
+        self.wind_angle = STARTING_WIND[0]
+        self.wind_strength = STARTING_WIND[1]
+        self.current_ship = STARTING_SHIP_CLASS
+        self.player_ship_name = STARTING_SHIP_NAME
+        self.player_livery = STARTING_SHIP_LIVERY
         self.ship_surface_cache = {}
-        self.upgrades = {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0, "cargo": 0}
+        self.upgrades = dict(STARTING_SHIP_UPGRADES)
         self.player_max_hull = PLAYER_HULL
         self.player_hull = PLAYER_HULL
+        self.player_hit_flash = 0.0
+        self.player_damage_marks = []
+        self.player_sinking_active = False
+        self.player_sink_elapsed = 0.0
+        self.player_lost = False
+        self.floating_debris = []
         self.fleet = []
         self.fleet_serial = 1
-        self.fleet_order = "follow"
+        self.fleet_order = STARTING_FLEET_ORDER
         self.shipyard_open = False
         self.shipyard_tab = 0
         self.shipyard_selection = 0
         self.ship_rename_mode = False
         self.ship_name_input = ""
-        self.shipyard_tabs = ["Flagship", "Refits", "Fleet", "Repairs", "Name & Colours"]
-        self.gold = 175
+        self.shipyard_tabs = list(SHIPYARD_TABS)
+        self.gold = STARTING_GOLD
         self.cannon_held = {-1: False, 1: False}
         self.cannon_first_volley_fired = {-1: False, 1: False}
         self.cannon_battery_timers = {-1: [], 1: []}
         self.cannon_battery_rates = {-1: [], 1: []}
         self.projectiles = []
         self.cannon_smoke = []
-        self.journal = [
-            "A battered sloop, a short purse, and a long stretch of blue water. Port Royal is your home for now.",
-            "The harbourmaster may know who is hiring. Ask around before putting out to sea.",
-        ]
-        self.land = [[(145, 258),
-  (290, 170),
-  (520, 174),
-  (735, 286),
-  (820, 465),
-  (744, 590),
-  (570, 690),
-  (355, 700),
-  (186, 590),
-  (105, 430)],
- [(1328, 260),
-  (1458, 146),
-  (1662, 105),
-  (1853, 204),
-  (1930, 362),
-  (1812, 497),
-  (1590, 520),
-  (1400, 421),
-  (1306, 340)],
- [(1850, 1170),
-  (1910, 1040),
-  (2040, 960),
-  (2180, 925),
-  (2350, 950),
-  (2490, 1030),
-  (2585, 1160),
-  (2550, 1300),
-  (2420, 1415),
-  (2240, 1460),
-  (2050, 1410),
-  (1900, 1300)],
- [(2720, 438), (2846, 342), (2990, 420), (3060, 588), (2942, 760), (2770, 730), (2655, 585)],
- [(520, 3600), (666, 3485), (890, 3520), (1060, 3660), (1038, 3822), (855, 3930), (630, 3890), (494, 3755)],
- [(1710, 3170),
-  (1790, 3110),
-  (1900, 3140),
-  (1970, 3230),
-  (1930, 3345),
-  (1820, 3410),
-  (1725, 3350),
-  (1670, 3255)],
- [(3250, 3500), (3380, 3415), (3540, 3460), (3640, 3600), (3570, 3760), (3410, 3810), (3270, 3710)]]
-        self.ports = [
-            Port("Port Royal", 540, 825, 540, 682, 90.0, "A noisy free port of privateers, rum runners, fishwives, and crooked customs men.", "Old Caribbean", "Independent"),
-            Port("Tortuga", 1610, 605, 1600, 487, 90.0, "A lawless harbour tucked beneath green hills. Every tavern has a different version of the truth.", "Old Caribbean", "Pirate Brotherhood"),
-            Port("Havana", 2245, 810, 2245, 938, -90.0, "A fortified Spanish harbour with high stone walls, merchant galleons, and watchful soldiers.", "Old Caribbean", "Spanish Crown"),
-        ]
+        self.journal = list(STARTING_JOURNAL)
+        self.land = [list(map(tuple, polygon)) for polygon in BASE_LAND_POLYGONS]
+        self.ports = [Port(*data) for data in STARTING_PORT_DATA]
         self.add_regional_islands_and_ports()
-        self.treasure_sites = [
-            TreasureSite(
-                "gannet_cay",
-                "Gannet Cay",
-                [(915, 1450), (955, 1385), (1025, 1370), (1090, 1400), (1120, 1465), (1090, 1530), (1020, 1550), (950, 1520)],
-                1035, 1495, 875, 1350,
-                "The Crooked Palm Chart",
-                "Sail east from Port Royal until a low green cay rises beyond the reef. Its crooked palm leans toward the sunrise. The chart marks the pale beach beneath it.",
-                "Three roots drink from one stone. From the crooked palm, take seven paces toward the rising sun. Which place hides the chest?",
-                ["The pale sand beside the split log", "The pool beneath the northern cliff", "The reef where the gulls circle"],
-                0, 420, "A silver sextant"
-            ),
-            TreasureSite(
-                "widows_key",
-                "Widow's Key",
-                [(2824, 950), (2870, 900), (2940, 908), (3004, 956), (3022, 1027), (2974, 1094), (2900, 1112), (2842, 1068)],
-                2930, 1045, 2500, 840,
-                "The Widow's Last Key",
-                "Run east of the great green island, where the open sea meets a small key watched by two pale rocks. At sunset the western beach turns the colour of old gold.",
-                "The widow keeps her fortune where two white sentries face the western tide. Do not dig beneath the taller one; seek the sand between them. What marks the right place?",
-                ["The black rock at the island's point", "The sand between the twin white stones", "The mangrove pool behind the beach"],
-                1, 650, "A ruby-encrusted ring"
-            ),
-            TreasureSite(
-                "dead_mans_cay",
-                "Dead Man's Cay",
-                [(1660, 2350), (1715, 2285), (1790, 2290), (1855, 2350), (1850, 2425), (1785, 2490), (1705, 2480), (1650, 2410)],
-                1750, 2390, 1960, 2180,
-                "The Broken Mast Chart",
-                "Sail southwest from Havana, past the southern shadow of the great island. A tiny cay hides there, with a broken mast lying across its red-sand beach.",
-                "A dead mast points no more to sea. When the sun sinks, its shadow touches the only red patch of sand. Where does the old captain sleep?",
-                ["At the foot of the fallen mast", "Under the palm at the island's centre", "Beside the eastern tide pool"],
-                0, 900, "The Black Pearl of Saint Elmo"
-            ),
-        ]
+        self.treasure_sites = [TreasureSite(*data) for data in STARTING_TREASURE_DATA]
         self.add_scattered_cays()
         self.add_faction_ports()
         self.add_reefs()
@@ -172,19 +95,11 @@ class Game(
         for site in self.treasure_sites:
             site.trees = self.make_tree_positions_for_polygon(site.polygon, 7)
         self.ports_by_name = {port.name: port for port in self.ports}
-        self.port_greetings = {
-            "Port Royal": "The harbourmaster's office is a low, timber building wedged between a rum store and a sailmaker. A brass bell rings as you step inside. A clerk looks up from a ledger; by the window, an old captain with a silver beard folds his charts and watches the sea.",
-            "Tortuga": "A tavern keeper wipes a pewter mug and watches you over its rim. Outside, men argue over dice while a schooner is careened on the beach.",
-            "Havana": "A uniformed harbour officer waits beneath a portrait of the governor. Beyond the open shutters, bells ring over the crowded anchorage.",
-        }
+        self.port_greetings = dict(PORT_GREETING_TEXT)
         for port in self.ports:
             self.port_greetings.setdefault(port.name, f"The harbour office at {port.name} smells of tar, salt, and damp ledgers. A clerk looks up as you enter.")
             self.port_greetings[port.name] += f" The harbour flies the colours of the {port.faction}."
-        self.news_by_port = {
-            "Port Royal": "A fisherman says black-sailed vessels have been seen beyond the eastern reefs. The customs men claim it is none of their concern.",
-            "Tortuga": "The taverns whisper of Captain Vane, a ruthless privateer who has taken to flying the black flag. His ships are gathering in the cays.",
-            "Havana": "The merchants complain that no convoy dares leave harbour. The governor promises safety, but the harbour guns have been loaded for days.",
-        }
+        self.news_by_port = dict(PORT_NEWS_TEXT)
         for port in self.ports:
             self.news_by_port.setdefault(port.name, f"Word from {port.region}: merchant captains report strange sails, missing cargoes, and unfamiliar agents asking after old charts.")
         self.missions = load_missions(MISSION_DIR)
@@ -204,9 +119,7 @@ class Game(
         self.mission_result_reward = 0
         self.mission_result_timer = 0.0
         self.initialise_day_jobs()
-        self.pirates = [
-            PirateShip("The Drowned Crown", 2760 * WORLD_SCALE, 1510 * WORLD_SCALE, -130, side_choice=1, wander=4.1),
-        ]
+        self.pirates = [PirateShip(*args, **kwargs) for args, kwargs in INITIAL_PIRATE_DATA]
         self.reinforcement_number = 1
         self.reinforcement_timer = self.pirate_reinforcement_interval()
         self.pirate_collision_notice_timer = 0.0
@@ -220,9 +133,9 @@ class Game(
         self.commander_ledger_scroll = 0
         self.initialise_diplomacy()
         self.traffic_ships = []
-        self.traffic_spawn_timer = 20.0
+        self.traffic_spawn_timer = INITIAL_TRAFFIC_SPAWN_INTERVAL
         self.traffic_serial = 1
-        self.initialise_traffic_ships(7)
+        self.initialise_traffic_ships(INITIAL_TRAFFIC_COUNT)
         self.last_docked_port = self.docked_port or "Port Royal"
         self.menu_mode = "main"
         self.menu_selection = 0
@@ -475,7 +388,7 @@ class Game(
 
     def run(self):
         while self.running:
-            dt = min(self.clock.tick(60) / 1000.0, 0.04)
+            dt = min(self.clock.tick(GAME_TARGET_FPS) / 1000.0, GAME_FRAME_TIME_LIMIT)
             for event in pygame.event.get():
                 self.handle_event(event)
             self.update(dt)

@@ -4,51 +4,6 @@ from ..common import *
 class TradeMixin:
     """Player cargo trading, port supply/demand markets and faction economies."""
 
-    TRADE_GOODS = [
-        {"id": "sugar", "name": "Raw Sugar", "base": 11, "space": 1.0, "description": "Cane sugar for refineries, taverns and the kitchens of the islands."},
-        {"id": "rum", "name": "Rum", "base": 24, "space": 1.0, "description": "Casks of island rum. Popular with sailors, taverns and privateers."},
-        {"id": "tobacco", "name": "Tobacco", "base": 19, "space": 1.0, "description": "Bales of cured leaf, prized by merchants and colonial factors."},
-        {"id": "coffee", "name": "Coffee", "base": 31, "space": 1.0, "description": "Green coffee beans from the warmer upland plantations."},
-        {"id": "cocoa", "name": "Cocoa", "base": 28, "space": 1.0, "description": "Cocoa beans and cakes for the growing chocolate trade."},
-        {"id": "spices", "name": "Spices", "base": 43, "space": 0.7, "description": "Pepper, nutmeg and other costly aromatics in sealed bales."},
-        {"id": "fish", "name": "Salt Fish", "base": 9, "space": 1.0, "description": "Preserved fish, a staple for ships and settlements far from fresh water."},
-        {"id": "salt", "name": "Salt", "base": 10, "space": 1.0, "description": "Salt for curing food, preserving hides and provisioning fleets."},
-        {"id": "timber", "name": "Ship Timber", "base": 18, "space": 1.5, "description": "Hardwood beams and planking for yards, wharves and repairs."},
-        {"id": "rope", "name": "Rope & Hemp", "base": 21, "space": 1.0, "description": "Cordage for rigging, anchors, blocks and dockside work."},
-        {"id": "canvas", "name": "Sailcloth", "base": 32, "space": 1.0, "description": "Heavy canvas and sailcloth for merchantmen and warships."},
-        {"id": "tools", "name": "Iron Tools", "base": 45, "space": 0.9, "description": "Tools and fittings needed by shipwrights, smiths and builders."},
-        {"id": "gunpowder", "name": "Gunpowder", "base": 58, "space": 0.8, "description": "Sealed powder kegs. Valuable, regulated and dangerous cargo."},
-        {"id": "silver", "name": "Silver Ingots", "base": 138, "space": 0.35, "description": "Small, heavy ingots from the Spanish silver routes."},
-        {"id": "contraband", "name": "Contraband", "base": 82, "space": 0.65, "description": "Unregistered luxury goods. Profitable, but not welcome in every customs house."},
-    ]
-    TRADE_GOODS_BY_ID = {}  # Populated immediately below the class definition.
-    CARGO_CAPACITY_BY_SHIP = {
-        "Sloop": 42.0,
-        "Cutter": 34.0,
-        "Schooner": 68.0,
-        "Brigantine": 104.0,
-        "Frigate": 82.0,
-    }
-    TRADE_QUANTITY_OPTIONS = (1, 5, "MAX")
-    MARKET_TICK_SECONDS = 75.0
-
-    FACTION_PRODUCES = {
-        "British Crown": {"canvas", "tools", "gunpowder", "rum"},
-        "Spanish Crown": {"silver", "sugar", "cocoa", "tobacco"},
-        "French Crown": {"coffee", "spices", "canvas", "rum"},
-        "Merchant League": {"fish", "salt", "rope", "timber", "sugar"},
-        "Pirate Brotherhood": {"contraband", "rum", "gunpowder", "tobacco"},
-        "Independent": {"fish", "salt", "timber", "rope"},
-    }
-    FACTION_WANTS = {
-        "British Crown": {"sugar", "coffee", "cocoa", "spices", "fish"},
-        "Spanish Crown": {"tools", "canvas", "gunpowder", "rope", "coffee"},
-        "French Crown": {"sugar", "tobacco", "silver", "fish", "tools"},
-        "Merchant League": {"silver", "spices", "coffee", "cocoa", "canvas", "gunpowder"},
-        "Pirate Brotherhood": {"rum", "gunpowder", "tools", "silver", "canvas", "fish"},
-        "Independent": {"tools", "canvas", "salt", "rum", "cocoa"},
-    }
-
     def initialise_trade_economy(self):
         self.market_state = {}
         self.cargo_hold = {}
@@ -79,8 +34,8 @@ class TradeMixin:
             # between new voyages and do not consume the campaign RNG stream.
             seed = sum((i + 1) * ord(character) for i, character in enumerate(port.name)) + port_index * 7919
             market_rng = random.Random(seed)
-            produces = set(self.FACTION_PRODUCES.get(port.faction, set()))
-            wants = set(self.FACTION_WANTS.get(port.faction, set()))
+            produces = set(FACTION_PRODUCES.get(port.faction, set()))
+            wants = set(FACTION_WANTS.get(port.faction, set()))
             name_lower = port.name.lower()
             region_lower = port.region.lower()
             if any(token in name_lower for token in ("sugar", "cane", "hook")) or "windward" in region_lower:
@@ -97,7 +52,7 @@ class TradeMixin:
                 produces.update({"timber", "rope"})
 
             records = {}
-            for good in self.TRADE_GOODS:
+            for good in TRADE_GOODS:
                 good_id = good["id"]
                 target = market_rng.randint(52, 82)
                 demand = market_rng.randint(34, 66)
@@ -126,7 +81,7 @@ class TradeMixin:
     def cargo_capacity_for_ship(self, ship_name=None, upgrades=None):
         ship_name = ship_name or getattr(self, "current_ship", "Sloop")
         upgrade_values = upgrades if upgrades is not None else getattr(self, "upgrades", {})
-        base = self.CARGO_CAPACITY_BY_SHIP.get(ship_name, 42.0)
+        base = CARGO_CAPACITY_BY_SHIP.get(ship_name, 42.0)
         return base + max(0, int(upgrade_values.get("cargo", 0))) * 12.0
 
     def cargo_capacity(self):
@@ -135,7 +90,7 @@ class TradeMixin:
     def cargo_load(self):
         total = 0.0
         for good_id, quantity in getattr(self, "cargo_hold", {}).items():
-            good = self.TRADE_GOODS_BY_ID.get(good_id)
+            good = TRADE_GOODS_BY_ID.get(good_id)
             if good:
                 total += max(0, int(quantity)) * good["space"]
         return total
@@ -150,7 +105,7 @@ class TradeMixin:
         return self.market_state.get(port_name, {}).get(good_id)
 
     def market_mid_price(self, port_name, good_id):
-        good = self.TRADE_GOODS_BY_ID[good_id]
+        good = TRADE_GOODS_BY_ID[good_id]
         record = self.market_record(port_name, good_id)
         if not record:
             return int(good["base"])
@@ -190,7 +145,7 @@ class TradeMixin:
             self.toast_message("The harbour's factors refuse to trade with a hostile captain.", 3.2)
             return False
         self.market_open = True
-        self.market_selection = max(0, min(self.market_selection, len(self.TRADE_GOODS) - 1))
+        self.market_selection = max(0, min(self.market_selection, len(TRADE_GOODS) - 1))
         self.market_quantity_index = 0
         self.toast_message(f"The factors at {self.docked_port} open their books. Compare prices before loading cargo.", 3.4)
         return True
@@ -199,15 +154,15 @@ class TradeMixin:
         self.market_open = False
 
     def selected_trade_good(self):
-        index = max(0, min(len(self.TRADE_GOODS) - 1, int(self.market_selection)))
-        return self.TRADE_GOODS[index]
+        index = max(0, min(len(TRADE_GOODS) - 1, int(self.market_selection)))
+        return TRADE_GOODS[index]
 
     def selected_trade_quantity(self):
-        return self.TRADE_QUANTITY_OPTIONS[max(0, min(2, int(self.market_quantity_index)))]
+        return TRADE_QUANTITY_OPTIONS[max(0, min(2, int(self.market_quantity_index)))]
 
     def maximum_buy_quantity(self, port_name, good_id):
         record = self.market_record(port_name, good_id) or {}
-        good = self.TRADE_GOODS_BY_ID[good_id]
+        good = TRADE_GOODS_BY_ID[good_id]
         stock_limit = max(0, int(float(record.get("stock", 0.0))))
         space_limit = int(self.cargo_free_space() // good["space"])
         price = self.market_buy_price(port_name, good_id)
@@ -233,10 +188,10 @@ class TradeMixin:
         return self.faction_economies[faction]
 
     def buy_trade_cargo(self, good_id, quantity=None):
-        if not self.docked_port or good_id not in self.TRADE_GOODS_BY_ID:
+        if not self.docked_port or good_id not in TRADE_GOODS_BY_ID:
             return 0
         port_name = self.docked_port
-        good = self.TRADE_GOODS_BY_ID[good_id]
+        good = TRADE_GOODS_BY_ID[good_id]
         requested = self.selected_trade_quantity() if quantity is None else quantity
         maximum = self.maximum_buy_quantity(port_name, good_id)
         quantity = maximum if requested == "MAX" else min(maximum, max(0, int(requested)))
@@ -279,9 +234,9 @@ class TradeMixin:
         return quantity
 
     def sell_trade_cargo(self, good_id, quantity=None):
-        if not self.docked_port or good_id not in self.TRADE_GOODS_BY_ID:
+        if not self.docked_port or good_id not in TRADE_GOODS_BY_ID:
             return 0
-        good = self.TRADE_GOODS_BY_ID[good_id]
+        good = TRADE_GOODS_BY_ID[good_id]
         requested = self.selected_trade_quantity() if quantity is None else quantity
         maximum = self.maximum_sell_quantity(good_id)
         quantity = maximum if requested == "MAX" else min(maximum, max(0, int(requested)))
@@ -336,7 +291,7 @@ class TradeMixin:
             shortages = 0
             total = 0
             for port in ports:
-                for good in self.TRADE_GOODS:
+                for good in TRADE_GOODS:
                     record = self.market_record(port.name, good["id"])
                     if not record:
                         continue
@@ -350,8 +305,8 @@ class TradeMixin:
     def update_trade_economy(self, dt):
         self.market_tick_timer += max(0.0, float(dt))
         ticks = 0
-        while self.market_tick_timer >= self.MARKET_TICK_SECONDS and ticks < 4:
-            self.market_tick_timer -= self.MARKET_TICK_SECONDS
+        while self.market_tick_timer >= MARKET_TICK_SECONDS and ticks < 4:
+            self.market_tick_timer -= MARKET_TICK_SECONDS
             ticks += 1
             for port_name, records in self.market_state.items():
                 for record in records.values():
@@ -393,7 +348,7 @@ class TradeMixin:
         if not origin:
             return []
         routes = []
-        for good in self.TRADE_GOODS:
+        for good in TRADE_GOODS:
             good_id = good["id"]
             if float(self.market_record(origin.name, good_id).get("stock", 0.0)) < 2.0:
                 continue
@@ -440,7 +395,7 @@ class TradeMixin:
             self.market_tick_timer = 0.0
             self.refresh_faction_shortages()
             return
-        valid_goods = set(self.TRADE_GOODS_BY_ID)
+        valid_goods = set(TRADE_GOODS_BY_ID)
         self.cargo_hold = {
             good_id: max(0, min(100000, int(quantity)))
             for good_id, quantity in saved.get("cargo_hold", {}).items()
@@ -458,7 +413,7 @@ class TradeMixin:
         for port in self.ports:
             source = saved_markets.get(port.name, {}) if isinstance(saved_markets, dict) else {}
             target_records = self.market_state.get(port.name, {})
-            for good in self.TRADE_GOODS:
+            for good in TRADE_GOODS:
                 good_id = good["id"]
                 entry = source.get(good_id, {}) if isinstance(source, dict) else {}
                 if not isinstance(entry, dict):
@@ -468,7 +423,7 @@ class TradeMixin:
                 record["demand"] = max(8, min(100, int(entry.get("demand", record["demand"]))))
                 # Production/consumption belong to the port's authored market profile.
         saved_economies = saved.get("faction_economies", {})
-        for faction in self.FACTION_NAMES:
+        for faction in FACTION_NAMES:
             economy = self._faction_economy(faction)
             entry = saved_economies.get(faction, {}) if isinstance(saved_economies, dict) else {}
             if not isinstance(entry, dict):
@@ -478,11 +433,11 @@ class TradeMixin:
             economy["trade_balance"] = max(-(10**12), min(10**12, int(entry.get("trade_balance", 0))))
             economy["trade_volume"] = max(0, min(10**12, int(entry.get("trade_volume", 0))))
             economy["shortage_pressure"] = max(0.0, min(100.0, float(entry.get("shortage_pressure", 0.0))))
-        self.market_tick_timer = max(0.0, min(self.MARKET_TICK_SECONDS, float(saved.get("market_tick_timer", 0.0))))
+        self.market_tick_timer = max(0.0, min(MARKET_TICK_SECONDS, float(saved.get("market_tick_timer", 0.0))))
         # A manually edited save cannot load more cargo than the ship can carry.
         overflow = self.cargo_load() - self.cargo_capacity()
         if overflow > 0.001:
-            for good in reversed(self.TRADE_GOODS):
+            for good in reversed(TRADE_GOODS):
                 good_id = good["id"]
                 quantity = self.cargo_quantity(good_id)
                 if quantity <= 0:
@@ -508,9 +463,9 @@ class TradeMixin:
         left_width = int(panel.width * 0.51)
         rows_top = panel.y + 142
         rows_bottom = panel.bottom - 174
-        row_height = max(14, min(34, (rows_bottom - rows_top) // len(self.TRADE_GOODS)))
+        row_height = max(14, min(34, (rows_bottom - rows_top) // len(TRADE_GOODS)))
         rows = [pygame.Rect(left_x, rows_top + index * row_height, left_width, row_height - 3)
-                for index in range(len(self.TRADE_GOODS))]
+                for index in range(len(TRADE_GOODS))]
         right_x = left_x + left_width + 22
         right_width = panel.right - 24 - right_x
         quantity_buttons = [pygame.Rect(right_x + index * (right_width // 3 + 5), panel.bottom - 158,
@@ -548,9 +503,9 @@ class TradeMixin:
         if key in (pygame.K_ESCAPE, pygame.K_y):
             self.close_trade_market()
         elif key in (pygame.K_UP, pygame.K_w):
-            self.market_selection = (self.market_selection - 1) % len(self.TRADE_GOODS)
+            self.market_selection = (self.market_selection - 1) % len(TRADE_GOODS)
         elif key == pygame.K_DOWN:
-            self.market_selection = (self.market_selection + 1) % len(self.TRADE_GOODS)
+            self.market_selection = (self.market_selection + 1) % len(TRADE_GOODS)
         elif key == pygame.K_LEFT:
             self.market_quantity_index = max(0, self.market_quantity_index - 1)
         elif key == pygame.K_RIGHT:
@@ -590,7 +545,7 @@ class TradeMixin:
             text = fit_text_surface(self.tiny_font, label, (107, 76, 47), 90, 22)
             self.screen.blit(text, (x, header_y))
         for index, row in enumerate(rows):
-            good = self.TRADE_GOODS[index]
+            good = TRADE_GOODS[index]
             selected = index == self.market_selection
             color = (197, 177, 139) if selected else ((224, 209, 177) if index % 2 == 0 else (214, 198, 164))
             pygame.draw.rect(self.screen, color, row, border_radius=3)
@@ -635,7 +590,7 @@ class TradeMixin:
         pygame.draw.rect(self.screen, (116, 83, 52), bar_rect, 1, border_radius=3)
         capacity_text = fit_text_surface(self.tiny_font, f"CARGO HOLD  {loaded:.1f} / {capacity:.0f} units  ·  {self.cargo_free_space():.1f} free", (83, 59, 38), right_width, 22)
         self.screen.blit(capacity_text, (right_x, bar_rect.y + 19))
-        manifest = [f"{self.TRADE_GOODS_BY_ID[gid]['name']} ×{qty}" for gid, qty in self.cargo_hold.items() if qty > 0]
+        manifest = [f"{TRADE_GOODS_BY_ID[gid]['name']} ×{qty}" for gid, qty in self.cargo_hold.items() if qty > 0]
         manifest_text = "Manifest: " + (", ".join(manifest[:3]) if manifest else "empty")
         if len(manifest) > 3:
             manifest_text += f" +{len(manifest) - 3} more"
@@ -661,7 +616,7 @@ class TradeMixin:
             selected = index == self.market_quantity_index
             pygame.draw.rect(self.screen, (94, 119, 77) if selected else (142, 111, 75), rect, border_radius=4)
             pygame.draw.rect(self.screen, (225, 206, 165), rect, 2 if selected else 1, border_radius=4)
-            label = str(self.TRADE_QUANTITY_OPTIONS[index])
+            label = str(TRADE_QUANTITY_OPTIONS[index])
             text = fit_text_surface(self.small_font, label, (255, 240, 211), rect.width - 8, rect.height - 6)
             self.screen.blit(text, text.get_rect(center=rect.center))
         pygame.draw.rect(self.screen, (57, 111, 71), buy_button, border_radius=4)
@@ -681,4 +636,3 @@ class TradeMixin:
         self.screen.set_clip(previous_clip)
 
 
-TradeMixin.TRADE_GOODS_BY_ID = {good["id"]: good for good in TradeMixin.TRADE_GOODS}

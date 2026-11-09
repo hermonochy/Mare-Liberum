@@ -4,13 +4,6 @@ from ..common import *
 class ReefsMixin:
     """Static navigational hazards with readable chart markings and NPC avoidance."""
 
-    REEF_ANCHORS = [
-        (9150, 3450), (9450, 5150), (10850, 5650), (11650, 7050),
-        (11650, 8750), (12350, 10150), (2900, 5200), (3150, 8950),
-        (7100, 1450), (10100, 1750), (17250, 1150), (18800, 5350),
-        (19000, 8650), (14500, 10800), (5200, 10450), (1750, 5650),
-        (8500, 10400), (11900, 4450), (1950, 1850), (18300, 10800),
-    ]
 
     def make_reef_polygon(self, cx, cy, rx, ry, rotation, seed):
         rng = random.Random(seed)
@@ -56,7 +49,7 @@ class ReefsMixin:
                     return False
             return True
 
-        for index, (anchor_x, anchor_y) in enumerate(self.REEF_ANCHORS):
+        for index, (anchor_x, anchor_y) in enumerate(REEF_ANCHORS):
             chosen = None
             # Try the authored shoal location first, then move within its local
             # passage if the current island/port geometry leaves too little room.
@@ -138,7 +131,7 @@ class ReefsMixin:
         return True
 
     def find_safe_water_position(self, x, y, clearance=100.0, max_radius=1700.0):
-        """Find nearby open water for an older saved NPC that now overlaps a new reef."""
+        """Find nearby open water for a vessel whose position overlaps a reef."""
         def safe(px, py):
             if not (80.0 < px < WORLD_WIDTH - 80.0 and 80.0 < py < WORLD_HEIGHT - 80.0):
                 return False
@@ -186,6 +179,7 @@ class ReefsMixin:
         if kind == "player":
             damage_rate = 1.1 + min(speed, 210.0) * 0.010
             self.player_hull = max(0.0, self.player_hull - damage_rate * dt)
+            self.player_hit_flash = max(getattr(self, "player_hit_flash", 0.0), 0.12)
             self.reef_damage_notice_timer = max(0.0, self.reef_damage_notice_timer - dt)
             if self.reef_damage_notice_timer <= 0.0:
                 self.toast_message(f"REEF! Coral and rock scrape your hull near {reef.name}.", 2.5)
@@ -203,13 +197,13 @@ class ReefsMixin:
         vessel.hull = max(0.0, before - damage_rate * dt)
         if before > 0 and vessel.hull <= 0:
             self.record_commander_ship_loss(vessel, f"the reef at {reef.name}")
+            self.start_ship_sinking(vessel, f"the reef at {reef.name}")
             if isinstance(vessel, PirateShip):
-                vessel.dead = True
-                self.add_journal(f"{vessel.name} was wrecked on {reef.name}.")
+                self.add_journal(f"{vessel.name} struck {reef.name} and is sinking.")
             elif vessel in getattr(self, "traffic_ships", []):
-                self.add_journal(f"{vessel.name} was wrecked on {reef.name}.")
+                self.add_journal(f"{vessel.name} struck {reef.name} and is sinking.")
             else:
-                self.toast_message(f"{getattr(vessel, 'name', 'An escort')} is wrecked on {reef.name}.", 3.0)
+                self.toast_message(f"{getattr(vessel, 'name', 'An escort')} struck {reef.name} and is sinking!", 3.0)
         return True
 
     def reef_avoidance_heading(self, x, y, desired_heading, lookahead=640.0, clearance=125.0):

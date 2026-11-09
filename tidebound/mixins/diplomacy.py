@@ -4,14 +4,6 @@ from ..common import *
 class DiplomacyMixin:
     """Player standing with Caribbean powers, individual commanders and harbours."""
 
-    FACTION_NAMES = (
-        "British Crown",
-        "Spanish Crown",
-        "French Crown",
-        "Merchant League",
-        "Pirate Brotherhood",
-        "Independent",
-    )
 
     def initialise_diplomacy(self):
         # Small starting biases give the captain a past without locking any doors.
@@ -63,7 +55,7 @@ class DiplomacyMixin:
         if isinstance(npc, PirateShip):
             return "Pirate Brotherhood"
         faction = getattr(npc, "faction", "")
-        if faction in self.FACTION_NAMES:
+        if faction in FACTION_NAMES:
             return faction
         role = getattr(npc, "role", "")
         return {
@@ -102,7 +94,7 @@ class DiplomacyMixin:
             pirate.player_attitude = self.npc_relation_label(pirate).lower()
 
     def adjust_faction_relation(self, faction, amount, reason, announce=True):
-        if faction not in self.FACTION_NAMES or not amount:
+        if faction not in FACTION_NAMES or not amount:
             return self.faction_standing(faction)
         old = self.faction_standing(faction)
         new = self.clamp_relation(old + amount)
@@ -266,20 +258,20 @@ class DiplomacyMixin:
         self.cannon_held[-1] = False
         self.cannon_held[1] = False
         self.diplomacy_open = True
-        self.diplomacy_selection = max(0, min(self.diplomacy_selection, len(self.FACTION_NAMES) - 1))
+        self.diplomacy_selection = max(0, min(self.diplomacy_selection, len(FACTION_NAMES) - 1))
         self.diplomacy_scroll = 0
 
     def handle_diplomacy_key(self, key):
         if key in (pygame.K_i, pygame.K_ESCAPE):
             self.diplomacy_open = False
         elif key in (pygame.K_UP, pygame.K_w):
-            self.diplomacy_selection = (self.diplomacy_selection - 1) % len(self.FACTION_NAMES)
+            self.diplomacy_selection = (self.diplomacy_selection - 1) % len(FACTION_NAMES)
         elif key in (pygame.K_DOWN, pygame.K_s):
-            self.diplomacy_selection = (self.diplomacy_selection + 1) % len(self.FACTION_NAMES)
+            self.diplomacy_selection = (self.diplomacy_selection + 1) % len(FACTION_NAMES)
         elif key == pygame.K_p:
-            self.request_safe_conduct(self.FACTION_NAMES[self.diplomacy_selection])
+            self.request_safe_conduct(FACTION_NAMES[self.diplomacy_selection])
         elif key == pygame.K_g:
-            self.offer_diplomatic_gift(self.FACTION_NAMES[self.diplomacy_selection])
+            self.offer_diplomatic_gift(FACTION_NAMES[self.diplomacy_selection])
 
     def diplomatic_action_hint(self):
         port = self.nearest_port_for_parley()

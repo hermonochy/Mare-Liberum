@@ -1,3 +1,7 @@
 __pycache__/
 tidebound/__pycache__/
 tidebound/mixins/__pycache__/
+venv/
+saves/
+mare_liberum_settings.json
+

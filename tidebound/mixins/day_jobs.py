@@ -2,7 +2,6 @@ from ..common import *
 
 
 class DayJobsMixin:
-    DAY_JOB_BOARD_SIZE = 5
 
     def initialise_day_jobs(self):
         self.day_job_offers = {}
@@ -109,7 +108,7 @@ class DayJobsMixin:
 
     def ensure_day_job_board(self, source_name):
         offers = self.day_job_offers.setdefault(source_name, [])
-        missing = max(0, self.DAY_JOB_BOARD_SIZE - len(offers))
+        missing = max(0, DAY_JOB_BOARD_SIZE - len(offers))
         kinds = ["cargo", "letter", "passenger", "rescue"]
         self.rng.shuffle(kinds)
         kinds.extend(self.rng.choice(["cargo", "letter", "passenger", "rescue"]) for _ in range(missing))
@@ -159,10 +158,10 @@ class DayJobsMixin:
         panel_width = min(930, width - 48)
         panel_height = min(660, height - 40)
         panel = pygame.Rect((width - panel_width) // 2, (height - panel_height) // 2, panel_width, panel_height)
-        row_stride = min(78, max(40, (panel_height - 245) // self.DAY_JOB_BOARD_SIZE))
+        row_stride = min(78, max(40, (panel_height - 245) // DAY_JOB_BOARD_SIZE))
         row_height = max(34, row_stride - 7)
         rows_top = panel.y + 122
-        rows = [pygame.Rect(panel.x + 28, rows_top + index * row_stride, panel.width - 56, row_height) for index in range(self.DAY_JOB_BOARD_SIZE)]
+        rows = [pygame.Rect(panel.x + 28, rows_top + index * row_stride, panel.width - 56, row_height) for index in range(DAY_JOB_BOARD_SIZE)]
         button_y = panel.bottom - 66
         accept = pygame.Rect(panel.right - 260, button_y, 224, 42)
         close = pygame.Rect(panel.x + 36, button_y, 170, 42)

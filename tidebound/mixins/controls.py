@@ -7,6 +7,10 @@ class ControlsMixin:
         if self.menu_mode or self.save_dialog_open:
             self.handle_menu_key(key)
             return
+        # Once the flagship is sinking, the player cannot steer, fire or create
+        # a new save; only the brief sinking animation and game-over screen remain.
+        if getattr(self, "player_sinking_active", False) or getattr(self, "player_lost", False):
+            return
         if getattr(self, "market_open", False):
             self.handle_trade_market_key(key)
             return

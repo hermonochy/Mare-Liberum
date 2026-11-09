@@ -2,46 +2,7 @@ from ..common import *
 
 
 class TrafficMixin:
-    TRAFFIC_ROLES = {
-        "merchant": {
-            "names": ["Golden Finch", "Grace of Bridgetown", "Three Sisters", "Dawn Trader", "Providence", "Cane Blossom"],
-            "types": ["Schooner", "Brigantine", "Frigate"],
-            "hull": 7,
-            "speed": 58.0,
-        },
-        "fishing": {
-            "names": ["Little Minnow", "Net and Needle", "Morning Catch", "Blue Mackerel", "Sea Lark"],
-            "types": ["Sloop", "Cutter"],
-            "hull": 4,
-            "speed": 66.0,
-        },
-        "naval patrol": {
-            "names": ["HMS Resolute", "HMS Sparrowhawk", "HMS Vigilant", "La Centinela"],
-            "types": ["Brigantine", "Frigate"],
-            "hull": 9,
-            "speed": 61.0,
-        },
-        "mail packet": {
-            "names": ["Swift Dispatch", "King's Letter", "Morning Star", "The Post Boy"],
-            "types": ["Cutter", "Schooner"],
-            "hull": 5,
-            "speed": 78.0,
-        },
-        "whaler": {
-            "names": ["Northern Light", "White Whale", "Moby's Luck", "Harpooner"],
-            "types": ["Brigantine", "Schooner"],
-            "hull": 8,
-            "speed": 48.0,
-        },
-    }
 
-    SHIP_COLLISION_RADII = {
-        "Sloop": 52.0,
-        "Cutter": 50.0,
-        "Schooner": 55.0,
-        "Brigantine": 58.0,
-        "Frigate": 62.0,
-    }
 
     def initialise_traffic_ships(self, count=6):
         self.traffic_ships = []
@@ -97,10 +58,10 @@ class TrafficMixin:
     def spawn_traffic_ship(self):
         if len(self.traffic_ships) >= 18:
             return False
-        roles = list(self.TRAFFIC_ROLES)
+        roles = list(TRAFFIC_ROLES)
         weights = self.trade_traffic_role_weights() if hasattr(self, "trade_traffic_role_weights") else [42, 23, 14, 15, 6]
         role = self.rng.choices(roles, weights=weights, k=1)[0]
-        profile = self.TRAFFIC_ROLES[role]
+        profile = TRAFFIC_ROLES[role]
         destination = self.choose_traffic_destination()
         if destination is None:
             return False
@@ -162,11 +123,6 @@ class TrafficMixin:
         self.traffic_serial += 1
         return True
 
-    ADMIRAL_NAMES = {
-        "naval patrol": ["Admiral Horatio Vale", "Commodore Anne Wycliffe", "Captain-General Mateo Ruiz"],
-        "merchant": ["Commodore Elias Harcourt", "Master Mariner Beatrice Shaw", "Captain Tomas Bell"],
-        "pirate": ["Black Jack Rourke", "Madame Sabine Voss", "Calico Ned Mercer", "Red Tom Kersey"],
-    }
 
     def organise_npc_fleets(self):
         """Occasionally bind nearby ships into named, persistent NPC squadrons."""
@@ -190,7 +146,7 @@ class TrafficMixin:
                         if math.hypot(extra.x-leader.x, extra.y-leader.y) < 1250:
                             wing.append(extra); unassigned.remove(extra)
                 fid = f"{role.replace(' ','-')}-{leader.name.replace(' ','-')}"
-                commander = self.rng.choice(self.ADMIRAL_NAMES[role])
+                commander = self.rng.choice(ADMIRAL_NAMES[role])
                 members = [leader] + wing
                 self.commander_fleet_state(fid, commander, role, len(members))
                 self.ensure_commander_record(commander, role)
@@ -215,7 +171,7 @@ class TrafficMixin:
                 if math.hypot(extra.x-leader.x, extra.y-leader.y) < 1150:
                     members.append(extra); free.remove(extra)
             fid = f"pirate-{leader.name.replace(' ','-')}"
-            commander = self.rng.choice(self.ADMIRAL_NAMES["pirate"])
+            commander = self.rng.choice(ADMIRAL_NAMES["pirate"])
             self.commander_fleet_state(fid, commander, "pirate", len(members))
             self.ensure_commander_record(commander, "pirate")
             for slot, member in enumerate(members):
@@ -715,7 +671,7 @@ class TrafficMixin:
             turn_rate = 25.0 if ship.role == "whaler" else (38.0 if combat_target is not None else 34.0)
             ship.heading = (ship.heading + clamp(difference, -turn_rate * dt, turn_rate * dt)) % 360.0
             heading = math.radians(ship.heading)
-            profile = self.TRAFFIC_ROLES[ship.role]
+            profile = TRAFFIC_ROLES[ship.role]
             ship.vx += math.cos(heading) * profile["speed"] * 0.62 * dt
             ship.vy += math.sin(heading) * profile["speed"] * 0.62 * dt
             drag = math.exp(-0.10 * dt)
@@ -730,20 +686,20 @@ class TrafficMixin:
             ship.y += ship.vy * dt
             old_heading = ship.heading
             ship.x, ship.y, ship.vx, ship.vy, collided = resolve_land_collision(
-                ship.x, ship.y, ship.vx, ship.vy, self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0), land_polygons
+                ship.x, ship.y, ship.vx, ship.vy, SHIP_COLLISION_RADII.get(ship.ship_type, 32.0), land_polygons
             )
             if collided:
                 ship.heading = (old_heading + self.rng.choice([-1, 1]) * self.rng.uniform(48.0, 82.0)) % 360.0
                 ship.vx *= 0.42
                 ship.vy *= 0.42
-            self.apply_reef_damage(ship, dt, kind="npc", ship_radius=self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0))
+            self.apply_reef_damage(ship, dt, kind="npc", ship_radius=SHIP_COLLISION_RADII.get(ship.ship_type, 32.0))
 
     def _ship_collision_bodies(self):
         bodies = []
         bodies.append({
             "entity": self,
             "x_key": "ship_x", "y_key": "ship_y", "vx_key": "ship_vx", "vy_key": "ship_vy",
-            "radius": self.SHIP_COLLISION_RADII.get(self.current_ship, 34.0) + 3.0,
+            "radius": SHIP_COLLISION_RADII.get(self.current_ship, 34.0) + 3.0,
             "mass": max(1.0, self.player_max_hull / 95.0), "player": True,
             "static": bool(self.docked_port),
         })
@@ -751,21 +707,21 @@ class TrafficMixin:
             if ship.hull > 0:
                 bodies.append({
                     "entity": ship, "x_key": "x", "y_key": "y", "vx_key": "vx", "vy_key": "vy",
-                    "radius": self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
+                    "radius": SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
                     "mass": max(0.9, ship.max_hull / 100.0), "player": False, "static": False,
                 })
         for ship in self.pirates:
             if not ship.dead:
                 bodies.append({
                     "entity": ship, "x_key": "x", "y_key": "y", "vx_key": "vx", "vy_key": "vy",
-                    "radius": self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
+                    "radius": SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
                     "mass": max(0.9, ship.max_hull / 6.5), "player": False, "static": False,
                 })
         for ship in self.traffic_ships:
             if ship.hull > 0:
                 bodies.append({
                     "entity": ship, "x_key": "x", "y_key": "y", "vx_key": "vx", "vy_key": "vy",
-                    "radius": self.SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
+                    "radius": SHIP_COLLISION_RADII.get(ship.ship_type, 32.0),
                     "mass": max(0.9, ship.max_hull / 6.5), "player": False, "static": bool(getattr(ship, "port_dwell", 0.0) > 0.0),
                 })
         return bodies

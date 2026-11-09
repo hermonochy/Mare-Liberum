@@ -104,6 +104,8 @@ class VesselsMixin:
         self.toast_message("BOOM! The whole port battery fires!" if side < 0 else "BOOM! The whole starboard battery fires!", 1.3)
 
     def update_player_cannons(self, dt):
+        if self.player_sinking_active or self.player_lost:
+            return
         for side in (-1, 1):
             gun_count = self.ensure_cannon_battery(side)
             timers = self.cannon_battery_timers[side]
@@ -115,7 +117,7 @@ class VesselsMixin:
                     timers[index] = rates[index] * self.rng.uniform(0.88, 1.16)
 
     def update_player_sailing(self, dt):
-        if self.docked_port:
+        if self.docked_port or self.player_sinking_active or self.player_lost:
             return
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w] or keys[pygame.K_UP]:
@@ -430,6 +432,122 @@ class VesselsMixin:
         self.audio.play("cannon_fire", volume=max(0.04, 0.27 * (1.0 - distance_to_player / 3000.0)))
         pirate.cooldown = 2.8 + self.rng.random() * 0.7
 
+    def record_ship_damage_mark(self, vessel, hit_x, hit_y, player=False):
+        """Keep a small, persistent splinter/scorch mark at every cannon impact."""
+        if player:
+            ship_x, ship_y, heading = self.ship_x, self.ship_y, self.ship_heading
+            marks = self.player_damage_marks
+        else:
+            ship_x, ship_y = vessel.x, vessel.y
+            heading = vessel.heading
+            marks = getattr(vessel, "damage_marks", None)
+            if marks is None:
+                marks = []
+                vessel.damage_marks = marks
+        angle = math.radians(heading)
+        dx, dy = float(hit_x) - float(ship_x), float(hit_y) - float(ship_y)
+        local_x = clamp(dx * math.cos(angle) + dy * math.sin(angle), -48.0, 48.0)
+        local_y = clamp(-dx * math.sin(angle) + dy * math.cos(angle), -27.0, 27.0)
+        marks.append({
+            "x": round(local_x, 2),
+            "y": round(local_y, 2),
+            "angle": round(self.rng.uniform(-math.pi, math.pi), 3),
+            "length": round(self.rng.uniform(7.0, 15.0), 2),
+            "size": round(self.rng.uniform(2.4, 4.0), 2),
+        })
+        del marks[:-18]
+
+    def start_ship_sinking(self, vessel, cause="combat"):
+        """Mark an NPC vessel as lost while retaining it for a visible sinking animation."""
+        if vessel is None or getattr(vessel, "sinking", False):
+            return False
+        vessel.hull = 0
+        vessel.sinking = True
+        vessel.sink_elapsed = 0.0
+        vessel.sink_cause = str(cause)
+        vessel.hit_flash = 0.0
+        vessel.vx = float(getattr(vessel, "vx", 0.0)) * 0.35
+        vessel.vy = float(getattr(vessel, "vy", 0.0)) * 0.35
+        if isinstance(vessel, PirateShip):
+            vessel.dead = True
+        return True
+
+    def spawn_floating_debris(self, x, y, heading=0.0, vx=0.0, vy=0.0, ship_type="Sloop"):
+        """Leave a short-lived scatter of planks and sailcloth where a vessel sank."""
+        if not hasattr(self, "floating_debris"):
+            self.floating_debris = []
+        count = self.rng.randint(6, 10)
+        for index in range(count):
+            angle = self.rng.uniform(0.0, math.tau)
+            speed = self.rng.uniform(5.0, 19.0)
+            size = self.rng.uniform(9.0, 25.0)
+            cloth = index == count - 1 and self.rng.random() < 0.55
+            self.floating_debris.append({
+                "x": float(x) + self.rng.uniform(-22.0, 22.0),
+                "y": float(y) + self.rng.uniform(-22.0, 22.0),
+                "vx": float(vx) * 0.12 + math.cos(angle) * speed,
+                "vy": float(vy) * 0.12 + math.sin(angle) * speed,
+                "angle": self.rng.uniform(0.0, math.tau),
+                "spin": self.rng.uniform(-0.7, 0.7),
+                "length": size * (1.6 if not cloth else 1.0),
+                "width": size * (0.34 if not cloth else 0.9),
+                "cloth": cloth,
+                "life": self.rng.uniform(38.0, 58.0),
+                "max_life": 58.0,
+            })
+        self.floating_debris = self.floating_debris[-260:]
+
+    def update_floating_debris(self, dt):
+        remaining = []
+        for piece in getattr(self, "floating_debris", []):
+            piece["life"] = max(0.0, float(piece.get("life", 0.0)) - dt)
+            if piece["life"] <= 0.0:
+                continue
+            piece["x"] += float(piece.get("vx", 0.0)) * dt
+            piece["y"] += float(piece.get("vy", 0.0)) * dt
+            piece["angle"] = (float(piece.get("angle", 0.0)) + float(piece.get("spin", 0.0)) * dt) % math.tau
+            piece["vx"] *= math.exp(-0.045 * dt)
+            piece["vy"] *= math.exp(-0.045 * dt)
+            remaining.append(piece)
+        self.floating_debris = remaining
+
+    def update_sinking_visuals(self, dt):
+        """Advance sinking ships and remove them only after their animation finishes."""
+        for collection in (self.pirates, self.traffic_ships, self.fleet):
+            for vessel in list(collection):
+                if not getattr(vessel, "sinking", False):
+                    vessel.hit_flash = max(0.0, float(getattr(vessel, "hit_flash", 0.0)) - dt)
+                    continue
+                vessel.sink_elapsed = float(getattr(vessel, "sink_elapsed", 0.0)) + dt
+                if vessel.sink_elapsed >= 5.0:
+                    self.spawn_floating_debris(
+                        vessel.x, vessel.y, vessel.heading,
+                        getattr(vessel, "vx", 0.0), getattr(vessel, "vy", 0.0),
+                        getattr(vessel, "ship_type", "Sloop"),
+                    )
+                    if vessel in collection:
+                        collection.remove(vessel)
+
+        self.player_hit_flash = max(0.0, float(getattr(self, "player_hit_flash", 0.0)) - dt)
+        if self.player_sinking_active:
+            self.player_sink_elapsed += dt
+            if self.player_sink_elapsed + 1e-6 >= 5.4:
+                self.spawn_floating_debris(
+                    self.ship_x, self.ship_y, self.ship_heading,
+                    self.ship_vx, self.ship_vy, self.current_ship,
+                )
+                self.player_sinking_active = False
+                self.player_lost = True
+                self.docked_port = None
+                self.near_port = None
+                self.menu_mode = "game_over"
+                self.menu_selection = 0
+                self.menu_scroll = 0
+                self.cannon_held[-1] = False
+                self.cannon_held[1] = False
+                self.toast_message("Your flagship has gone beneath the waves. The last saved voyage remains untouched.", 8.0)
+                self.add_journal("The flagship was lost at sea. This voyage ended; only a previous saved log can restore it.")
+
     def update_projectiles(self, dt):
         remaining = []
         for ball in self.projectiles:
@@ -443,17 +561,19 @@ class VesselsMixin:
             if ball.owner in {"player", "fleet", "port", "npc_navy", "npc_merchant"}:
                 hit = False
                 for pirate in self.pirates:
-                    if pirate.dead:
+                    if pirate.dead or pirate.hull <= 0 or pirate.sinking:
                         continue
                     if math.hypot(ball.x - pirate.x, ball.y - pirate.y) < 27:
                         if ball.owner in {"player", "fleet"}:
                             source = "your flagship" if ball.owner == "player" else "your escort fleet"
                             self.record_player_attack_on_pirate(pirate, source)
-                        pirate.hull -= 1
+                        pirate.hull = max(0, pirate.hull - 1)
+                        pirate.hit_flash = 0.34
+                        self.record_ship_damage_mark(pirate, ball.x, ball.y)
                         self.audio.play("cannon_impact", volume=0.25)
                         hit = True
                         if pirate.hull <= 0:
-                            pirate.dead = True
+                            self.start_ship_sinking(pirate, "cannon fire")
                             if ball.owner == "port":
                                 self.record_commander_ship_loss(pirate, "harbour guns")
                                 self.add_journal(f"{pirate.name} was sunk by the harbour guns.")
@@ -464,7 +584,7 @@ class VesselsMixin:
                                 source = "a naval patrol" if ball.owner == "npc_navy" else "an armed merchant"
                                 self.record_commander_ship_loss(pirate, source, ball)
                                 self.add_journal(f"{pirate.name} was sunk by {source} in an independent sea battle.")
-                                self.toast_message(f"{pirate.name} is sunk in an independent sea battle!", 3.0)
+                                self.toast_message(f"{pirate.name} is sinking after a broadside from {source}.", 3.0)
                             else:
                                 self.record_commander_ship_loss(pirate, "the captain's guns")
                             self.register_pirate_sunk(pirate, by_player=ball.owner in {"player", "fleet"})
@@ -474,47 +594,56 @@ class VesselsMixin:
                 if hit:
                     continue
                 if ball.owner in {"player", "fleet"}:
-                    traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and math.hypot(ball.x - ship.x, ball.y - ship.y) < 27), None)
+                    traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and not ship.sinking and math.hypot(ball.x - ship.x, ball.y - ship.y) < 27), None)
                     if traffic_hit:
                         self.audio.play("cannon_impact", volume=0.26)
                         source = "Your broadside" if ball.owner == "player" else "Your escort fleet"
                         self.provoke_traffic_ship(traffic_hit, source)
                         traffic_hit.hull = max(0, traffic_hit.hull - 1)
+                        traffic_hit.hit_flash = 0.34
+                        self.record_ship_damage_mark(traffic_hit, ball.x, ball.y)
                         if traffic_hit.hull <= 0:
                             self.record_player_sunk_npc(traffic_hit)
                             self.record_commander_ship_loss(traffic_hit, "the player's guns")
-                            self.traffic_ships.remove(traffic_hit)
-                            self.toast_message(f"Your cannonball sinks the {traffic_hit.role} ship {traffic_hit.name}.", 3.2)
+                            self.start_ship_sinking(traffic_hit, "the player's guns")
+                            self.toast_message(f"The {traffic_hit.role} ship {traffic_hit.name} is going down!", 3.2)
                         elif ball.owner != "player":
                             self.toast_message(f"A ball strikes {traffic_hit.name}!", 1.3)
                         continue
             elif ball.owner == "npc_pirate":
-                traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and math.hypot(ball.x - ship.x, ball.y - ship.y) < 29), None)
+                traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and not ship.sinking and math.hypot(ball.x - ship.x, ball.y - ship.y) < 29), None)
                 if traffic_hit:
                     self.audio.play("cannon_impact", volume=0.24)
                     traffic_hit.hull = max(0, traffic_hit.hull - 1)
+                    traffic_hit.hit_flash = 0.34
+                    self.record_ship_damage_mark(traffic_hit, ball.x, ball.y)
                     if traffic_hit.hull <= 0:
                         self.record_commander_ship_loss(traffic_hit, "pirate guns", ball)
-                        self.traffic_ships.remove(traffic_hit)
-                        self.add_journal(f"{traffic_hit.name} was sunk by pirate guns in open water.")
+                        self.start_ship_sinking(traffic_hit, "pirate guns")
+                        self.add_journal(f"{traffic_hit.name} is sinking after being struck by pirate guns in open water.")
                         if self.npc_battle_notice_timer <= 0.0:
-                            self.toast_message(f"{traffic_hit.name} is sunk by pirates!", 3.0)
+                            self.toast_message(f"{traffic_hit.name} is going down under pirate fire!", 3.0)
                             self.npc_battle_notice_timer = 3.0
                     continue
-            elif not self.docked_port:
+            elif not self.docked_port and not self.player_sinking_active and not self.player_lost:
                 if math.hypot(ball.x - self.ship_x, ball.y - self.ship_y) < 23:
                     self.audio.play("cannon_impact", volume=0.36)
                     self.player_hull = max(0, self.player_hull - 11)
+                    self.player_hit_flash = 0.38
+                    self.record_ship_damage_mark(None, ball.x, ball.y, player=True)
                     self.toast_message(f"Enemy broadside hit! Hull: {int(100 * self.player_hull / max(1, self.player_max_hull))}%", 1.4)
                     if self.player_hull <= 0:
                         self.player_sunk()
                     continue
-                escort_hit = next((escort for escort in self.fleet if escort.hull > 0 and math.hypot(ball.x - escort.x, ball.y - escort.y) < 23), None)
+                escort_hit = next((escort for escort in self.fleet if escort.hull > 0 and not escort.sinking and math.hypot(ball.x - escort.x, ball.y - escort.y) < 23), None)
                 if escort_hit:
                     self.audio.play("cannon_impact", volume=0.28)
                     escort_hit.hull = max(0, escort_hit.hull - 11)
+                    escort_hit.hit_flash = 0.34
+                    self.record_ship_damage_mark(escort_hit, ball.x, ball.y)
                     if escort_hit.hull == 0:
-                        self.toast_message(f"{escort_hit.name} is disabled! Return to a shipyard for repairs.", 3.2)
+                        self.start_ship_sinking(escort_hit, "enemy cannon fire")
+                        self.toast_message(f"{escort_hit.name} has been struck below the waterline and is sinking!", 3.2)
                     else:
                         self.toast_message(f"{escort_hit.name} takes a hit. Hull: {escort_hit.hull}/{escort_hit.max_hull}.", 2.0)
                     continue
@@ -522,43 +651,31 @@ class VesselsMixin:
         self.projectiles = remaining
 
     def player_sunk(self):
-        penalty = min(90, self.gold)
-        self.gold -= penalty
-        berth_options = []
-        for candidate in self.ports:
-            free_slots = [slot for slot in range(PORT_BERTH_COUNT)
-                          if slot not in self.occupied_harbour_slots(candidate)]
-            for slot in free_slots:
-                bx, by = self.harbour_berth_position(candidate, slot)
-                berth_options.append((math.hypot(bx - self.ship_x, by - self.ship_y), candidate, slot))
-        if berth_options:
-            _, port, slot = min(berth_options, key=lambda item: item[0])
-        else:
-            # If every berth in the world is occupied, release the longest-
-            # berthed NPC at the nearest harbour rather than overlap ships.
-            port = min(self.ports, key=lambda item: math.hypot(item.x - self.ship_x, item.y - self.ship_y))
-            berthed = [ship for ship in self.traffic_ships if ship.berth_port == port.name and ship.port_dwell > 0]
-            if berthed:
-                released = max(berthed, key=lambda ship: ship.port_dwell)
-                slot = int(getattr(released, "berth_slot", PORT_BERTH_CENTER_SLOT))
-                released.berth_port, released.berth_slot, released.port_dwell = "", -1, 0.0
-            else:
-                slot = PORT_BERTH_CENTER_SLOT
-        self.player_berth_slot = slot
-        self.last_docked_port_slot = slot
-        self.ship_x, self.ship_y = self.harbour_berth_position(port, slot)
-        self.ship_vx = 0.0
-        self.ship_vy = 0.0
-        self.ship_heading = port.exit_heading
-        self.docked_port = port.name
-        self.last_docked_port = port.name
-        self.near_port = port
-        self.player_hull = max(1, int(self.player_max_hull * 0.55))
-        self.projectiles = [ball for ball in self.projectiles if ball.owner != "enemy"]
-        self.add_journal(f"Your ship was dismasted and towed to {port.name}. Lost {penalty} gold in repairs.")
-        self.toast_message(f"Your ship was nearly sunk. Repairs at {port.name} cost {penalty} gold.", 5.0)
+        """Fatal loss: animate the flagship going under; never teleport or auto-repair it."""
+        if self.player_sinking_active or self.player_lost:
+            return
+        self.player_hull = 0
+        self.player_sinking_active = True
+        self.player_sink_elapsed = 0.0
+        self.player_hit_flash = 0.0
+        self.ship_vx *= 0.22
+        self.ship_vy *= 0.22
+        self.sail_setting = 0.0
+        self.oars_deployed = False
+        self.cannon_held[-1] = False
+        self.cannon_held[1] = False
+        self.projectiles = [ball for ball in self.projectiles if ball.owner in {"player", "fleet"}]
+        self.add_journal("The flagship has taken fatal damage. The crew abandon ship as the hull begins to settle beneath the waves.")
+        self.toast_message("HULL BREACHED! Your ship is sinking. The last save will be your only way back.", 6.0)
 
     def update(self, dt):
+        if getattr(self, "menu_mode", None) == "game_over":
+            self.update_sinking_visuals(dt)
+            self.update_floating_debris(dt)
+            nearest = min((math.hypot(self.ship_x - port.x, self.ship_y - port.y) for port in self.ports), default=None)
+            self.audio.update(dt, docked=False, near_port_distance=nearest,
+                              speed=0.0, wind_strength=self.wind_strength)
+            return
         if getattr(self, "menu_mode", None) or getattr(self, "save_dialog_open", False):
             nearest = min((math.hypot(self.ship_x - port.x, self.ship_y - port.y) for port in self.ports), default=None)
             self.audio.update(dt, docked=bool(self.docked_port), near_port_distance=nearest,
@@ -566,6 +683,8 @@ class VesselsMixin:
                               wind_strength=self.wind_strength)
             return
         self.world_time += dt
+        self.update_sinking_visuals(dt)
+        self.update_floating_debris(dt)
         self.update_trade_economy(dt)
         self.toast_time = max(0.0, self.toast_time - dt)
         self.mission_result_timer = max(0.0, self.mission_result_timer - dt)
@@ -597,7 +716,12 @@ class VesselsMixin:
             self.cannon_held[-1] = False
             self.cannon_held[1] = False
             return
-        self.update_player_cannons(dt)
-        self.update_player_sailing(dt)
+        if not self.player_sinking_active and not self.player_lost:
+            self.update_player_cannons(dt)
+            self.update_player_sailing(dt)
+        else:
+            self.cannon_held[-1] = False
+            self.cannon_held[1] = False
         self.update_fleet(dt)
-        self.update_treasure_discovery()
+        if not self.player_sinking_active and not self.player_lost:
+            self.update_treasure_discovery()
