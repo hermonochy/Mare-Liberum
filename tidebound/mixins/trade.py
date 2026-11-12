@@ -144,6 +144,10 @@ class TradeMixin:
         if self.port_attitude(self.ports_by_name[self.docked_port]) == "HOSTILE":
             self.toast_message("The harbour's factors refuse to trade with a hostile captain.", 3.2)
             return False
+        if hasattr(self, "open_port_menu"):
+            self.market_selection = max(0, min(self.market_selection, len(TRADE_GOODS) - 1))
+            self.open_port_menu("trade")
+            return True
         self.market_open = True
         self.market_selection = max(0, min(self.market_selection, len(TRADE_GOODS) - 1))
         self.market_quantity_index = 0

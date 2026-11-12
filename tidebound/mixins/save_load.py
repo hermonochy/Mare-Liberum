@@ -99,7 +99,7 @@ class SaveLoadMixin:
         cleaned = re.sub(r"[^A-Za-z0-9 _-]", "", name).strip()
         return cleaned[:36] or "Unnamed Voyage"
 
-    def save_game(self, slot_name):
+    def save_game(self, slot_name, notify=True):
         if getattr(self, "player_sinking_active", False) or getattr(self, "player_lost", False):
             raise ValueError("A sinking or lost flagship cannot create a new save. Load a previous voyage instead.")
         last_port_name = getattr(self, "last_docked_port", None) or self.docked_port
@@ -152,6 +152,8 @@ class SaveLoadMixin:
                 "mission_completion_started": self.mission_completion_started,
                 "mission_result_title": self.mission_result_title,
                 "mission_result_reward": self.mission_result_reward,
+                "mission_event_states": getattr(self, "mission_event_states", {}),
+                "world_flags": getattr(self, "world_flags", {}),
             },
             "treasure": [
                 {
@@ -203,8 +205,11 @@ class SaveLoadMixin:
             },
         }
         text = json.dumps(data, ensure_ascii=False, indent=2)
-        path.write_text(text + "\n", encoding="utf-8")
-        self.toast_message(f"Voyage saved as '{safe_name}' at {port.name}.", 4.5)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_text(text + "\n", encoding="utf-8")
+        temporary.replace(path)
+        if notify:
+            self.toast_message(f"Voyage saved as '{safe_name}' at {port.name}.", 4.5)
         return path
 
     def load_game_file(self, path):
@@ -282,6 +287,8 @@ class SaveLoadMixin:
         self.mission_result_title = str(story.get("mission_result_title", ""))
         self.mission_result_reward = max(0, int(story.get("mission_result_reward", 0)))
         self.mission_result_timer = 0.0
+        if hasattr(self, "restore_mission_event_state"):
+            self.restore_mission_event_state(story.get("mission_event_states", {}), story.get("world_flags", {}))
 
         treasure_flags = {entry.get("id"): entry for entry in data["treasure"]}
         for site in self.treasure_sites:
@@ -329,7 +336,12 @@ class SaveLoadMixin:
                 })
             except (KeyError, TypeError, ValueError):
                 continue
-        self.fleet = [FleetShip(**entry) for entry in data["fleet"]]
+        fleet_entries = []
+        for entry in data["fleet"]:
+            entry = dict(entry)
+            entry.setdefault("upgrades", {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0})
+            fleet_entries.append(FleetShip(**entry))
+        self.fleet = fleet_entries
         formation = "gather" if self.fleet_order == "gather" else "follow"
         for index, escort in enumerate(self.fleet):
             escort.x, escort.y = self.fleet_formation_target(index, len(self.fleet), formation)
@@ -443,6 +455,10 @@ class SaveLoadMixin:
         self.conversation = None
         self.shipyard_open = False
         self.job_board_open = False
+        self.market_open = False
+        self.diplomacy_open = False
+        if hasattr(self, "open_port_menu"):
+            self.open_port_menu("overview")
         self.journal_open = False
         self.treasure_chart_open = False
         self.world_map_open = False
@@ -479,6 +495,7 @@ class SaveLoadMixin:
         self.__init__()
         self.menu_mode = None
         self.show_help = True
+        self.open_port_menu("overview")
 
     def menu_visible_count(self, option_count):
         width, height = self.screen.get_size()

@@ -148,6 +148,11 @@ class DayJobsMixin:
             self.toast_message("The harbour job board is ashore. Make fast at a port first.", 3.0)
             return
         offers = self.ensure_day_job_board(self.docked_port)
+        if hasattr(self, "open_port_menu"):
+            self.job_board_selected_ids.clear()
+            self.open_port_menu("jobs")
+            self.toast_message(f"{len(offers)} harbour jobs are posted at {self.docked_port}.", 3.0)
+            return
         self.job_board_selected_ids.clear()
         self.job_board_selected_index = 0
         self.job_board_open = True

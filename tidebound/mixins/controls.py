@@ -11,6 +11,12 @@ class ControlsMixin:
         # a new save; only the brief sinking animation and game-over screen remain.
         if getattr(self, "player_sinking_active", False) or getattr(self, "player_lost", False):
             return
+        if getattr(self, "port_menu_open", False):
+            self.handle_port_menu_key(key)
+            return
+        if self.docked_port and key == pygame.K_e:
+            self.open_port_menu("overview")
+            return
         if getattr(self, "market_open", False):
             self.handle_trade_market_key(key)
             return
@@ -167,6 +173,20 @@ class ControlsMixin:
             self.set_fleet_order("follow")
 
     def handle_event(self, event):
+        if event.type == pygame.QUIT:
+            self.running = False
+            return
+        if getattr(self, "port_menu_open", False):
+            if event.type == pygame.TEXTINPUT and self.ship_rename_mode:
+                allowed = "".join(character for character in event.text if character.isprintable())
+                self.ship_name_input = (self.ship_name_input + allowed)[:24]
+            elif event.type == pygame.KEYDOWN:
+                self.handle_keydown(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.handle_port_menu_click(event.pos)
+            elif event.type == pygame.MOUSEWHEEL:
+                self.handle_port_menu_scroll(-event.y, pygame.mouse.get_pos())
+            return
         if event.type == pygame.TEXTINPUT and self.save_dialog_open:
             allowed = "".join(character for character in event.text if character.isprintable() and character not in "/\\:")
             self.save_name_input = (self.save_name_input + allowed)[:36]

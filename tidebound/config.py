@@ -2,6 +2,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MISSION_DIR = PROJECT_ROOT / "missions"
+MISSION_DIR = PROJECT_ROOT / "missions"
 # Authored world coordinates use a compact design grid and are scaled at startup.
 MAP_DESIGN_WIDTH = 19000
 MAP_DESIGN_HEIGHT = 11000
@@ -65,8 +66,8 @@ REGIONAL_PORT_FACTIONS = {
     "Cormorant Quay": "British Crown", "Nueva Esperanza": "Spanish Crown", "Crown's Fall": "British Crown",
     "Sugarhook": "Merchant League", "Port de Lune": "French Crown", "Santa Isabela": "Spanish Crown",
     "Mermaid's Rest": "Merchant League", "Stormhaven": "British Crown", "Redoubt": "British Crown",
-    "Saint's Refuge": "Independent", "Last Light": "British Crown", "Wreckers' Moon": "Pirate Brotherhood",
-    "Bellweather Cay": "Independent", "San Aurelio": "Spanish Crown", "Gallows Key": "Pirate Brotherhood",
+    "Saint's Refuge": "Independent", "Last Light": "British Crown", "Wreckers' Moon": "Independent",
+    "Bellweather Cay": "Independent", "San Aurelio": "Spanish Crown", "Gallows Key": "Independent",
 }
 
 # Several named ports now share a single large island. Bearings are measured
@@ -254,7 +255,7 @@ STARTING_PORT_DATA = [('Port Royal',
   90.0,
   'A lawless harbour tucked beneath green hills. Every tavern has a different account of the truth.',
   'Old Caribbean',
-  'Pirate Brotherhood'),
+  'Independent'),
  ('Havana',
   2245,
   810,
@@ -351,7 +352,7 @@ STARTING_FLEET_ORDER = "follow"
 STARTING_RANDOM_SEED = 41
 INITIAL_TRAFFIC_COUNT = 7
 INITIAL_TRAFFIC_SPAWN_INTERVAL = 20.0
-SHIPYARD_TABS = ("Flagship", "Refits", "Fleet", "Repairs", "Name & Colours")
+SHIPYARD_TABS = ("Flagship", "Refits", "Fleet", "Escort Refits", "Repairs", "Name & Colours")
 STARTING_CAMERA_ZOOM = 1.0
 STARTING_SAIL_SETTING = 0.72
 STARTING_WIND = (24.0, 1.0)
@@ -547,3 +548,19 @@ ADMIRAL_NAMES = {
 
 TRADE_GOODS_BY_ID = {good["id"]: good for good in TRADE_GOODS}
 
+
+# Harbour checkpoint saving and visible cannon powder effects.
+AUTOSAVE_SLOT_NAME = "Autosave"
+CANNON_MUZZLE_OFFSET = 27.0
+CANNON_SMOKE_LIFE_RANGE = (0.62, 0.88)
+CANNON_SMOKE_RADIUS_RANGE = (7.0, 10.0)
+CANNON_SMOKE_GROWTH_RANGE = (4.0, 6.5)
+CANNON_SMOKE_DRIFT_RANGE = (8.0, 15.0)
+
+# Individual escort refits. Levels run from zero to three.
+ESCORT_UPGRADE_BASE_COSTS = {"hull": 240, "cannons": 360, "rigging": 290, "rudder": 250}
+ESCORT_UPGRADE_COST_STEP = 220
+ESCORT_HULL_UPGRADE_AMOUNT = 20
+ESCORT_RIGGING_SPEED_PER_LEVEL = 0.07
+ESCORT_RUDDER_TURN_PER_LEVEL = 0.14
+ESCORT_CANNON_RELOAD_PER_LEVEL = 0.07

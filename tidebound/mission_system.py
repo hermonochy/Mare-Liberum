@@ -1,4 +1,5 @@
 import re
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -65,6 +66,8 @@ class Mission:
     category: str = "main"
     lead: str = ""
     waypoints: list = field(default_factory=list)
+    event_expression: str = ""
+    event_config: dict = field(default_factory=dict)
 
 
 class MissionParser:
@@ -107,6 +110,14 @@ class MissionParser:
         category = "main"
         lead = ""
         waypoints = []
+        event_expression = ""
+        event_config = {
+            "ship_types": [],
+            "ship_names": [],
+            "actions": [],
+            "on_complete": [],
+            "on_repelled": [],
+        }
         section_speakers = {}
         sections = {}
         self.index = 1
@@ -116,7 +127,63 @@ class MissionParser:
                 self.index += 1
                 continue
             self.index += 1
-            if text.startswith("name "):
+            if text.startswith("event "):
+                event_expression = text[len("event "):].strip()
+                if not event_expression:
+                    raise ValueError(f"Event requires a trigger expression in {self.path.name}")
+            elif text.startswith("event_delay "):
+                values = text.split()[1:]
+                if len(values) != 2:
+                    raise ValueError(f"event_delay requires minimum and maximum in {self.path.name}")
+                event_config["delay"] = {"minimum": float(values[0]), "maximum": float(values[1])}
+            elif text.startswith("event_cancel_if "):
+                event_config["cancel_if_expression"] = text[len("event_cancel_if "):].strip()
+            elif text.startswith("event_action "):
+                event_config["actions"].append(self.parse_event_action(text[len("event_action "):]))
+            elif text.startswith("event_on_complete "):
+                event_config["on_complete"].append(self.parse_event_action(text[len("event_on_complete "):]))
+            elif text.startswith("event_on_repelled "):
+                event_config["on_repelled"].append(self.parse_event_action(text[len("event_on_repelled "):]))
+            elif text.startswith("event_pause_while_docked "):
+                event_config["pause_while_docked"] = text.split(None, 1)[1].lower() in {"true", "yes", "1"}
+            elif text.startswith("event_repeatable "):
+                event_config["repeatable"] = text.split(None, 1)[1].lower() in {"true", "yes", "1"}
+            elif text.startswith("event_max_triggers "):
+                event_config["max_triggers"] = int(text.split(None, 1)[1])
+            elif text.startswith("event_cooldown "):
+                event_config["cooldown_seconds"] = float(text.split(None, 1)[1])
+            elif text.startswith("event_spawn_fleet "):
+                quoted = re.findall(r'"([^"\n]*)"', text)
+                trailing = text.rsplit('"', 1)[-1].split()
+                if len(quoted) < 2 or len(trailing) < 5:
+                    raise ValueError(f"event_spawn_fleet requires name, commander, min, max, hard max, strength ratio and spawn distance in {self.path.name}")
+                event_config["spawn_fleet"] = {
+                    "name": quoted[0],
+                    "commander": quoted[1],
+                    "minimum_ships": int(trailing[0]),
+                    "maximum_ships": int(trailing[1]),
+                    "hard_maximum_ships": int(trailing[2]),
+                    "strength_ratio": float(trailing[3]),
+                    "spawn_distance": float(trailing[4]),
+                }
+            elif text.startswith("event_ship_types "):
+                event_config["ship_types"] = re.findall(r'"([^"\n]*)"', text)
+            elif text.startswith("event_ship_name "):
+                event_config["ship_names"].append(self.quoted(text))
+            elif text.startswith("event_announcement "):
+                event_config["announcement"] = self.quoted(text)
+                trailing = text.rsplit('"', 1)[-1].split()
+                if trailing:
+                    event_config["announcement_seconds"] = float(trailing[0])
+            elif text.startswith("event_journal_entry "):
+                event_config["journal_entry"] = self.quoted(text)
+            elif text.startswith("event_complete_flag "):
+                event_config["complete_flag"] = self.quoted(text)
+            elif text.startswith("event_complete_text "):
+                event_config["complete_text"] = self.quoted(text)
+            elif text.startswith("event_repelled_text "):
+                event_config["repelled_text"] = self.quoted(text)
+            elif text.startswith("name "):
                 name = self.quoted(text)
             elif text.startswith("description "):
                 description = self.quoted(text)
@@ -190,7 +257,74 @@ class MissionParser:
             category=category,
             lead=lead,
             waypoints=waypoints,
+            event_expression=event_expression,
+            event_config=event_config,
         )
+
+    @staticmethod
+    def parse_event_action(text):
+        parts = shlex.split(text)
+        if not parts:
+            raise ValueError("Event action cannot be empty")
+        kind = parts[0].lower()
+        args = parts[1:]
+
+        def amount(index):
+            try:
+                value = float(args[index])
+            except (IndexError, ValueError):
+                raise ValueError(f"Event action '{kind}' requires a numeric amount")
+            return int(value) if value.is_integer() else value
+
+        def required(index):
+            if index >= len(args):
+                raise ValueError(f"Event action '{kind}' is missing an argument")
+            return args[index]
+
+        if kind in {"toast", "journal"}:
+            action = {"type": kind, "text": required(0)}
+            if kind == "toast" and len(args) > 1:
+                action["seconds"] = float(args[1])
+            return action
+        if kind in {"give_gold", "set_gold"}:
+            return {"type": kind, "amount": amount(0)}
+        if kind == "set_flag":
+            value = required(1) if len(args) > 1 else "true"
+            lowered = value.lower()
+            if lowered in {"true", "false"}:
+                parsed = lowered == "true"
+            else:
+                try:
+                    parsed_number = float(value)
+                    parsed = int(parsed_number) if parsed_number.is_integer() else parsed_number
+                except ValueError:
+                    parsed = value
+            return {"type": kind, "key": required(0), "value": parsed}
+        if kind == "add_flag":
+            return {"type": kind, "key": required(0), "amount": amount(1)}
+        if kind == "remove_flag":
+            return {"type": kind, "key": required(0)}
+        if kind == "adjust_relation":
+            action = {"type": kind, "faction": required(0), "amount": amount(1)}
+            if len(args) > 2:
+                action["reason"] = " ".join(args[2:])
+            return action
+        if kind == "set_mission_state":
+            return {"type": kind, "mission": required(0), "state": required(1)}
+        if kind == "schedule_event":
+            action = {"type": kind, "event": required(0)}
+            if len(args) == 2:
+                action["delay"] = {"minimum": float(args[1]), "maximum": float(args[1])}
+            elif len(args) >= 3:
+                action["delay"] = {"minimum": float(args[1]), "maximum": float(args[2])}
+            if len(args) >= 4:
+                action["force"] = args[3].lower() in {"true", "yes", "1"}
+            return action
+        if kind in {"enable_event", "disable_event", "retreat_fleet"}:
+            return {"type": kind, "event": required(0)}
+        if kind in {"add_cargo", "remove_cargo"}:
+            return {"type": kind, "good": required(0), "amount": amount(1)}
+        raise ValueError(f"Unknown event action '{kind}'")
 
     def parse_nodes(self, lines):
         self.node_lines = lines

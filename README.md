@@ -59,25 +59,25 @@ There is no single way to spend your time. Follow the main story, accept optiona
 
 ### Sailing and navigation
 
-Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. When the wind is unfavourable, deploy the oars with **O**. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches.
+Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. When the wind is unfavourable, deploy the oars with **O**. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches. Both banks row together in a synchronized stroke.
 
 The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag to pan, and press **C** to centre the view on your ship.
 
-Approach a harbour slowly and press **E** to take the nearest available berth. The nine quay slots are shared with visiting ships; no berth is permanently reserved for the player. If the harbour is full, wait for a vessel to leave and try again. Press **E** while docked to cast off.
+Approach a harbour slowly and press **E** to take the nearest available berth. The nine quay slots are shared with visiting ships; no berth is permanently reserved for the player. If the harbour is full, wait for a vessel to leave and try again. Docking opens the port services screen automatically. Choose **Depart** to cast off; press **Esc** to close the screen and **E** to reopen it while still berthed.
 
 Watch for reefs. Their warning areas are marked in translucent red on the chart and in the world. Crossing a reef damages the hull, with greater danger at speed. NPC ships try to steer around reefs, but a battle or a poor approach can still put them in danger.
 
 ### Ports, people and local work
 
-While docked, press **Q** to speak with the harbour office and local characters. Conversations can reveal story leads, rumours, new contacts, unusual purchases and scams as well as ordinary work. The harbour job board offers repeatable tasks such as cargo deliveries, letters, passenger passages and rescues. Several routine jobs can be active at the same time.
+The port services screen brings the harbour's activities into one place. Its navigation column links the port overview, trade market, job board, harbourmaster, shipyard, outfitter, repairs, fleet orders, diplomacy and captain's log. The overview presents local harbour information and news. The harbourmaster conversation still handles story contracts, rumours, unusual purchases, local secrets and scams. The job board offers repeatable tasks such as cargo deliveries, letters, passenger passages and rescues. Several routine jobs can be active at the same time.
 
 Some authored missions have several required port calls. Follow the route in order: collect passengers, documents or other items at each waypoint, then continue to the final destination. The compass and journal show the next required stop. Visiting the final port early will not complete a mission if an intermediate call remains outstanding.
 
-Use **B** while docked to visit the shipyard. You can repair and refit your vessel, change its name and appearance, buy another ship, expand its cargo hold and recruit escorts.
+The **Shipyard** and **Outfitter** share a persistent **Your Ships** panel. Select either the flagship or any escort to inspect its class and hull condition, rename it, jump directly to its refits, or sell it from the same panel. The shipyard lets you commission a replacement flagship or add a new escort without leaving the screen. Selling the flagship transfers command to a surviving escort when one is available; the promoted vessel remains safely moored at the current berth. The outfitter applies hull, cannon, rigging and rudder improvements to the selected vessel, plus cargo-hold refits for the flagship. Repairs can be made to one vessel or to the entire fleet. Flagship paint and sail colours can be changed on the Fleet Orders page.
 
 ### Trading and cargo
 
-Press **Y** while docked to open the market. Fifteen goods are traded across the ports, including foodstuffs, spirits, tobacco, spices, ship supplies, tools, gunpowder, silver and contraband. Prices differ by harbour and change as local stock, demand, production, consumption and trade activity change.
+Choose **Trade & Cargo** in the port services screen to open the market. Fifteen goods are traded across the ports, including foodstuffs, spirits, tobacco, spices, ship supplies, tools, gunpowder, silver and contraband. Prices differ by harbour and change as local stock, demand, production, consumption and trade activity change.
 
 Buy where goods are plentiful and sell where they are scarce. The market shows indicative trade-route opportunities and estimated returns, but a price forecast is not a promise: the market may move while you are at sea. Cargo occupies hold space, and each ship class has a different capacity. Cargo-hold refits increase that capacity. The market screen shows your manifest, remaining space and purchase costs.
 
@@ -89,13 +89,13 @@ Hold **Z** to fire the port-side battery or **X** to fire starboard. Your guns f
 
 Your escorts can fight alongside you. Give them orders with **F** to fight, **H** to hold fire, **G** to gather around the flagship, or **V** to follow in formation. Firing on a normally friendly vessel turns it hostile; its surviving squadron may join the fight, and the attack can damage your standing with its faction.
 
-NPC fleets can form around named commanders. Merchant convoys, pirate bands and navy squadrons coordinate movement and attacks, may retreat when badly damaged, and build reputations through victories, losses and retreats. Pirates, merchants and naval ships can fight each other without the player's involvement.
+NPC fleets can form around named commanders. Merchant convoys, pirate bands and navy squadrons coordinate movement and attacks, may retreat when badly damaged, and build reputations through victories, losses and retreats. Pirates, merchants and naval ships can fight each other without the player's involvement. The world can also generate major scripted encounters independently of the main story. A growing escort fleet may attract a delayed, randomly timed armada whose ship count and combat strength scale against your own vessels.
 
 Ships show progressive battle damage. A vessel that loses all its hull sinks, leaving floating wreckage that eventually disperses. Losing your flagship ends the current voyage. After the sinking sequence, load a saved voyage to continue; progress made since that save is lost. The game does not create a rescue save when your ship sinks.
 
 ### Factions and diplomacy
 
-The six powers are the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and Independent settlements. Open the diplomacy ledger with **I** to see your standing with each faction. Relationships range from hostile through neutral to friendly and are shaped by your actions: completing work, supplying scarce goods, attacking ships, sinking convoys and making gifts all have consequences.
+The six powers are the British Crown, Spanish Crown, French Crown, Merchant League, Pirate Brotherhood and Independent settlements. Tortuga, Wreckers’ Moon and Gallows Key are independent free harbours despite their pirate traffic and associations, so ordinary story visits do not automatically mean the harbour itself is at war with you. Open the diplomacy ledger with **I** to see your standing with each faction. Relationships range from hostile through neutral to friendly and are shaped by your actions: completing work, supplying scarce goods, attacking ships, sinking convoys and making gifts all have consequences.
 
 Ports may refuse entry when their faction considers you hostile, and coastal guns can defend their approaches. You can offer a gift while docked at a faction's port or request safe conduct to repair a hostile relationship. Individual admirals and pirate captains can also remember personal encounters. Press **N** to inspect the Admirals' & Captains' Ledger.
 
@@ -115,10 +115,11 @@ The journal, opened with **J**, records story leads, discoveries and important e
 | Steer | **A / D** |
 | Deploy / stow oars | **O** |
 | Fire port / starboard cannons | Hold **Z / X** |
-| Dock at nearest available berth / cast off | **E** |
-| Speak with harbour office | **Q** (while docked) |
-| Open shipyard | **B** (while docked) |
-| Open trading market | **Y** (while docked) |
+| Dock at nearest available berth / reopen port services | **E** |
+| Depart from port services screen | **E** or choose **Depart** |
+| Speak with harbour office | Choose **Harbourmaster** (or **Q** when the port screen is closed) |
+| Open shipyard / trading | Choose **Shipyard** / **Trade & Cargo** (or **B / Y** when the port screen is closed) |
+| Close port services screen | **Esc** |
 | Escort fleet: fight / hold fire / gather / follow | **F / H / G / V** |
 | Interact with jobs, treasure and wrecks | **R** |
 | View treasure charts | **T** |
@@ -135,14 +136,25 @@ The journal, opened with **J**, records story leads, discoveries and important e
 
 ## Saving your voyage
 
-Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a new save. You can keep multiple named voyages.
+Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a new named save. You can keep multiple named voyages. The game also creates or replaces a rolling **Autosave** every time you successfully dock at a harbour; this records the safe port and berth you have just reached.
 
 A save records your last harbour and the actual berth you occupied. You can save while sailing; loading returns your flagship safely to that last berth, with your fleet and voyage progress restored. Gold, ship and refits, cargo, markets, active and completed missions, intermediate mission stops, jobs, treasure, wreck discoveries, faction economies, diplomacy and commander records are all stored in the human-readable `.tide` save file.
 
-Save regularly before a dangerous voyage. If your flagship sinks, only a voyage you previously saved can be restored.
+Save regularly before a dangerous voyage. If your flagship sinks, load the most recent Autosave or another named voyage; unsaved progress since the last docking or manual save is lost. Mission-event timers, completed encounters, world flags and event fleets are saved as part of the voyage.
+
+## Mission events
+
+Story missions and world events use the same `.mission` syntax and the same `missions` directory. An event starts with a line such as `event escorts > 10 and random > 50`. Expressions support comparisons, `and`, `or`, `not`, and parentheses. Available values include escorts, total fleet size and power, gold, world time, hull percentage, completed jobs, relics, region, docked port, at-sea status, cargo and random. Function conditions include `standing("Pirate Brotherhood")`, `flag("black_armada_defeated")`, `visited("Tortuga")`, `visits("Tortuga")`, `mission("A Letter in the Main")`, `upgrade("cannons")`, `cargo("rum")` and `event("the_black_armada")`. A random value is rolled once when the other conditions first become true, so `random > 50` is a genuine 50% chance rather than a repeated roll every frame. `event_cancel_if` supplies a cancellation expression. Repeated `event_action`, `event_on_complete` and `event_on_repelled` lines can display notices, write journal entries, alter gold, relations, cargo or flags, change mission states, or schedule, enable, disable and retreat other events. Additional `event_` keywords configure timing, fleet composition, strength, announcements and outcomes.
+
+Event missions can configure a random delay, docking pauses, one-time or repeatable triggers, cooldowns and completion or retreat outcomes. Their fleet declaration supports selected ship classes, minimum, normal and hard maximum sizes, a strength multiplier against the player's current fleet, a named commander and custom ship names. Fleet power scaling accounts for hull strength and broadside size; if the hard ship limit is reached, individual enemy vessels are strengthened to meet the requested power ratio.
+
+The included `black_armada.mission` triggers when the player has more than ten living escorts and wins the 50% random check. After a random delay of 110–260 in-game seconds, it arrives with at least sixteen warships and is sized to exceed the estimated combat power of the player's fleet. Its ships distribute attacks across individual escorts and the flagship. Enemy broadsides fire more frequently and use the ship's gun count to determine the number of cannonballs in each volley. The event remains active until the armada is destroyed or its surviving ships withdraw. Event state and spawned fleets persist across saves.
 
 ## Settings
 
 Open **Text & Display Settings** from the main menu or pause menu to adjust text size, sound effects and sea ambience. The preferences are saved automatically and apply the next time you play. Sound can be disabled or reduced independently for effects and ambience.
 
 The Captain's Guide is available from the main menu and pause menu. It contains a shorter in-game reference for sailing, combat, charts, discoveries and harbour life.
+
+
+The dockside interface uses the same dark nautical palette as the rest of the game. Conversations opened from the dock remain within that interface, and the harbourmaster is reserved for special mission commissions; ordinary local work remains on the job board.

@@ -1,6 +1,7 @@
 from .treasure import TreasureMixin
 from .shipwrecks import ShipwreckMixin
 from .missions import MissionMixin
+from .mission_events import MissionEventsMixin
 from .day_jobs import DayJobsMixin
 from .shipyard_fleet import ShipyardFleetMixin
 from .controls import ControlsMixin
@@ -12,9 +13,10 @@ from .save_load import SaveLoadMixin
 from .diplomacy import DiplomacyMixin
 from .reefs import ReefsMixin
 from .trade import TradeMixin
+from .port_menu import PortMenuMixin
 
 __all__ = [
-    "TreasureMixin", "ShipwreckMixin", "MissionMixin", "DayJobsMixin", "ShipyardFleetMixin",
+    "TreasureMixin", "ShipwreckMixin", "MissionMixin", "MissionEventsMixin", "DayJobsMixin", "ShipyardFleetMixin",
     "ControlsMixin", "VesselsMixin", "CameraMixin", "RenderingMixin", "TrafficMixin",
-    "SaveLoadMixin", "DiplomacyMixin", "ReefsMixin", "TradeMixin",
+    "SaveLoadMixin", "DiplomacyMixin", "ReefsMixin", "TradeMixin", "PortMenuMixin",
 ]

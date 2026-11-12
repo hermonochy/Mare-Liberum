@@ -449,6 +449,26 @@ class TrafficMixin:
                 ship.combat_target_name = target.name
                 ship.under_attack = distance <= 500.0
 
+        player_escorts = [escort for escort in self.fleet if escort.hull > 0 and not escort.sinking]
+        event_targets = {}
+        event_pirates = sorted(
+            (pirate for pirate in living_pirates if getattr(pirate, "event_id", "") and not pirate.retreating),
+            key=lambda pirate: (pirate.fleet_id, getattr(pirate, "formation_slot", 0)),
+        )
+        for pirate in event_pirates:
+            candidates = []
+            for escort in player_escorts:
+                distance = math.hypot(escort.x - pirate.x, escort.y - pirate.y)
+                load = event_targets.get(escort.name, 0)
+                candidates.append((distance + load * 700.0, escort.name))
+            player_distance = math.hypot(self.ship_x - pirate.x, self.ship_y - pirate.y)
+            player_load = event_targets.get("__player__", 0)
+            candidates.append((player_distance + player_load * 700.0 + 250.0, "__player__"))
+            if candidates:
+                _, target_name = min(candidates, key=lambda item: item[0])
+                pirate.npc_target_name = target_name
+                event_targets[target_name] = event_targets.get(target_name, 0) + 1
+
     def _combat_target_for_traffic(self, ship):
         if ship.combat_target_name == "__player__":
             return self
@@ -471,8 +491,14 @@ class TrafficMixin:
             self.toast_message(f"{ship.name} turns hostile and brings its guns to bear!", 3.2)
 
     def _combat_target_for_pirate(self, pirate):
+        if pirate.npc_target_name == "__player__":
+            return self
         if not pirate.npc_target_name:
             return None
+        escort = next((ship for ship in self.fleet
+                       if ship.hull > 0 and ship.name == pirate.npc_target_name), None)
+        if escort is not None:
+            return escort
         return next((ship for ship in self.traffic_ships
                      if ship.hull > 0 and ship.name == pirate.npc_target_name), None)
 
@@ -496,7 +522,7 @@ class TrafficMixin:
         bearing = math.degrees(math.atan2(dy, dx))
         port_alignment = abs(angle_difference((attacker.heading - 90.0) % 360.0, bearing))
         starboard_alignment = abs(angle_difference((attacker.heading + 90.0) % 360.0, bearing))
-        if min(port_alignment, starboard_alignment) > 31.0:
+        if min(port_alignment, starboard_alignment) > 40.0:
             return False
 
         angle = math.radians(bearing)
@@ -507,8 +533,8 @@ class TrafficMixin:
             offset = (index - (shot_count - 1) / 2.0) * 12.0
             spread = (index - (shot_count - 1) / 2.0) * 0.018
             aim = angle + spread
-            muzzle_x = attacker.x + math.cos(forward) * offset + math.cos(broadside) * 18.0
-            muzzle_y = attacker.y + math.sin(forward) * offset + math.sin(broadside) * 18.0
+            muzzle_x = attacker.x + math.cos(forward) * offset + math.cos(broadside) * CANNON_MUZZLE_OFFSET
+            muzzle_y = attacker.y + math.sin(forward) * offset + math.sin(broadside) * CANNON_MUZZLE_OFFSET
             self.projectiles.append(Cannonball(
                 muzzle_x, muzzle_y,
                 math.cos(aim) * speed + attacker.vx * 0.12,
@@ -536,13 +562,21 @@ class TrafficMixin:
             target = self._combat_target_for_pirate(pirate)
             if target is None:
                 continue
-            distance = math.hypot(target.x - pirate.x, target.y - pirate.y)
-            bearing = math.degrees(math.atan2(target.y - pirate.y, target.x - pirate.x))
+            target_x, target_y = self._battle_target_position(target)
+            distance = math.hypot(target_x - pirate.x, target_y - pirate.y)
+            bearing = math.degrees(math.atan2(target_y - pirate.y, target_x - pirate.x))
             desired = (bearing + 180.0) % 360.0 if pirate.retreating else self._broadside_course(bearing, pirate.heading, distance)
             pirate.heading = (pirate.heading + clamp(angle_difference(desired, pirate.heading), -40.0 * dt, 40.0 * dt)) % 360.0
-            pirate.cooldown = max(0.0, pirate.cooldown - dt)
-            if pirate.cooldown <= 0.0 and self.fire_npc_broadside(pirate, target, "npc_pirate", shot_count=3, speed=390.0):
-                pirate.cooldown = 2.8 + self.rng.uniform(0.0, 1.0)
+            is_event_ship = bool(getattr(pirate, "event_id", ""))
+            pirate_shots = max(3, min(10, int(getattr(pirate, "gun_count", 3))))
+            projectile_owner = "event_pirate" if is_event_ship else "npc_pirate"
+            projectile_speed = 430.0 if is_event_ship else 410.0
+            if pirate.cooldown <= 0.0 and self.fire_npc_broadside(pirate, target, projectile_owner, shot_count=pirate_shots, speed=projectile_speed):
+                reload_seconds = max(0.8, float(getattr(pirate, "reload_seconds", 2.8)))
+                if is_event_ship:
+                    pirate.cooldown = max(0.72, reload_seconds * 0.54) + self.rng.uniform(0.04, 0.14)
+                else:
+                    pirate.cooldown = max(0.85, reload_seconds * 0.58) + self.rng.uniform(0.06, 0.18)
                 if math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y) < 1350.0 and self.npc_battle_notice_timer <= 0.0:
                     self.toast_message(f"Beyond the waves, {pirate.name} trades broadsides with {target.name}.", 2.6)
                     self.npc_battle_notice_timer = 7.0
@@ -567,7 +601,7 @@ class TrafficMixin:
                 speed = 435.0 if ship.role == "naval patrol" else 375.0
                 owner = "npc_traffic_hostile" if target is self else ("npc_navy" if ship.role == "naval patrol" else "npc_merchant")
                 if self.fire_npc_broadside(ship, target, owner, shot_count=shots, speed=speed):
-                    ship.combat_cooldown = (2.25 if ship.role == "naval patrol" else 3.0) + self.rng.uniform(0.0, 0.85)
+                    ship.combat_cooldown = (1.2 if ship.role == "naval patrol" else 1.55) + self.rng.uniform(0.05, 0.25)
                     if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) < 1350.0 and self.npc_battle_notice_timer <= 0.0:
                         target_name = "your ship" if target is self else target.name
                         self.toast_message(f"{ship.name} opens fire on {target_name}.", 2.6)

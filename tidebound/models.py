@@ -56,6 +56,9 @@ class PirateShip:
     sink_cause: str = ""
     hit_flash: float = 0.0
     damage_marks: list = field(default_factory=list)
+    event_id: str = ""
+    gun_count: int = 3
+    reload_seconds: float = 2.8
 
 @dataclass
 class FleetShip:
@@ -71,6 +74,7 @@ class FleetShip:
     cooldown: float = 1.0
     anchor_x: float = 0.0
     anchor_y: float = 0.0
+    upgrades: dict = field(default_factory=lambda: {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0})
     sinking: bool = False
     sink_elapsed: float = 0.0
     sink_cause: str = ""

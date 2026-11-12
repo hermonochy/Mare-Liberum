@@ -7,15 +7,15 @@ class VesselsMixin:
         if not hasattr(self, "cannon_smoke"):
             self.cannon_smoke = []
         for _ in range(max(1, int(amount))):
-            life = self.rng.uniform(0.20, 0.34)
+            life = self.rng.uniform(*CANNON_SMOKE_LIFE_RANGE)
             self.cannon_smoke.append({
-                "x": float(x) + self.rng.uniform(-0.7, 0.7),
-                "y": float(y) + self.rng.uniform(-0.7, 0.7),
-                "vx": direction_x * self.rng.uniform(4.0, 9.0) + self.rng.uniform(-2.5, 2.5),
-                "vy": direction_y * self.rng.uniform(4.0, 9.0) + self.rng.uniform(-2.5, 2.5),
+                "x": float(x),
+                "y": float(y),
+                "vx": direction_x * self.rng.uniform(*CANNON_SMOKE_DRIFT_RANGE) + self.rng.uniform(-3.5, 3.5),
+                "vy": direction_y * self.rng.uniform(*CANNON_SMOKE_DRIFT_RANGE) + self.rng.uniform(-3.5, 3.5),
                 "life": life, "max_life": life,
-                "radius": self.rng.uniform(1.4, 2.4),
-                "growth": self.rng.uniform(1.2, 2.4),
+                "radius": self.rng.uniform(*CANNON_SMOKE_RADIUS_RANGE),
+                "growth": self.rng.uniform(*CANNON_SMOKE_GROWTH_RANGE),
             })
 
     def update_cannon_smoke(self, dt):
@@ -82,8 +82,8 @@ class VesselsMixin:
         broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
         spacing = 13.0
         offset = (gun_index - (gun_count - 1) / 2) * spacing
-        x = self.ship_x + forward[0] * offset + broadside[0] * 19
-        y = self.ship_y + forward[1] * offset + broadside[1] * 19
+        x = self.ship_x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
+        y = self.ship_y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
         vx = broadside[0] * 480 + self.ship_vx * 0.18
         vy = broadside[1] * 480 + self.ship_vy * 0.18
         self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "player"))
@@ -420,9 +420,11 @@ class VesselsMixin:
         forward = (math.cos(angle), math.sin(angle))
         broadside_angle = angle + side * math.pi / 2
         broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
-        for offset in (-16, 0, 16):
-            x = pirate.x + forward[0] * offset + broadside[0] * 17
-            y = pirate.y + forward[1] * offset + broadside[1] * 17
+        shot_count = max(1, int(getattr(pirate, "gun_count", 3)))
+        for index in range(shot_count):
+            offset = (index - (shot_count - 1) / 2.0) * 13.0
+            x = pirate.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
+            y = pirate.y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
             vx = broadside[0] * 370 + pirate.vx * 0.14
             vy = broadside[1] * 370 + pirate.vy * 0.14
             self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "enemy"))
@@ -430,7 +432,7 @@ class VesselsMixin:
         self.apply_cannon_recoil(pirate, broadside[0], broadside[1], 8.0)
         distance_to_player = math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.04, 0.27 * (1.0 - distance_to_player / 3000.0)))
-        pirate.cooldown = 2.8 + self.rng.random() * 0.7
+        pirate.cooldown = max(0.85, float(getattr(pirate, "reload_seconds", 2.8)) * 0.58) + self.rng.uniform(0.06, 0.18)
 
     def record_ship_damage_mark(self, vessel, hit_x, hit_y, player=False):
         """Keep a small, persistent splinter/scorch mark at every cannon impact."""
@@ -548,6 +550,32 @@ class VesselsMixin:
                 self.toast_message("Your flagship has gone beneath the waves. The last saved voyage remains untouched.", 8.0)
                 self.add_journal("The flagship was lost at sea. This voyage ended; only a previous saved log can restore it.")
 
+    def apply_enemy_projectile_to_player_fleet(self, ball):
+        if self.docked_port or self.player_sinking_active or self.player_lost:
+            return False
+        if math.hypot(ball.x - self.ship_x, ball.y - self.ship_y) < 23:
+            self.audio.play("cannon_impact", volume=0.36)
+            self.player_hull = max(0, self.player_hull - 11)
+            self.player_hit_flash = 0.38
+            self.record_ship_damage_mark(None, ball.x, ball.y, player=True)
+            self.toast_message(f"Enemy broadside hit! Hull: {int(100 * self.player_hull / max(1, self.player_max_hull))}%", 1.4)
+            if self.player_hull <= 0:
+                self.player_sunk()
+            return True
+        escort_hit = next((escort for escort in self.fleet if escort.hull > 0 and not escort.sinking and math.hypot(ball.x - escort.x, ball.y - escort.y) < 23), None)
+        if escort_hit:
+            self.audio.play("cannon_impact", volume=0.28)
+            escort_hit.hull = max(0, escort_hit.hull - 11)
+            escort_hit.hit_flash = 0.34
+            self.record_ship_damage_mark(escort_hit, ball.x, ball.y)
+            if escort_hit.hull == 0:
+                self.start_ship_sinking(escort_hit, "enemy cannon fire")
+                self.toast_message(f"{escort_hit.name} has been struck below the waterline and is sinking!", 3.2)
+            else:
+                self.toast_message(f"{escort_hit.name} takes a hit. Hull: {escort_hit.hull}/{escort_hit.max_hull}.", 2.0)
+            return True
+        return False
+
     def update_projectiles(self, dt):
         remaining = []
         for ball in self.projectiles:
@@ -610,7 +638,7 @@ class VesselsMixin:
                         elif ball.owner != "player":
                             self.toast_message(f"A ball strikes {traffic_hit.name}!", 1.3)
                         continue
-            elif ball.owner == "npc_pirate":
+            elif ball.owner in {"npc_pirate", "event_pirate"}:
                 traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and not ship.sinking and math.hypot(ball.x - ship.x, ball.y - ship.y) < 29), None)
                 if traffic_hit:
                     self.audio.play("cannon_impact", volume=0.24)
@@ -625,28 +653,10 @@ class VesselsMixin:
                             self.toast_message(f"{traffic_hit.name} is going down under pirate fire!", 3.0)
                             self.npc_battle_notice_timer = 3.0
                     continue
-            elif not self.docked_port and not self.player_sinking_active and not self.player_lost:
-                if math.hypot(ball.x - self.ship_x, ball.y - self.ship_y) < 23:
-                    self.audio.play("cannon_impact", volume=0.36)
-                    self.player_hull = max(0, self.player_hull - 11)
-                    self.player_hit_flash = 0.38
-                    self.record_ship_damage_mark(None, ball.x, ball.y, player=True)
-                    self.toast_message(f"Enemy broadside hit! Hull: {int(100 * self.player_hull / max(1, self.player_max_hull))}%", 1.4)
-                    if self.player_hull <= 0:
-                        self.player_sunk()
+                if ball.owner == "event_pirate" and self.apply_enemy_projectile_to_player_fleet(ball):
                     continue
-                escort_hit = next((escort for escort in self.fleet if escort.hull > 0 and not escort.sinking and math.hypot(ball.x - escort.x, ball.y - escort.y) < 23), None)
-                if escort_hit:
-                    self.audio.play("cannon_impact", volume=0.28)
-                    escort_hit.hull = max(0, escort_hit.hull - 11)
-                    escort_hit.hit_flash = 0.34
-                    self.record_ship_damage_mark(escort_hit, ball.x, ball.y)
-                    if escort_hit.hull == 0:
-                        self.start_ship_sinking(escort_hit, "enemy cannon fire")
-                        self.toast_message(f"{escort_hit.name} has been struck below the waterline and is sinking!", 3.2)
-                    else:
-                        self.toast_message(f"{escort_hit.name} takes a hit. Hull: {escort_hit.hull}/{escort_hit.max_hull}.", 2.0)
-                    continue
+            elif self.apply_enemy_projectile_to_player_fleet(ball):
+                continue
             remaining.append(ball)
         self.projectiles = remaining
 
@@ -683,6 +693,7 @@ class VesselsMixin:
                               wind_strength=self.wind_strength)
             return
         self.world_time += dt
+        self.update_mission_events(dt)
         self.update_sinking_visuals(dt)
         self.update_floating_debris(dt)
         self.update_trade_economy(dt)

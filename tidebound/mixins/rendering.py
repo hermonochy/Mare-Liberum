@@ -376,7 +376,7 @@ class RenderingMixin:
             for oar_index in range(oar_count):
                 oar_x = int(24 + oar_index * (82 / max(1, oar_count - 1)))
                 upper_tip = (int(oar_x + stroke), 7)
-                lower_tip = (int(oar_x - stroke), 85)
+                lower_tip = (int(oar_x + stroke), 85)
                 pygame.draw.line(surface, (92, 57, 31), (oar_x, 35), upper_tip, 2)
                 pygame.draw.line(surface, (92, 57, 31), (oar_x, 57), lower_tip, 2)
                 pygame.draw.ellipse(surface, (153, 111, 65), (upper_tip[0] - 4, upper_tip[1] - 3, 8, 5))
@@ -497,16 +497,21 @@ class RenderingMixin:
                 pygame.draw.line(self.screen, (198, 151, 96), points[0], points[2], 1)
 
     def draw_cannon_smoke(self):
+        # Powder puffs are drawn above the hull so they remain visible even
+        # when the muzzle is close to the ship silhouette at normal zoom.
         for puff in self.cannon_smoke:
             sx, sy = self.world_to_screen(puff["x"], puff["y"])
             life_ratio = max(0.0, min(1.0, puff["life"] / max(0.01, puff["max_life"])))
-            radius = max(2, int(puff["radius"] * self.camera_zoom))
-            if sx < -radius * 2 or sy < -radius * 2 or sx > self.screen.get_width() + radius * 2 or sy > self.screen.get_height() + radius * 2:
+            radius = max(4, int(puff["radius"] * self.camera_zoom))
+            if sx < -radius * 3 or sy < -radius * 3 or sx > self.screen.get_width() + radius * 3 or sy > self.screen.get_height() + radius * 3:
                 continue
-            alpha = int(150 * life_ratio)
-            cloud = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
-            pygame.draw.circle(cloud, (190, 190, 181, alpha), (radius + 1, radius + 1), radius)
-            self.screen.blit(cloud, (sx - radius - 1, sy - radius - 1))
+            alpha = int(205 * life_ratio)
+            cloud = pygame.Surface((radius * 3 + 4, radius * 3 + 4), pygame.SRCALPHA)
+            center = (radius + 2, radius + 2)
+            pygame.draw.circle(cloud, (222, 218, 202, alpha), center, radius)
+            pygame.draw.circle(cloud, (185, 185, 177, int(alpha * 0.78)), (center[0] + radius // 2, center[1] - radius // 3), max(2, int(radius * 0.62)))
+            pygame.draw.circle(cloud, (205, 203, 191, int(alpha * 0.68)), (center[0] - radius // 2, center[1] + radius // 4), max(2, int(radius * 0.48)))
+            self.screen.blit(cloud, (sx - center[0], sy - center[1]))
 
     def draw_cannonballs(self):
         for ball in self.projectiles:
@@ -723,7 +728,7 @@ class RenderingMixin:
             port_record = self.ports_by_name.get(self.docked_port)
             faction_name = getattr(port_record, "faction", "Independent")
             standing = self.faction_attitude(faction_name)
-            prompt_text = f"{self.docked_port} · {faction_name} ({standing})  |  E: cast off   Q: harbourmaster   B: shipyard   Y: market   I: diplomacy"
+            prompt_text = f"{self.docked_port} · {faction_name} ({standing})  |  E: reopen port services"
             prompt = fit_text_surface(self.small_font, prompt_text, (255, 239, 198), width - 54, 34)
             box = prompt.get_rect(center=(width // 2, height - 35)).inflate(25, 13)
             pygame.draw.rect(self.screen, (36, 29, 21), box, border_radius=5)
@@ -1049,8 +1054,56 @@ class RenderingMixin:
         pygame.draw.rect(self.screen, (157, 116, 71), box, 2, border_radius=6)
         self.screen.blit(text, text.get_rect(center=box.center))
 
+    def draw_port_menu_conversation(self):
+        width, height = self.screen.get_size()
+        box_height = min(390, height - 36)
+        box = pygame.Rect(30, height - box_height - 18, width - 60, box_height)
+        pygame.draw.rect(self.screen, (39, 25, 18), box.inflate(8, 8), border_radius=8)
+        pygame.draw.rect(self.screen, (224, 207, 163), box, border_radius=5)
+        pygame.draw.rect(self.screen, (155, 118, 73), box, 2, border_radius=5)
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(box)
+        heading = fit_text_surface(self.title_font, self.dialogue_speaker.upper(), (83, 48, 31), box.width - 48, 44)
+        self.screen.blit(heading, (box.x + 24, box.y + 12))
+        pygame.draw.line(self.screen, (156, 119, 77), (box.x + 22, box.y + 61), (box.right - 22, box.y + 61), 2)
+        current = self.conversation.current
+        if isinstance(current, TextNode):
+            line_step = max(22, self.font.get_linesize() + 4)
+            lines = wrap_text(self.font, current.text, box.width - 64)
+            content_height = max(40, box.height - 142)
+            max_lines = max(1, content_height // line_step)
+            for index, line in enumerate(lines[:max_lines]):
+                rendered = fit_text_surface(self.font, line, (56, 43, 31), box.width - 64, line_step - 2)
+                self.screen.blit(rendered, (box.x + 30, box.y + 78 + index * line_step))
+            prompt = fit_text_surface(self.small_font, "Enter / Space: continue", (104, 74, 48), box.width - 60, 26)
+            self.screen.blit(prompt, prompt.get_rect(bottomright=(box.right - 28, box.bottom - 15)))
+        elif isinstance(current, ChoiceNode):
+            choice_prompt = fit_text_surface(self.font, "Available special commissions", (56, 43, 31), box.width - 64, 33)
+            self.screen.blit(choice_prompt, (box.x + 30, box.y + 72))
+            start_y = box.y + 116
+            available_height = max(120, box.bottom - 46 - start_y)
+            row_height = min(66, max(36, available_height // max(1, len(current.options))))
+            option_font = self.small_font if row_height >= 52 else self.tiny_font
+            line_step = max(18, option_font.get_linesize() + 2)
+            for index, option in enumerate(current.options):
+                selected = index == self.conversation.selected
+                row = pygame.Rect(box.x + 22, start_y + index * row_height - 4, box.width - 44, row_height - 5)
+                if selected:
+                    pygame.draw.rect(self.screen, (198, 180, 143), row, border_radius=4)
+                    pygame.draw.rect(self.screen, (144, 105, 66), row, 2, border_radius=4)
+                text = ("▶  " if selected else "   ") + option.text
+                lines = wrap_text(option_font, text, box.width - 90)
+                for line_index, line in enumerate(lines[:max(1, min(2, (row.height - 8) // line_step))]):
+                    rendered = fit_text_surface(option_font, line, (56, 43, 31), box.width - 90, line_step - 2)
+                    self.screen.blit(rendered, (row.x + 12, row.y + 4 + line_index * line_step))
+            hint = fit_text_surface(self.small_font, "Up / Down: select    Enter: accept    Esc: close", (104, 74, 48), box.width - 50, 25)
+            self.screen.blit(hint, hint.get_rect(bottomright=(box.right - 24, box.bottom - 15)))
+        self.screen.set_clip(previous_clip)
     def draw_conversation(self):
         if not self.conversation or not self.conversation.current:
+            return
+        if getattr(self, "port_menu_open", False):
+            self.draw_port_menu_conversation()
             return
         width, height = self.screen.get_size()
         box_height = min(390, height - 36)
@@ -1401,6 +1454,13 @@ class RenderingMixin:
             return
         if self.menu_mode == "guide":
             self.draw_guide_menu()
+            pygame.display.flip()
+            return
+        if getattr(self, "port_menu_open", False):
+            self.draw_port_menu()
+            if self.conversation:
+                self.draw_conversation()
+            self.draw_toast()
             pygame.display.flip()
             return
         if self.menu_mode == "game_over":

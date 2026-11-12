@@ -255,6 +255,9 @@ class DiplomacyMixin:
         return True
 
     def open_diplomacy_ledger(self):
+        if self.docked_port and hasattr(self, "open_port_menu"):
+            self.open_port_menu("diplomacy")
+            return
         self.cannon_held[-1] = False
         self.cannon_held[1] = False
         self.diplomacy_open = True

@@ -1,0 +1,25 @@
+mission "The Black Armada"
+    name "The Black Armada"
+    description "A vast pirate force hunts powerful fleets across the Caribbean."
+    category event
+    event escorts > 10 and random > 50
+    event_delay 110 260
+    event_pause_while_docked true
+    event_repeatable false
+    event_max_triggers 1
+    event_spawn_fleet "Black Armada" "Admiral Silas Vane" 16 48 128 1.15 2450
+    event_ship_types "Schooner" "Brigantine" "Frigate"
+    event_ship_name "The Dread Sovereign"
+    event_ship_name "The Widow's Due"
+    event_ship_name "The Iron Vow"
+    event_ship_name "The Gallows Star"
+    event_ship_name "The Crimson Requiem"
+    event_ship_name "The Black Meridian"
+    event_ship_name "The Last Covenant"
+    event_ship_name "The Pale Tempest"
+    event_announcement "LOOKOUT! A vast pirate armada has appeared under Admiral Silas Vane. {ships} warships are bearing down on your fleet!" 10
+    event_journal_entry "The Black Armada, commanded by Admiral Silas Vane, has found your fleet. Its hull strength and broadsides have been scaled to exceed the estimated fighting power of your ships."
+    reward 1800
+    event_complete_flag "black_armada_defeated"
+    event_complete_text "The Black Armada has been broken. Sailors across the Caribbean will speak of the battle for years."
+    event_repelled_text "The Black Armada's surviving ships have fled. Admiral Silas Vane may yet return, but his assault has been turned aside."

@@ -1,14 +1,14 @@
 from .common import *
 from .audio import AudioEngine
 from .mixins import (
-    TreasureMixin, MissionMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
-    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin,
+    TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
+    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin, PortMenuMixin,
 )
 
 
 class Game(
-    TreasureMixin, MissionMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
-    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin,
+    TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
+    VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin, PortMenuMixin,
 ):
     def __init__(self):
         pygame.init()
@@ -103,6 +103,7 @@ class Game(
         for port in self.ports:
             self.news_by_port.setdefault(port.name, f"Word from {port.region}: merchant captains report strange sails, missing cargoes, and unfamiliar agents asking after old charts.")
         self.missions = load_missions(MISSION_DIR)
+        self.mission_events = load_mission_events(MISSION_DIR)
         for mission in self.missions:
             if mission.battlefield_x is not None:
                 mission.battlefield_x *= WORLD_SCALE
@@ -118,6 +119,7 @@ class Game(
         self.mission_result_title = ""
         self.mission_result_reward = 0
         self.mission_result_timer = 0.0
+        self.initialise_mission_events()
         self.initialise_day_jobs()
         self.pirates = [PirateShip(*args, **kwargs) for args, kwargs in INITIAL_PIRATE_DATA]
         self.reinforcement_number = 1
@@ -145,6 +147,7 @@ class Game(
         self.save_dialog_return_to_pause = False
         self.save_name_input = ""
         self.initialise_trade_economy()
+        self.initialise_port_menu()
 
     def expand_world_layout(self, factor):
         """Enlarge the whole chart coherently: islands, reefs, berths and passages."""

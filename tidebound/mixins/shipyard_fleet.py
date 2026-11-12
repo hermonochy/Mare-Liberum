@@ -12,6 +12,9 @@ class ShipyardFleetMixin:
         if not self.docked_port:
             self.toast_message("The shipwright works in port. Come alongside first.", 3.0)
             return
+        if hasattr(self, "open_port_menu"):
+            self.open_port_menu("shipyard")
+            return
         self.shipyard_open = True
         self.shipyard_tab = 0
         self.shipyard_selection = 0
@@ -68,6 +71,25 @@ class ShipyardFleetMixin:
                     "action": "set_order", "key": order,
                 })
         elif self.shipyard_tab == 3:
+            escort_refits = [
+                ("hull", "Armoured hull", "Adds 20 maximum hull and restores those points."),
+                ("cannons", "Additional guns", "Adds a gun to each broadside and improves reload speed."),
+                ("rigging", "Escort rigging", "Improves cruising speed and formation keeping."),
+                ("rudder", "Escort rudder", "Improves turning and manoeuvring in battle."),
+            ]
+            for escort_index, escort in enumerate(self.fleet):
+                levels = getattr(escort, "upgrades", None) or {"hull": 0, "cannons": 0, "rigging": 0, "rudder": 0}
+                for upgrade_key, title, detail in escort_refits:
+                    level = int(levels.get(upgrade_key, 0))
+                    cost = ESCORT_UPGRADE_BASE_COSTS[upgrade_key] + level * ESCORT_UPGRADE_COST_STEP
+                    action = "upgrade_escort" if level < 3 else "none"
+                    label = (f"{escort.name}: fit {title} — level {level + 1} — {cost} gold" if level < 3
+                             else f"{escort.name}: {title} — fully fitted")
+                    items.append({"label": label, "detail": f"{detail} Current level: {level}/3.",
+                                  "action": action, "key": f"{escort_index}:{upgrade_key}", "cost": cost})
+            if not self.fleet:
+                items.append({"label": "No escorts in your fleet", "detail": "Hire ships on the Fleet page before fitting them.", "action": "none", "key": ""})
+        elif self.shipyard_tab == 4:
             flagship_missing = max(0, self.player_max_hull - self.player_hull)
             flagship_cost = flagship_missing * 2
             items.append({
@@ -104,12 +126,14 @@ class ShipyardFleetMixin:
         items = self.shipyard_items()
         if not items:
             return
-        item = items[self.shipyard_selection % len(items)]
+        self.execute_shipyard_item(items[self.shipyard_selection % len(items)])
+
+    def execute_shipyard_item(self, item):
         action = item["action"]
         key = item.get("key", "")
         if action == "buy_flagship":
             stats = SHIP_CLASSES[key]
-            cost = stats["cost"]
+            cost = int(item.get("cost", stats["cost"]))
             if self.gold < cost:
                 self.toast_message(f"The {key} costs {cost} gold. You have {self.gold}.", 3.5)
                 return
@@ -171,6 +195,44 @@ class ShipyardFleetMixin:
             self.fleet.append(escort)
             self.add_journal(f"Hired {name}, a {key}, into your personal fleet.")
             self.toast_message(f"{name}, your new {key} escort, joins the fleet.", 4.0)
+        elif action == "upgrade_escort":
+            try:
+                escort_index_text, upgrade_key = key.split(":", 1)
+                escort_index = int(escort_index_text)
+                escort = self.fleet[escort_index]
+            except (ValueError, IndexError):
+                self.toast_message("That escort is no longer in the fleet.", 3.0)
+                return
+            levels = getattr(escort, "upgrades", None)
+            if levels is None:
+                escort.upgrades = {"hull": 0, "cannons": 0, "rigging": 0, "rudder": 0}
+                levels = escort.upgrades
+            level = int(levels.get(upgrade_key, 0))
+            cost = item.get("cost", 999999)
+            if level >= 3:
+                self.toast_message("That escort fitting is already at its finest level.", 3.0)
+            elif self.gold < cost:
+                self.toast_message(f"The escort refit costs {cost} gold. You have {self.gold}.", 3.2)
+            else:
+                self.gold -= cost
+                levels[upgrade_key] = level + 1
+                if upgrade_key == "hull":
+                    escort.max_hull += ESCORT_HULL_UPGRADE_AMOUNT
+                    escort.hull = min(escort.max_hull, escort.hull + ESCORT_HULL_UPGRADE_AMOUNT)
+                self.add_journal(f"Installed level {level + 1} {upgrade_key} refit aboard {escort.name} at {self.docked_port}.")
+                self.toast_message(f"{escort.name}: {upgrade_key.title()} upgraded to level {level + 1}.", 3.5)
+        elif action == "sell_escort":
+            try:
+                escort = self.fleet[int(key)]
+            except (ValueError, IndexError):
+                self.toast_message("That escort is no longer in the fleet.", 3.0)
+                return
+            base = int(SHIP_CLASSES[escort.ship_type]["cost"])
+            value = max(90, int(base * 0.56 * max(0.25, escort.hull / max(1, escort.max_hull))))
+            self.fleet.remove(escort)
+            self.gold += value
+            self.add_journal(f"Sold escort {escort.name} at {self.docked_port} for {value} gold.")
+            self.toast_message(f"Sold {escort.name} for {value:,} gold.", 3.4)
         elif action == "set_order":
             self.set_fleet_order(key)
         elif action == "repair_flagship":
@@ -268,7 +330,9 @@ class ShipyardFleetMixin:
         heading_options = ((bearing - 90.0) % 360.0, (bearing + 90.0) % 360.0)
         desired_heading = min(heading_options, key=lambda value: abs(angle_difference(value, escort.heading)))
         difference = angle_difference(desired_heading, escort.heading)
-        escort.heading = (escort.heading + clamp(difference, -66.0 * dt, 66.0 * dt)) % 360.0
+        rudder_level = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
+        aim_turn_rate = 66.0 * (1.0 + rudder_level * ESCORT_RUDDER_TURN_PER_LEVEL)
+        escort.heading = (escort.heading + clamp(difference, -aim_turn_rate * dt, aim_turn_rate * dt)) % 360.0
         if abs(difference) < 24.0 and escort.cooldown <= 0:
             self.fire_fleet_broadside(escort, target)
 
@@ -292,13 +356,15 @@ class ShipyardFleetMixin:
                 dy = target_pirate.y - escort.y
                 distance = max(1.0, math.hypot(dx, dy))
                 if distance > 335.0:
-                    self.steer_escort_toward(escort, target_pirate.x, target_pirate.y, dt, 54.0, 62.0)
+                    escort_rudder = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
+                    self.steer_escort_toward(escort, target_pirate.x, target_pirate.y, dt, 54.0 * (1.0 + escort_rudder * ESCORT_RUDDER_TURN_PER_LEVEL), 62.0)
                 if 145.0 < distance < 650.0:
                     self.aim_and_fire_fleet_broadside(escort, target_pirate, dt)
             else:
                 formation_order = "gather" if self.fleet_order == "gather" else "follow"
                 target_x, target_y = self.fleet_formation_target(index, fleet_count, formation_order)
-                self.steer_escort_toward(escort, target_x, target_y, dt, 58.0, 64.0)
+                escort_rudder = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
+                self.steer_escort_toward(escort, target_x, target_y, dt, 58.0 * (1.0 + escort_rudder * ESCORT_RUDDER_TURN_PER_LEVEL), 64.0)
                 if self.fleet_order == "follow" and target_pirate and 145.0 < enemy_distance < 560.0:
                     self.aim_and_fire_fleet_broadside(escort, target_pirate, dt)
 
@@ -308,7 +374,8 @@ class ShipyardFleetMixin:
             escort.vx *= math.exp(-0.19 * dt)
             escort.vy *= math.exp(-0.19 * dt)
             speed = math.hypot(escort.vx, escort.vy)
-            max_speed = SHIP_CLASSES[escort.ship_type]["speed"] * 0.68
+            escort_upgrades = getattr(escort, "upgrades", {}) or {}
+            max_speed = SHIP_CLASSES[escort.ship_type]["speed"] * 0.68 * (1.0 + escort_upgrades.get("rigging", 0) * ESCORT_RIGGING_SPEED_PER_LEVEL)
             if speed > max_speed:
                 escort.vx *= max_speed / speed
                 escort.vy *= max_speed / speed
@@ -332,11 +399,12 @@ class ShipyardFleetMixin:
         forward = (math.cos(angle), math.sin(angle))
         broadside_angle = angle + side * math.pi / 2
         broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
-        gun_count = max(2, SHIP_CLASSES[escort.ship_type]["guns"] // 2)
+        escort_upgrades = getattr(escort, "upgrades", {}) or {}
+        gun_count = max(2, (SHIP_CLASSES[escort.ship_type]["guns"] + escort_upgrades.get("cannons", 0) * 2) // 2)
         for index in range(gun_count):
             offset = (index - (gun_count - 1) / 2) * 14
-            x = escort.x + forward[0] * offset + broadside[0] * 17
-            y = escort.y + forward[1] * offset + broadside[1] * 17
+            x = escort.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
+            y = escort.y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
             vx = broadside[0] * 455 + escort.vx * 0.14
             vy = broadside[1] * 455 + escort.vy * 0.14
             self.projectiles.append(Cannonball(x, y, vx, vy, 1.4, "fleet"))
@@ -344,7 +412,8 @@ class ShipyardFleetMixin:
         self.apply_cannon_recoil(escort, broadside[0], broadside[1], 8.0)
         distance_to_player = math.hypot(escort.x - self.ship_x, escort.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.04, 0.25 * (1.0 - distance_to_player / 2700.0)))
-        escort.cooldown = SHIP_CLASSES[escort.ship_type]["reload"] + 0.25
+        reload_base = SHIP_CLASSES[escort.ship_type]["reload"]
+        escort.cooldown = reload_base * max(0.72, 1.0 - escort_upgrades.get("cannons", 0) * ESCORT_CANNON_RELOAD_PER_LEVEL) + 0.25
 
     def draw_shipyard(self):
         width, height = self.screen.get_size()

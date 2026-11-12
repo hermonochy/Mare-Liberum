@@ -318,20 +318,26 @@ class MissionMixin:
         self.conversation = Conversation(self, None, nodes)
 
     def open_port_talk(self):
-        greeting = self.port_greetings.get(self.docked_port, "A harbour official looks up as you enter.")
+        available = self.available_missions_at_port()
+        intro = self.available_intro_mission_at_port()
         options = []
-        if self.available_intro_mission_at_port():
-            options.append(self.make_option("Speak with the old Captain Elias Ward, who is retiring from the sea.", "intro_mission"))
-        options.extend([
-            self.make_option("Ask whether there is work for a captain.", "offers"),
-            self.make_option("Visit the harbour job board and browse available work.", "day_jobs"),
-            self.make_option("Ask for the latest harbour news.", "news"),
-            self.make_option("Visit the shipwright and see the yard.", "shipyard"),
-            self.make_option("Ask about unusual wares, strangers, and local secrets.", "curiosities"),
-            self.make_option("Take my leave.", "close"),
-        ])
-        nodes = [TextNode(greeting), ChoiceNode(options)]
-        self.start_custom_conversation("Harbour office", nodes)
+        if intro:
+            options.append(OptionNode(
+                f"Special commission: {intro.name} — {intro.description}",
+                [CommandNode("intro_mission")],
+            ))
+        for mission in available:
+            route = " → ".join([mission.source] + [stop.port for stop in getattr(mission, "waypoints", [])] + [mission.destination])
+            options.append(OptionNode(
+                f"{mission.name} — {route} — {mission.reward} gold. {mission.description}",
+                [CommandNode("mission_offer", mission.mission_id)],
+            ))
+        if options:
+            options.append(OptionNode("No, thank you.", [CommandNode("close")]))
+            nodes = [TextNode("The harbourmaster opens the special commissions ledger. These are personal contracts and unusual assignments, separate from the ordinary work posted on the job board."), ChoiceNode(options)]
+        else:
+            nodes = [TextNode("The harbourmaster checks the special commissions ledger. There are no special assignments available here at present. Ordinary cargo and local work can be found on the job board.")]
+        self.start_custom_conversation("Harbourmaster", nodes)
 
     def open_intro_mission_offer(self):
         mission = self.available_intro_mission_at_port()
@@ -590,6 +596,10 @@ class MissionMixin:
         self.last_docked_port_slot = slot
         self.docked_port = port.name
         self.last_docked_port = port.name
+        if hasattr(self, "set_world_flag"):
+            self.set_world_flag(f"visited_port:{port.name}", True)
+            visit_key = f"port_visits:{port.name}"
+            self.set_world_flag(visit_key, int(self.world_flags.get(visit_key, 0)) + 1)
         self.oars_deployed = False
         self.ship_heading = port.exit_heading
         self.ship_x, self.ship_y = self.harbour_berth_position(port, slot)
@@ -599,10 +609,21 @@ class MissionMixin:
         self.toast_message(f"Made fast at {port.name}, berth {slot + 1}. Q: speak to the harbourmaster.", 4.0)
         self.trigger_port_visit(port)
         self.complete_day_job_at_port(port)
+        # Docking is a safe harbour checkpoint. Keep a dedicated rolling
+        # autosave so a later fatal sinking never destroys the last safe port.
+        try:
+            self.save_game(AUTOSAVE_SLOT_NAME, notify=False)
+            self.toast_message(f"Made fast at {port.name}, berth {slot + 1}. Autosaved.", 3.8)
+        except (OSError, ValueError) as error:
+            self.toast_message(f"Docked at {port.name}, but autosave failed: {error}", 5.0)
+        if hasattr(self, "open_port_menu"):
+            self.open_port_menu("overview")
         return True
 
     def undock(self):
         port = self.ports_by_name[self.docked_port]
         self.ship_heading = port.exit_heading
+        if hasattr(self, "close_port_menu"):
+            self.close_port_menu()
         self.docked_port = None
         self.toast_message("Cast off! Keep the wind in your sails and the rocks off your keel.", 3.0)
