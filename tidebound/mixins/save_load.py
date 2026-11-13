@@ -134,6 +134,7 @@ class SaveLoadMixin:
                 "oars_deployed": self.oars_deployed,
                 "fleet_order": self.fleet_order,
                 "fleet_serial": self.fleet_serial,
+                "used_names": sorted(getattr(self, "used_ship_names", set())),
             },
             "last_berth": {
                 "port": port.name,
@@ -255,14 +256,16 @@ class SaveLoadMixin:
         self.completed_day_jobs = max(0, int(captain.get("completed_day_jobs", 0)))
 
         self.player_ship_name = str(ship.get("name", "The Wayward Gull"))[:24]
-        known_ship_types = {"Sloop", "Cutter", "Schooner", "Brigantine", "Frigate"}
         self.current_ship = ship.get("class", "Sloop")
-        if self.current_ship not in known_ship_types:
+        self.used_ship_names = set(str(name) for name in ship.get("used_names", []) if name)
+        self.used_ship_names.add(self.player_ship_name)
+        if self.current_ship not in SHIP_CLASSES:
             self.current_ship = "Sloop"
         self.player_livery = max(0, min(len(SHIP_LIVERIES) - 1, int(ship.get("livery", 0))))
         self.upgrades = {key: max(0, int(value)) for key, value in ship.get("upgrades", {}).items()}
         for key in ("cannons", "hull", "rigging", "rudder", "cargo"):
             self.upgrades.setdefault(key, 0)
+            self.upgrades[key] = min(self.upgrades[key], ship_upgrade_limit(self.current_ship, key))
         self.player_max_hull = max(1, int(ship.get("maximum_hull", PLAYER_HULL)))
         self.player_hull = max(1, min(self.player_max_hull, int(ship.get("hull", self.player_max_hull))))
         self.sail_setting = max(0.0, min(1.0, float(ship.get("sail_setting", 0.72))))
@@ -342,6 +345,10 @@ class SaveLoadMixin:
             entry.setdefault("upgrades", {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0})
             fleet_entries.append(FleetShip(**entry))
         self.fleet = fleet_entries
+        self.used_ship_names.update(ship.name for ship in self.fleet)
+        for escort in self.fleet:
+            for upgrade_key, level in list(escort.upgrades.items()):
+                escort.upgrades[upgrade_key] = min(max(0, int(level)), ship_upgrade_limit(escort.ship_type, upgrade_key))
         formation = "gather" if self.fleet_order == "gather" else "follow"
         for index, escort in enumerate(self.fleet):
             escort.x, escort.y = self.fleet_formation_target(index, len(self.fleet), formation)
@@ -349,6 +356,8 @@ class SaveLoadMixin:
             escort.anchor_x, escort.anchor_y = escort.x, escort.y
         self.pirates = [PirateShip(**entry) for entry in data["pirate_ships"]]
         self.traffic_ships = [TrafficShip(**entry) for entry in data["other_ships"]]
+        self.used_ship_names.update(ship.name for ship in self.pirates)
+        self.used_ship_names.update(ship.name for ship in self.traffic_ships)
         # Re-seat traffic ships using the current quay geometry and keep the
         # player's actual saved slot clear without reserving a fixed quay position.
         occupied_saved_berths = {}

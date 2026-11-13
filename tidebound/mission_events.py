@@ -102,7 +102,7 @@ def validate_actions(actions, source):
         if kind not in ACTION_TYPES:
             raise ValueError(f"Unknown action type '{kind}' in {source}")
         if kind == "spawn_fleet":
-            ship_types = action.setdefault("ship_types", ["Schooner", "Brigantine", "Frigate"])
+            ship_types = action.setdefault("ship_types", ["Schooner", "Brigantine", "Brig", "Corvette", "Frigate", "Ship of the Line"])
             if not isinstance(ship_types, list) or not ship_types:
                 raise ValueError(f"spawn_fleet requires a non-empty ship_types list in {source}")
             action["ship_types"] = [str(value) for value in ship_types]
@@ -331,7 +331,7 @@ def load_mission_events(directory):
         if spawn_config:
             fleet_action = dict(spawn_config)
             fleet_action["type"] = "spawn_fleet"
-            fleet_action["ship_types"] = data.get("ship_types") or ["Schooner", "Brigantine", "Frigate"]
+            fleet_action["ship_types"] = data.get("ship_types") or ["Schooner", "Brigantine", "Brig", "Corvette", "Frigate", "Ship of the Line"]
             fleet_action["ship_names"] = data.get("ship_names", [])
             for key in ("announcement", "announcement_seconds", "journal_entry"):
                 if key in data:

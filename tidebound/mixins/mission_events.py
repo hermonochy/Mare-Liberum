@@ -195,7 +195,7 @@ class MissionEventsMixin:
 
     def player_fleet_power(self):
         flagship_stats = SHIP_CLASSES.get(self.current_ship, SHIP_CLASSES["Sloop"])
-        flagship_guns = flagship_stats["guns"] + max(0, self.upgrades.get("cannons", 0))
+        flagship_guns = min(max_broadside_guns(self.current_ship), flagship_stats["guns"] + max(0, self.upgrades.get("cannons", 0)))
         total = self.vessel_combat_power(
             self.player_max_hull,
             flagship_guns,
@@ -206,7 +206,7 @@ class MissionEventsMixin:
                 continue
             stats = SHIP_CLASSES.get(escort.ship_type, SHIP_CLASSES["Sloop"])
             upgrades = getattr(escort, "upgrades", {}) or {}
-            guns = max(2, (stats["guns"] + max(0, upgrades.get("cannons", 0)) * 2) // 2)
+            guns = min(max_broadside_guns(escort.ship_type), max(2, (stats["guns"] + max(0, upgrades.get("cannons", 0)) * 2) // 2))
             total += self.vessel_combat_power(
                 escort.max_hull,
                 guns,
@@ -245,7 +245,7 @@ class MissionEventsMixin:
         return self.vessel_combat_power(ship.max_hull, ship.gun_count)
 
     def spawn_event_fleet(self, action, event_id, trigger_count, action_index, fleet_serial):
-        ship_types = action.get("ship_types", ["Schooner", "Brigantine", "Frigate"])
+        ship_types = action.get("ship_types", ["Schooner", "Brigantine", "Brig", "Corvette", "Frigate", "Ship of the Line"])
         commander = str(action.get("commander", "")) or self.rng.choice(ADMIRAL_NAMES["pirate"])
         fleet_name = str(action.get("name", "Pirate Squadron"))
         minimum_ships = max(1, int(action.get("minimum_ships", action.get("min_ships", 6))))
@@ -256,7 +256,7 @@ class MissionEventsMixin:
 
         def type_power(ship_type):
             stats = SHIP_CLASSES[ship_type]
-            return self.vessel_combat_power(stats["hull"], stats["guns"])
+            return self.vessel_combat_power(stats["hull"], min(max_broadside_guns(ship_type), stats["guns"]))
 
         selected_types = [self.rng.choice(ship_types) for _ in range(minimum_ships)]
         selected_power = sum(type_power(ship_type) for ship_type in selected_types)
@@ -289,12 +289,13 @@ class MissionEventsMixin:
             x, y = position
             stats = SHIP_CLASSES[ship_type]
             hull = max(1, int(stats["hull"]))
-            gun_count = max(1, int(stats["guns"]))
+            gun_count = min(max_broadside_guns(ship_type), max(1, int(stats["guns"])))
             name_pool = action.get("ship_names", [])
             if index < len(name_pool):
                 name = str(name_pool[index])
+                self.used_ship_names.add(name)
             else:
-                name = f"{fleet_name} — {ship_type} {index + 1}"
+                name = generate_ship_name(self.rng, self.used_ship_names)
             heading = math.degrees(math.atan2(self.ship_y - y, self.ship_x - x)) % 360.0
             pirate = PirateShip(
                 name=name,

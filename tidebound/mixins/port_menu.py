@@ -132,37 +132,38 @@ class PortMenuMixin:
         return records[selection + 1]
 
     def port_menu_shipyard_items(self):
-        escort_prices = {"Sloop": 480, "Cutter": 720, "Schooner": 1080, "Brigantine": 1650, "Frigate": 2450}
         items = []
         for name, stats in SHIP_CLASSES.items():
             trade_in = int(SHIP_CLASSES[self.current_ship]["cost"] * 0.48 * (self.player_hull / max(1, self.player_max_hull)))
             flagship_price = max(0, int(stats["cost"]) - trade_in)
             items.append({"key": name, "label": f"{name}  ·  {flagship_price:,}g as flagship",
-                          "detail": stats["description"], "flagship_cost": flagship_price,
-                          "escort_cost": escort_prices.get(name, max(480, int(stats["cost"] * 0.62)))})
+                          "detail": f"{stats['description']} Hull {stats['hull']}; {stats['guns'] * 2} fitted cannons / {stats['max_cannons']} maximum; cargo {stats['cargo']:.0f}.", "flagship_cost": flagship_price,
+                          "escort_cost": max(240, int(stats["cost"] * 0.62))})
         return items
 
     def port_menu_refit_items(self):
         ship = self.port_menu_selected_ship()
-        keys = ["hull", "cannons", "rigging", "rudder"]
-        if ship["kind"] == "flagship":
-            keys.append("cargo")
+        stats = SHIP_CLASSES[ship["type"]]
+        keys = [key for key in stats["outfitting"] if key in {"hull", "cannons", "rigging", "rudder", "cargo"}]
+        if ship["kind"] == "escort":
+            keys = [key for key in keys if key != "cargo"]
         items = []
         titles = {"hull": "Reinforced Hull", "cannons": "Broadside Guns", "rigging": "Fine-cut Rigging",
                   "rudder": "Balanced Rudder", "cargo": "Expanded Cargo Hold"}
         details = {
             "hull": "Strengthens the vessel's maximum hull and restores the added capacity.",
-            "cannons": "Adds one cannon to each broadside and improves reload performance.",
+            "cannons": f"Adds one cannon to each broadside. Fitted: {int(stats['guns']) * 2 + int(ship['upgrades'].get('cannons', 0)) * 2}/{int(stats['max_cannons'])} maximum.",
             "rigging": "Improves sail power and maximum speed.",
             "rudder": "Improves turning response and manoeuvrability.",
             "cargo": "Adds 12 units to the flagship's cargo capacity.",
         }
         for key in keys:
             level = int(ship["upgrades"].get(key, 0))
+            limit = ship_upgrade_limit(ship["type"], key)
             cost = (self.upgrade_cost(key) if ship["kind"] == "flagship"
-                    else ESCORT_UPGRADE_BASE_COSTS[key] + level * ESCORT_UPGRADE_COST_STEP)
-            items.append({"key": key, "label": f"{titles[key]}  ·  Level {level}/3  ·  {cost:,}g",
-                          "detail": details[key], "cost": cost, "level": level,
+                    else ESCORT_UPGRADE_BASE_COSTS.get(key, 300) + level * ESCORT_UPGRADE_COST_STEP)
+            items.append({"key": key, "label": f"{titles[key]}  ·  Level {level}/{limit}  ·  {cost:,}g",
+                          "detail": details[key], "cost": cost, "level": level, "limit": limit,
                           "action": "upgrade" if ship["kind"] == "flagship" else "upgrade_escort"})
         return items
 
@@ -266,8 +267,9 @@ class PortMenuMixin:
             if action == "install":
                 ship = self.port_menu_selected_ship()
                 key = selected["key"]
-                if selected["level"] >= 3:
-                    self.toast_message("That fitting is already at its finest level.", 2.8)
+                ship_type = self.port_menu_selected_ship()["type"]
+                if selected["level"] >= ship_upgrade_limit(ship_type, key):
+                    self.toast_message("That vessel cannot take another level of this fitting.", 2.8)
                 elif ship["kind"] == "flagship":
                     self.execute_shipyard_item({"action": "upgrade", "key": key})
                 else:
@@ -356,6 +358,7 @@ class PortMenuMixin:
         self.upgrades = {key: int(value) for key, value in getattr(promoted, "upgrades", {}).items()}
         for key in ("cannons", "hull", "rigging", "rudder", "cargo"):
             self.upgrades.setdefault(key, 0)
+            self.upgrades[key] = min(self.upgrades[key], ship_upgrade_limit(self.current_ship, key))
         self.player_max_hull = SHIP_CLASSES[self.current_ship]["hull"] + self.upgrades["hull"] * 25
         hull_ratio = max(0.0, min(1.0, promoted.hull / max(1, promoted.max_hull)))
         self.player_hull = max(1, min(self.player_max_hull, int(self.player_max_hull * hull_ratio)))
@@ -389,6 +392,7 @@ class PortMenuMixin:
                         self.player_ship_name = name
                     else:
                         self.fleet[ship["index"]].name = name
+                    self.used_ship_names.add(name)
                     self.add_journal(f"Renamed a vessel to {name} at {self.docked_port}.")
                     self.toast_message(f"Vessel renamed to {name}.", 3.0)
                 self.ship_rename_mode = False
@@ -685,7 +689,7 @@ class PortMenuMixin:
             active = self.active_mission()
             objective = self.mission_guidance_text(active) if active else "No active story voyage."
             lines = [f"Flagship: {self.player_ship_name} ({self.current_ship})", f"Hull: {self.player_hull:.0f}/{self.player_max_hull}",
-                     f"Crew: {self.player_ship_stats().get('rowers', 0)} rowers", f"Fleet size: {len(self.fleet)} escorts",
+                     f"Crew: {self.player_ship_stats().get('crew', 0)}", f"Fleet size: {len(self.fleet)} escorts",
                      f"Cargo: {self.cargo_load():.1f}/{self.cargo_capacity():.0f}", f"Current voyage: {active.name if active else 'None'}",
                      f"Objective: {objective}", f"Completed day jobs: {self.completed_day_jobs}"]
             y = content.y + 67
@@ -774,7 +778,7 @@ class PortMenuMixin:
         elif page == "outfitter":
             ship = self.port_menu_selected_ship()
             level = selected_item["level"]
-            for line in (f"Installed on: {ship['name']}", f"Current level: {level}/3",
+            for line in (f"Installed on: {ship['name']}", f"Current level: {level}/{selected_item['limit']}",
                          f"Next installation: {selected_item['cost']:,} gold"):
                 surf = fit_text_surface(self.small_font, line, (73, 47, 31), detail_rect.width - 24, 25)
                 self.screen.blit(surf, (detail_rect.x + 12, details_y))

@@ -29,32 +29,36 @@ class ShipyardFleetMixin:
                     continue
                 items.append({
                     "label": f"Commission a {ship_name}  —  {stats['cost']} gold",
-                    "detail": f"{stats['description']} Hull {stats['hull']}, {stats['guns']} guns, {stats.get('rowers', 12)} oarsmen, top way {int(stats['speed'])} kn.",
+                    "detail": f"{stats['description']} Hull {stats['hull']}, {stats['guns'] * 2} fitted cannons / {stats['max_cannons']} maximum, {stats.get('crew', 12)} crew, top way {int(stats['speed'])} kn.",
                     "action": "buy_flagship", "key": ship_name,
                 })
         elif self.shipyard_tab == 1:
-            upgrade_info = [
-                ("cannons", "Long guns", "Add one cannon to each broadside and improve reload time."),
-                ("hull", "Reinforced hull", "Add 25 points to your flagship's maximum hull strength."),
-                ("rigging", "Fine-cut rigging", "Improve sail power and maximum speed."),
-                ("rudder", "Balanced rudder", "Improve the ship's turning response."),
-                ("cargo", "Expanded cargo hold", "Add 12 cargo units to your flagship's hold."),
-            ]
-            for key, title, detail in upgrade_info:
+            upgrade_info = {
+                "cannons": ("Long guns", "Add one cannon to each broadside and improve reload time."),
+                "hull": ("Reinforced hull", "Add 25 points to your flagship's maximum hull strength."),
+                "rigging": ("Fine-cut rigging", "Improve sail power and maximum speed."),
+                "rudder": ("Balanced rudder", "Improve the ship's turning response."),
+                "cargo": ("Expanded cargo hold", "Add 12 cargo units to your flagship's hold."),
+            }
+            stats = SHIP_CLASSES[self.current_ship]
+            for key in stats["outfitting"]:
+                title, detail = upgrade_info[key]
                 level = self.upgrades[key]
-                if level >= 3:
-                    label = f"{title}  —  fully fitted"
+                limit = ship_upgrade_limit(self.current_ship, key)
+                if level >= limit:
+                    label = f"{title}  —  maximum fit reached"
                     action = "none"
                 else:
                     cost = self.upgrade_cost(key)
                     label = f"Fit {title}  —  level {level + 1}  —  {cost} gold"
                     action = "upgrade"
-                items.append({"label": label, "detail": f"{detail} Current level: {level}/3.", "action": action, "key": key})
+                items.append({"label": label, "detail": f"{detail} Current level: {level}/{limit}.", "action": action, "key": key})
         elif self.shipyard_tab == 2:
-            for ship_name, cost in (("Sloop", 480), ("Cutter", 720), ("Schooner", 1080), ("Brigantine", 1650)):
+            for ship_name, stats in SHIP_CLASSES.items():
+                cost = max(240, int(stats["cost"] * 0.62))
                 items.append({
                     "label": f"Hire {ship_name} escort  —  {cost} gold",
-                    "detail": f"Add a {ship_name.lower()} to your personal fleet. Escorts sail with you and fire on hostile pirates.",
+                    "detail": f"Add a {ship_name.lower()} to your personal fleet. {stats['description']} Hull {stats['hull']}; {stats['max_cannons']} maximum cannons.",
                     "action": "hire", "key": ship_name, "cost": cost,
                 })
             order_info = [
@@ -80,12 +84,15 @@ class ShipyardFleetMixin:
             for escort_index, escort in enumerate(self.fleet):
                 levels = getattr(escort, "upgrades", None) or {"hull": 0, "cannons": 0, "rigging": 0, "rudder": 0}
                 for upgrade_key, title, detail in escort_refits:
+                    limit = ship_upgrade_limit(escort.ship_type, upgrade_key)
+                    if limit <= 0:
+                        continue
                     level = int(levels.get(upgrade_key, 0))
                     cost = ESCORT_UPGRADE_BASE_COSTS[upgrade_key] + level * ESCORT_UPGRADE_COST_STEP
-                    action = "upgrade_escort" if level < 3 else "none"
-                    label = (f"{escort.name}: fit {title} — level {level + 1} — {cost} gold" if level < 3
-                             else f"{escort.name}: {title} — fully fitted")
-                    items.append({"label": label, "detail": f"{detail} Current level: {level}/3.",
+                    action = "upgrade_escort" if level < limit else "none"
+                    label = (f"{escort.name}: fit {title} — level {level + 1} — {cost} gold" if level < limit
+                             else f"{escort.name}: {title} — maximum fit reached")
+                    items.append({"label": label, "detail": f"{detail} Current level: {level}/{limit}.",
                                   "action": action, "key": f"{escort_index}:{upgrade_key}", "cost": cost})
             if not self.fleet:
                 items.append({"label": "No escorts in your fleet", "detail": "Hire ships on the Fleet page before fitting them.", "action": "none", "key": ""})
@@ -143,7 +150,9 @@ class ShipyardFleetMixin:
             old_name = self.player_ship_name
             self.gold -= cost
             self.current_ship = key
-            self.player_ship_name = f"The {key} {self.rng.choice(['Fortune', 'Revenge', 'Liberty', 'Tempest', 'Seahawk'])}"
+            for upgrade_key, level in list(self.upgrades.items()):
+                self.upgrades[upgrade_key] = min(max(0, int(level)), ship_upgrade_limit(self.current_ship, upgrade_key))
+            self.player_ship_name = generate_ship_name(self.rng, self.used_ship_names)
             for side in (-1, 1):
                 self.cannon_held[side] = False
                 self.cannon_first_volley_fired[side] = False
@@ -157,8 +166,8 @@ class ShipyardFleetMixin:
             self.toast_message(f"A new {key} is yours! Your old ship has been traded in.", 4.0)
         elif action == "upgrade":
             cost = self.upgrade_cost(key)
-            if self.upgrades[key] >= 3:
-                self.toast_message("That refit is already at its finest level.", 2.5)
+            if self.upgrades[key] >= ship_upgrade_limit(self.current_ship, key):
+                self.toast_message("This vessel cannot take another level of that fitting.", 2.5)
             elif self.gold < cost:
                 self.toast_message(f"The refit costs {cost} gold. You have {self.gold}.", 3.0)
             else:
@@ -179,8 +188,7 @@ class ShipyardFleetMixin:
             self.gold -= cost
             serial = self.fleet_serial
             self.fleet_serial += 1
-            names = ["Jolly Raven", "Sea Witch", "Morning Star", "Copper Belle", "Dread Gull", "Merry Rogue"]
-            name = f"{names[(serial - 1) % len(names)]} {serial}"
+            name = generate_ship_name(self.rng, self.used_ship_names)
             new_fleet_count = len(self.fleet) + 1
             for index, existing in enumerate(self.fleet):
                 existing_x, existing_y = self.fleet_formation_target(index, new_fleet_count, "follow")
@@ -209,8 +217,8 @@ class ShipyardFleetMixin:
                 levels = escort.upgrades
             level = int(levels.get(upgrade_key, 0))
             cost = item.get("cost", 999999)
-            if level >= 3:
-                self.toast_message("That escort fitting is already at its finest level.", 3.0)
+            if level >= ship_upgrade_limit(escort.ship_type, upgrade_key):
+                self.toast_message("That escort cannot take another level of this fitting.", 3.0)
             elif self.gold < cost:
                 self.toast_message(f"The escort refit costs {cost} gold. You have {self.gold}.", 3.2)
             else:
@@ -400,7 +408,7 @@ class ShipyardFleetMixin:
         broadside_angle = angle + side * math.pi / 2
         broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
         escort_upgrades = getattr(escort, "upgrades", {}) or {}
-        gun_count = max(2, (SHIP_CLASSES[escort.ship_type]["guns"] + escort_upgrades.get("cannons", 0) * 2) // 2)
+        gun_count = min(max_broadside_guns(escort.ship_type), max(2, (SHIP_CLASSES[escort.ship_type]["guns"] + escort_upgrades.get("cannons", 0) * 2) // 2))
         for index in range(gun_count):
             offset = (index - (gun_count - 1) / 2) * 14
             x = escort.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET

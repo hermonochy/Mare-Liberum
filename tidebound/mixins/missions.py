@@ -91,8 +91,9 @@ class MissionMixin:
             return
         names = list(mission.enemy_names)
         while len(names) < mission.objective_count:
-            names.append(f"Vane's Raider {len(names) + 1}")
+            names.append(generate_ship_name(self.rng, self.used_ship_names))
         names = names[:mission.objective_count]
+        self.used_ship_names.update(names)
         spawned = list(existing)
         for index in range(len(existing), len(names)):
             name = names[index]
@@ -101,7 +102,9 @@ class MissionMixin:
                 continue
             x, y = position
             heading = math.degrees(math.atan2(self.ship_y - y, self.ship_x - x)) % 360.0
-            hull = 7 if len(names) <= 3 else 8
+            ship_type = self.rng.choice(["Cutter", "Sloop", "Xebec", "Schooner", "Brigantine", "Brig", "Corvette", "Frigate"])
+            stats = SHIP_CLASSES[ship_type]
+            hull = max(6, int(round(stats["hull"] / 17.0)))
             pirate = PirateShip(
                 name,
                 x,
@@ -113,7 +116,9 @@ class MissionMixin:
                 wander=self.rng.random() * 6.0,
                 mission_id=mission.mission_id,
                 objective_target=True,
-                ship_type=self.rng.choice(["Cutter", "Schooner", "Brigantine", "Frigate"]),
+                ship_type=ship_type,
+                gun_count=min(10, max_broadside_guns(ship_type)),
+                reload_seconds=float(stats["reload"]),
             )
             self.pirates.append(pirate)
             spawned.append(pirate)

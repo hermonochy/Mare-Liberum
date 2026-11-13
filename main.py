@@ -1,4 +1,4 @@
-from tidebound import Game
+from tidebound.game import Game
 
 
 if __name__ == "__main__":

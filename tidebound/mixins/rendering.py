@@ -1,4 +1,5 @@
 from ..common import *
+from ..ship_rendering import build_ship_surface
 
 
 class RenderingMixin:
@@ -243,146 +244,16 @@ class RenderingMixin:
         if cache is None:
             cache = {}
             self.ship_surface_cache = cache
-        rowing_phase = int(round(math.sin(self.world_time * 8.0) * 7)) if rowing else 0
         if not faction:
             faction = "player" if player else "allied" if allied else "pirate"
-        cache_key = (player, allied, rowing, ship_type, faction, self.player_livery if player else None, rowing_phase)
+        cache_key = (player, allied, rowing, ship_type, faction, self.player_livery if player else None,
+                     int(round(math.sin(self.world_time * 8.0) * 7)) if rowing else 0)
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
-        surface = pygame.Surface((132, 92), pygame.SRCALPHA)
-        if player:
-            _, hull_color, trim_color, sail_color = SHIP_LIVERIES[self.player_livery]
-        elif allied:
-            hull_color = (42, 80, 69)
-            trim_color = (179, 190, 135)
-            sail_color = (191, 220, 202)
-        elif faction == "merchant":
-            hull_color = (126, 83, 43)
-            trim_color = (218, 180, 112)
-            sail_color = (222, 211, 176)
-        elif faction == "fishing":
-            hull_color = (67, 91, 72)
-            trim_color = (190, 172, 119)
-            sail_color = (202, 191, 153)
-        elif faction == "naval patrol":
-            hull_color = (39, 60, 86)
-            trim_color = (206, 194, 151)
-            sail_color = (224, 224, 209)
-        elif faction == "mail packet":
-            hull_color = (107, 64, 54)
-            trim_color = (218, 190, 143)
-            sail_color = (220, 222, 200)
-        elif faction == "whaler":
-            hull_color = (73, 73, 61)
-            trim_color = (180, 161, 123)
-            sail_color = (170, 181, 169)
-        else:
-            hull_color = (69, 39, 34)
-            trim_color = (165, 92, 65)
-            sail_color = (155, 55, 48)
-        sail_shadow = tuple(max(0, channel - 45) for channel in sail_color)
-
-        profiles = {
-            "Sloop": {
-                "hull": [(12, 46), (29, 29), (94, 29), (118, 46), (94, 63), (29, 63)],
-                "masts": [(61, 28)], "guns": 3, "rig": "gaff", "cabin": (28, 38, 18, 16),
-            },
-            "Cutter": {
-                "hull": [(7, 46), (31, 35), (103, 35), (125, 46), (103, 57), (31, 57)],
-                "masts": [(72, 26)], "guns": 2, "rig": "lateen", "cabin": (24, 39, 14, 14),
-            },
-            "Schooner": {
-                "hull": [(6, 46), (25, 30), (105, 30), (125, 46), (105, 62), (25, 62)],
-                "masts": [(43, 27), (83, 30)], "guns": 4, "rig": "foreaft", "cabin": (27, 37, 20, 18),
-            },
-            "Brigantine": {
-                "hull": [(4, 46), (21, 22), (109, 22), (128, 46), (109, 70), (21, 70)],
-                "masts": [(38, 21), (81, 24)], "guns": 5, "rig": "square", "cabin": (24, 36, 25, 20),
-            },
-            "Frigate": {
-                "hull": [(2, 46), (17, 17), (113, 17), (130, 46), (113, 75), (17, 75)],
-                "masts": [(29, 18), (60, 14), (92, 18)], "guns": 7, "rig": "three_mast", "cabin": (22, 33, 31, 25),
-            },
-        }
-        profile = profiles.get(ship_type, profiles["Sloop"])
-        hull = profile["hull"]
-        shadow = [(x, y + 3) for x, y in hull]
-        inset = []
-        center_x = sum(x for x, _ in hull) / len(hull)
-        center_y = sum(y for _, y in hull) / len(hull)
-        for x, y in hull:
-            inset.append((center_x + (x - center_x) * 0.84, center_y + (y - center_y) * 0.78))
-        pygame.draw.polygon(surface, (34, 25, 21), shadow)
-        pygame.draw.polygon(surface, (43, 30, 25), hull)
-        pygame.draw.polygon(surface, hull_color, inset)
-        pygame.draw.lines(surface, trim_color, True, inset, 3)
-        pygame.draw.line(surface, (143, 100, 61), (24, 46), (112, 46), 3)
-
-        cabin_x, cabin_y, cabin_w, cabin_h = profile["cabin"]
-        pygame.draw.rect(surface, (73, 48, 34), (cabin_x, cabin_y, cabin_w, cabin_h), border_radius=3)
-        pygame.draw.rect(surface, trim_color, (cabin_x + 2, cabin_y + 2, cabin_w - 4, cabin_h - 4), 1, border_radius=2)
-        pygame.draw.line(surface, (221, 190, 135), (cabin_x + 3, cabin_y + 4), (cabin_x + cabin_w - 3, cabin_y + 4), 1)
-
-        gun_count = profile["guns"]
-        gun_spacing = 10 if gun_count >= 6 else 13
-        gun_start = 66 - (gun_count - 1) * gun_spacing / 2
-        for gun_index in range(gun_count):
-            gun_x = int(gun_start + gun_index * gun_spacing)
-            pygame.draw.circle(surface, (30, 25, 22), (gun_x, 29 if ship_type != "Cutter" else 36), 2)
-            if ship_type in {"Brigantine", "Frigate"}:
-                pygame.draw.circle(surface, (30, 25, 22), (gun_x, 63 if ship_type == "Brigantine" else 63), 2)
-
-        for mast_index, (mast_x, mast_height) in enumerate(profile["masts"]):
-            top_y = mast_height
-            pygame.draw.line(surface, (53, 37, 26), (mast_x, 46), (mast_x, top_y), 3)
-            pygame.draw.line(surface, (204, 182, 139), (mast_x - 1, top_y + 2), (mast_x - 1, 46), 1)
-            if profile["rig"] == "lateen":
-                sail_points = [(mast_x, top_y + 3), (mast_x + 21, 39), (mast_x - 3, 41)]
-                pygame.draw.polygon(surface, sail_color, sail_points)
-                pygame.draw.line(surface, sail_shadow, (mast_x, top_y + 3), (mast_x + 21, 39), 2)
-                pygame.draw.line(surface, (224, 210, 174), (mast_x - 4, top_y + 1), (mast_x + 25, 41), 1)
-            elif profile["rig"] in {"square", "three_mast"}:
-                sail_w = 17 if ship_type == "Brigantine" else 15
-                sail_h = 15 if ship_type == "Brigantine" else 14
-                sail_rect = pygame.Rect(mast_x - sail_w // 2, top_y + 6, sail_w, sail_h)
-                pygame.draw.polygon(surface, sail_shadow, [(sail_rect.left, sail_rect.top), (sail_rect.right, sail_rect.top + 3), (sail_rect.right, sail_rect.bottom), (sail_rect.left, sail_rect.bottom - 2)])
-                pygame.draw.polygon(surface, sail_color, [(sail_rect.left + 2, sail_rect.top), (sail_rect.right - 2, sail_rect.top + 2), (sail_rect.right - 2, sail_rect.bottom - 2), (sail_rect.left + 2, sail_rect.bottom - 3)])
-                pygame.draw.line(surface, (224, 210, 174), (mast_x - sail_w // 2 - 3, sail_rect.top), (mast_x + sail_w // 2 + 3, sail_rect.top + 2), 1)
-                pygame.draw.line(surface, (224, 210, 174), (mast_x, top_y), (mast_x, sail_rect.bottom + 3), 1)
-            else:
-                sail_w = 19 if ship_type == "Schooner" else 24
-                sail_h = 17 if ship_type == "Schooner" else 20
-                sail_points = [(mast_x, top_y + 4), (mast_x + sail_w, top_y + sail_h), (mast_x, top_y + sail_h + 6)]
-                pygame.draw.polygon(surface, sail_color, sail_points)
-                pygame.draw.polygon(surface, sail_shadow, [(mast_x, top_y + 4), (mast_x, top_y + sail_h + 6), (mast_x - sail_w // 2, top_y + sail_h // 2)])
-                pygame.draw.line(surface, (224, 210, 174), (mast_x, top_y), (mast_x + sail_w, top_y + sail_h), 1)
-            if profile["rig"] == "foreaft" and mast_index == 0:
-                pygame.draw.line(surface, (207, 188, 151), (mast_x, top_y + 2), (mast_x + 31, 43), 1)
-
-        pygame.draw.line(surface, (71, 47, 29), (19, 46), (2, 46), 3)
-        pygame.draw.line(surface, (71, 47, 29), (112, 46), (130, 46), 2)
-        flag_y = max(8, min(mast_height for _, mast_height in profile["masts"]) - 5)
-        flag_x = profile["masts"][0][0]
-        pygame.draw.line(surface, (44, 32, 25), (flag_x, flag_y + 2), (flag_x, flag_y - 8), 1)
-        flag_color = (24, 22, 20) if faction == "pirate" else (225, 218, 183) if allied else (53, 87, 126) if faction == "naval patrol" else (173, 139, 74) if faction == "merchant" else (100, 123, 91) if faction == "fishing" else (158, 62, 49) if faction == "mail packet" else (100, 100, 91)
-        pygame.draw.polygon(surface, flag_color, [(flag_x, flag_y - 8), (flag_x + 13, flag_y - 5), (flag_x, flag_y - 2)])
-        if player:
-            pygame.draw.circle(surface, (48, 37, 29), (cabin_x + cabin_w // 2, cabin_y + 4), 4)
-            pygame.draw.circle(surface, (235, 224, 196), (cabin_x + cabin_w // 2 - 1, cabin_y + 3), 1)
-        if rowing:
-            stroke = math.sin(self.world_time * 8.0) * 3.5
-            oar_count = 5 if ship_type in {"Sloop", "Cutter"} else 7 if ship_type in {"Schooner", "Brigantine"} else 9
-            for oar_index in range(oar_count):
-                oar_x = int(24 + oar_index * (82 / max(1, oar_count - 1)))
-                upper_tip = (int(oar_x + stroke), 7)
-                lower_tip = (int(oar_x + stroke), 85)
-                pygame.draw.line(surface, (92, 57, 31), (oar_x, 35), upper_tip, 2)
-                pygame.draw.line(surface, (92, 57, 31), (oar_x, 57), lower_tip, 2)
-                pygame.draw.ellipse(surface, (153, 111, 65), (upper_tip[0] - 4, upper_tip[1] - 3, 8, 5))
-                pygame.draw.ellipse(surface, (153, 111, 65), (lower_tip[0] - 4, lower_tip[1] - 2, 8, 5))
+        surface = build_ship_surface(player, allied, rowing, ship_type, faction, self.player_livery, self.world_time)
         cache[cache_key] = surface
-        if len(cache) > 96:
+        if len(cache) > 160:
             cache.pop(next(iter(cache)))
         return surface
 

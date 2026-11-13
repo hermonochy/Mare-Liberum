@@ -91,7 +91,10 @@ class TrafficMixin:
             return False
         x, y = position
         heading = math.degrees(math.atan2(destination.y - y, destination.x - x)) % 360.0
-        name = self.rng.choice(profile["names"])
+        name = generate_ship_name(self.rng, self.used_ship_names)
+        ship_type = self.rng.choice(profile["types"])
+        ship_stats = SHIP_CLASSES[ship_type]
+        ship_hull = max(int(profile["hull"]), int(round(ship_stats["hull"] / 35.0)))
         faction_weights = {
             "naval patrol": [("British Crown", 48), ("Spanish Crown", 32), ("French Crown", 20)],
             "merchant": [("Merchant League", 58), ("Independent", 20), ("British Crown", 8), ("Spanish Crown", 8), ("French Crown", 6)],
@@ -105,15 +108,15 @@ class TrafficMixin:
         attitude = self.relation_label(self.faction_standing(ship_faction))
         self.traffic_ships.append(
             TrafficShip(
-                name=f"{name} {self.traffic_serial}",
+                name=name,
                 role=role,
-                ship_type=self.rng.choice(profile["types"]),
+                ship_type=ship_type,
                 x=x,
                 y=y,
                 heading=heading,
                 destination=destination.name,
-                hull=profile["hull"],
-                max_hull=profile["hull"],
+                hull=ship_hull,
+                max_hull=ship_hull,
                 wander=self.rng.random() * math.tau,
                 faction=ship_faction,
                 player_attitude=attitude.lower(),
@@ -597,7 +600,8 @@ class TrafficMixin:
             ship.combat_cooldown = max(0.0, ship.combat_cooldown - dt)
             shot_limit = 760.0 if ship.role == "naval patrol" else 650.0
             if distance <= shot_limit and ship.combat_cooldown <= 0.0:
-                shots = 4 if ship.role == "naval patrol" else (3 if ship.hostile_to_player else 2)
+                base_guns = SHIP_CLASSES.get(ship.ship_type, SHIP_CLASSES["Sloop"])["guns"]
+                shots = min(max_broadside_guns(ship.ship_type), max(2, int(base_guns * (0.78 if ship.role == "naval patrol" else 0.48))))
                 speed = 435.0 if ship.role == "naval patrol" else 375.0
                 owner = "npc_traffic_hostile" if target is self else ("npc_navy" if ship.role == "naval patrol" else "npc_merchant")
                 if self.fire_npc_broadside(ship, target, owner, shot_count=shots, speed=speed):

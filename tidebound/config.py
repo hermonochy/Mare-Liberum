@@ -1,7 +1,8 @@
 from pathlib import Path
 
+from .ships import SHIP_CLASSES
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MISSION_DIR = PROJECT_ROOT / "missions"
 MISSION_DIR = PROJECT_ROOT / "missions"
 MAP_DESIGN_WIDTH = 19000
 MAP_DESIGN_HEIGHT = 11000
@@ -14,13 +15,6 @@ PORT_BERTH_SPACING = 220.0
 PLAYER_RADIUS = 36
 MAX_PLAYER_SPEED = 205.0
 PLAYER_HULL = 100
-SHIP_CLASSES = {
-    "Sloop": {"cost": 0, "hull": 100, "speed": 205.0, "turn": 1.0, "guns": 3, "reload": 1.45, "oar_power": 34.0, "rowers": 12, "description": "A nimble little vessel. A sound first command."},
-    "Cutter": {"cost": 650, "hull": 92, "speed": 238.0, "turn": 1.2, "guns": 2, "reload": 1.22, "oar_power": 32.0, "rowers": 12, "description": "Quick through the water and handy for chasing prizes."},
-    "Schooner": {"cost": 1250, "hull": 138, "speed": 218.0, "turn": 1.05, "guns": 4, "reload": 1.48, "oar_power": 39.0, "rowers": 16, "description": "A balanced trader-raider with a stronger broadside."},
-    "Brigantine": {"cost": 2200, "hull": 188, "speed": 194.0, "turn": 0.9, "guns": 5, "reload": 1.7, "oar_power": 46.0, "rowers": 20, "description": "A sturdy two-masted fighter with plenty of room for guns."},
-    "Frigate": {"cost": 3600, "hull": 250, "speed": 176.0, "turn": 0.76, "guns": 7, "reload": 1.95, "oar_power": 54.0, "rowers": 24, "description": "A costly gun platform built to dominate a fleet action."},
-}
 SHIP_LIVERIES = [
     ("Weathered Pirate", (98, 47, 31), (205, 155, 89), (227, 215, 177)),
     ("Royal Blue", (38, 66, 91), (190, 163, 104), (222, 225, 211)),
@@ -455,13 +449,7 @@ TRADE_GOODS = [
         {"id": "contraband", "name": "Contraband", "base": 82, "space": 0.65, "description": "Unregistered luxury goods. Profitable, but not welcome in every customs house."},
     ]
 
-CARGO_CAPACITY_BY_SHIP = {
-        "Sloop": 42.0,
-        "Cutter": 34.0,
-        "Schooner": 68.0,
-        "Brigantine": 104.0,
-        "Frigate": 82.0,
-    }
+CARGO_CAPACITY_BY_SHIP = {name: stats["cargo"] for name, stats in SHIP_CLASSES.items()}
 
 TRADE_QUANTITY_OPTIONS = (1, 5, "MAX")
 
@@ -487,44 +475,33 @@ FACTION_WANTS = {
 
 TRAFFIC_ROLES = {
         "merchant": {
-            "names": ["Golden Finch", "Grace of Bridgetown", "Three Sisters", "Dawn Trader", "Providence", "Cane Blossom"],
-            "types": ["Schooner", "Brigantine", "Frigate"],
+            "types": ["Schooner", "Brigantine", "Brig", "Barque", "Corvette", "Merchantman", "Frigate", "East Indiaman"],
             "hull": 7,
             "speed": 58.0,
         },
         "fishing": {
-            "names": ["Little Minnow", "Net and Needle", "Morning Catch", "Blue Mackerel", "Sea Lark"],
-            "types": ["Sloop", "Cutter"],
+            "types": ["Launch", "Cutter", "Sloop", "Yawl"],
             "hull": 4,
             "speed": 66.0,
         },
         "naval patrol": {
-            "names": ["HMS Resolute", "HMS Sparrowhawk", "HMS Vigilant", "La Centinela"],
-            "types": ["Brigantine", "Frigate"],
+            "types": ["Brig", "Corvette", "Frigate", "Ship of the Line"],
             "hull": 9,
             "speed": 61.0,
         },
         "mail packet": {
-            "names": ["Swift Dispatch", "King's Letter", "Morning Star", "The Post Boy"],
-            "types": ["Cutter", "Schooner"],
+            "types": ["Cutter", "Sloop", "Schooner", "Xebec"],
             "hull": 5,
             "speed": 78.0,
         },
         "whaler": {
-            "names": ["Northern Light", "White Whale", "Moby's Luck", "Harpooner"],
-            "types": ["Brigantine", "Schooner"],
+            "types": ["Brigantine", "Brig", "Barque", "Merchantman", "Carrack"],
             "hull": 8,
             "speed": 48.0,
         },
     }
 
-SHIP_COLLISION_RADII = {
-        "Sloop": 52.0,
-        "Cutter": 50.0,
-        "Schooner": 55.0,
-        "Brigantine": 58.0,
-        "Frigate": 62.0,
-    }
+SHIP_COLLISION_RADII = {name: stats["collision_radius"] for name, stats in SHIP_CLASSES.items()}
 
 ADMIRAL_NAMES = {
         "naval patrol": ["Admiral Horatio Vale", "Commodore Anne Wycliffe", "Captain-General Mateo Ruiz"],

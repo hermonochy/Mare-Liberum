@@ -59,7 +59,7 @@ There is no single way to spend your time. Follow the main story, accept optiona
 
 ### Sailing and navigation
 
-Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. When the wind is unfavourable, deploy the oars with **O**. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches. Both banks row together in a synchronized stroke.
+Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. On oared craft such as launches, cutters, sloops, yawls and xebecs, deploy the oars with **O** when the wind is unfavourable. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches. Both banks row together in a synchronized stroke.
 
 The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag to pan, and press **C** to centre the view on your ship.
 
@@ -74,6 +74,8 @@ The port services screen brings the harbour's activities into one place. Its nav
 Some authored missions have several required port calls. Follow the route in order: collect passengers, documents or other items at each waypoint, then continue to the final destination. The compass and journal show the next required stop. Visiting the final port early will not complete a mission if an intermediate call remains outstanding.
 
 The **Shipyard** and **Outfitter** share a persistent **Your Ships** panel. Select either the flagship or any escort to inspect its class and hull condition, rename it, jump directly to its refits, or sell it from the same panel. The shipyard lets you commission a replacement flagship or add a new escort without leaving the screen. Selling the flagship transfers command to a surviving escort when one is available; the promoted vessel remains safely moored at the current berth. The outfitter applies hull, cannon, rigging and rudder improvements to the selected vessel, plus cargo-hold refits for the flagship. Repairs can be made to one vessel or to the entire fleet. Flagship paint and sail colours can be changed on the Fleet Orders page.
+
+The ship catalogue ranges from small launches, cutters and sloops to xebecs, schooners, brigs, corvettes, frigates, merchantmen, galleons and ships of the line. Classes have distinct hull dimensions, handling, speed, cargo, strength, sail plans and refit limits. Cannon capacities are class-specific: a sloop can carry up to 10 guns, a frigate up to 30, and a ship of the line up to 48. Some light or cargo-focused vessels cannot take every kind of refit. Ship names are assembled from a large prefix-and-suffix pool, providing more than 12,000 combinations before the fallback naming system is needed.
 
 ### Trading and cargo
 

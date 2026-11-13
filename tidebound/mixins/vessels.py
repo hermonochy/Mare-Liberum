@@ -62,7 +62,7 @@ class VesselsMixin:
 
     def ensure_cannon_battery(self, side):
         stats = self.player_ship_stats()
-        gun_count = stats["guns"] + self.upgrades["cannons"]
+        gun_count = min(max_broadside_guns(self.current_ship), stats["guns"] + self.upgrades["cannons"])
         timers = self.cannon_battery_timers[side]
         rates = self.cannon_battery_rates[side]
         base_reload = stats["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
@@ -162,15 +162,16 @@ class VesselsMixin:
             self.ship_vy *= factor
         self.ship_x += self.ship_vx * dt
         self.ship_y += self.ship_vy * dt
+        ship_radius = SHIP_COLLISION_RADII.get(self.current_ship, PLAYER_RADIUS)
         self.ship_x, self.ship_y, self.ship_vx, self.ship_vy, collided = resolve_land_collision(
-            self.ship_x, self.ship_y, self.ship_vx, self.ship_vy, PLAYER_RADIUS, self.collision_land_polygons()
+            self.ship_x, self.ship_y, self.ship_vx, self.ship_vy, ship_radius, self.collision_land_polygons()
         )
         if collided and not getattr(self, "shore_warning", False):
             self.toast_message("Shore! The hull scrapes the shallows.", 1.7)
             self.shore_warning = True
         if not collided:
             self.shore_warning = False
-        self.apply_reef_damage(self, dt, kind="player", ship_radius=PLAYER_RADIUS)
+        self.apply_reef_damage(self, dt, kind="player", ship_radius=ship_radius)
         self.near_port = None
         nearest_distance = 185.0
         for port in self.ports:
@@ -195,10 +196,6 @@ class VesselsMixin:
         return 1 + int(wealth >= 7000) + int(wealth >= 18000)
 
     def spawn_pirate_reinforcement(self):
-        names = [
-            "The Salt Widow", "The Crimson Gull", "The Ragged Crown", "The Laughing Mary",
-            "The Cutlass Rose", "The Storm Petrel", "The Black Marlin", "The Mercy's End",
-        ]
         spawned = 0
         group_size = self.pirate_reinforcement_group_size()
         for group_index in range(group_size):
@@ -229,11 +226,10 @@ class VesselsMixin:
                 continue
             x, y = position
             heading = math.degrees(math.atan2(self.ship_y - y, self.ship_x - x))
-            serial = self.reinforcement_number
-            name = names[(serial - 1) % len(names)]
-            if serial > len(names):
-                name = f"{name} {serial}"
-            hull = self.rng.choice([5, 6, 6, 7])
+            name = generate_ship_name(self.rng, self.used_ship_names)
+            ship_type = self.rng.choice(["Cutter", "Sloop", "Xebec", "Schooner", "Brigantine", "Brig", "Corvette"])
+            stats = SHIP_CLASSES[ship_type]
+            hull = max(5, int(round(stats["hull"] / 20.0)))
             new_pirate = PirateShip(
                 name,
                 x,
@@ -243,7 +239,9 @@ class VesselsMixin:
                 max_hull=hull,
                 side_choice=self.rng.choice([-1, 1]),
                 wander=self.rng.random() * 6.0,
-                ship_type=self.rng.choice(["Cutter", "Schooner", "Brigantine"]),
+                ship_type=ship_type,
+                gun_count=min(10, max_broadside_guns(ship_type)),
+                reload_seconds=float(stats["reload"]),
             )
             new_pirate.player_attitude = self.npc_relation_label(new_pirate).lower()
             self.pirates.append(new_pirate)
@@ -450,6 +448,11 @@ class VesselsMixin:
         dx, dy = float(hit_x) - float(ship_x), float(hit_y) - float(ship_y)
         local_x = clamp(dx * math.cos(angle) + dy * math.sin(angle), -48.0, 48.0)
         local_y = clamp(-dx * math.sin(angle) + dy * math.cos(angle), -27.0, 27.0)
+        ship_type = self.current_ship if player else getattr(vessel, "ship_type", "Sloop")
+        length_limit = SHIP_CLASSES.get(ship_type, SHIP_CLASSES["Sloop"])["length"] * 0.48
+        beam_limit = SHIP_CLASSES.get(ship_type, SHIP_CLASSES["Sloop"])["beam"] * 0.44
+        local_x = clamp(local_x, -length_limit, length_limit)
+        local_y = clamp(local_y, -beam_limit, beam_limit)
         marks.append({
             "x": round(local_x, 2),
             "y": round(local_y, 2),

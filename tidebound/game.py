@@ -52,6 +52,7 @@ class Game(
         self.wind_strength = STARTING_WIND[1]
         self.current_ship = STARTING_SHIP_CLASS
         self.player_ship_name = STARTING_SHIP_NAME
+        self.used_ship_names = {STARTING_SHIP_NAME}
         self.player_livery = STARTING_SHIP_LIVERY
         self.ship_surface_cache = {}
         self.upgrades = dict(STARTING_SHIP_UPGRADES)

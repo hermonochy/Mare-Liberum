@@ -5,6 +5,7 @@ import sys
 import pygame
 
 from .config import *
+from .ships import generate_ship_name, max_broadside_guns, ship_upgrade_limit
 from .geometry import *
 from .models import *
 from .mission_system import ChoiceNode, CommandNode, GotoNode, LabelNode, TextNode, OptionNode, load_missions

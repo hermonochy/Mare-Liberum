@@ -1,22 +1,35 @@
-from .treasure import TreasureMixin
-from .shipwrecks import ShipwreckMixin
-from .missions import MissionMixin
-from .mission_events import MissionEventsMixin
-from .day_jobs import DayJobsMixin
-from .shipyard_fleet import ShipyardFleetMixin
-from .controls import ControlsMixin
-from .vessels import VesselsMixin
 from .camera import CameraMixin
-from .rendering import RenderingMixin
-from .traffic import TrafficMixin
-from .save_load import SaveLoadMixin
+from .controls import ControlsMixin
+from .day_jobs import DayJobsMixin
 from .diplomacy import DiplomacyMixin
-from .reefs import ReefsMixin
-from .trade import TradeMixin
+from .mission_events import MissionEventsMixin
+from .missions import MissionMixin
 from .port_menu import PortMenuMixin
+from .reefs import ReefsMixin
+from .rendering import RenderingMixin
+from .save_load import SaveLoadMixin
+from .shipwrecks import ShipwreckMixin
+from .shipyard_fleet import ShipyardFleetMixin
+from .trade import TradeMixin
+from .traffic import TrafficMixin
+from .treasure import TreasureMixin
+from .vessels import VesselsMixin
 
 __all__ = [
-    "TreasureMixin", "ShipwreckMixin", "MissionMixin", "MissionEventsMixin", "DayJobsMixin", "ShipyardFleetMixin",
-    "ControlsMixin", "VesselsMixin", "CameraMixin", "RenderingMixin", "TrafficMixin",
-    "SaveLoadMixin", "DiplomacyMixin", "ReefsMixin", "TradeMixin", "PortMenuMixin",
+    "CameraMixin",
+    "ControlsMixin",
+    "DayJobsMixin",
+    "DiplomacyMixin",
+    "MissionEventsMixin",
+    "MissionMixin",
+    "PortMenuMixin",
+    "ReefsMixin",
+    "RenderingMixin",
+    "SaveLoadMixin",
+    "ShipwreckMixin",
+    "ShipyardFleetMixin",
+    "TradeMixin",
+    "TrafficMixin",
+    "TreasureMixin",
+    "VesselsMixin",
 ]

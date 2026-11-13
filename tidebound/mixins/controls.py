@@ -132,12 +132,15 @@ class ControlsMixin:
         elif key == pygame.K_c:
             self.recenter_camera()
         elif key == pygame.K_o:
+            stats = self.player_ship_stats()
             if self.docked_port:
                 self.toast_message("The oarsmen are ashore while the ship is moored.", 2.8)
+            elif stats.get("oar_power", 0.0) <= 0 or stats.get("rowers", 0) < 8:
+                self.toast_message("This vessel is built for sail, not oars.", 3.0)
             else:
                 self.oars_deployed = not self.oars_deployed
                 if self.oars_deployed:
-                    rowers = self.player_ship_stats().get("rowers", 8)
+                    rowers = stats["rowers"]
                     self.toast_message(f"OARS OUT! {rowers} oarsmen take their benches. Pull against the wind!", 3.6)
                 else:
                     self.toast_message("Oars shipped. Let the canvas carry you.", 2.8)
