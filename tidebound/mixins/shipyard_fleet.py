@@ -4,9 +4,60 @@ from ..common import *
 class ShipyardFleetMixin:
     def player_ship_stats(self):
         stats = dict(SHIP_CLASSES[self.current_ship])
-        stats["hull"] += self.upgrades["hull"] * 25
+        fitting_effects = ship_customisation_effects(getattr(self, "ship_customisation", None))
+        stats["hull"] = int(round(stats["hull"] * fitting_effects["hull"])) + self.upgrades["hull"] * 25
+        stats["speed"] *= fitting_effects["speed"]
+        stats["turn"] *= fitting_effects["turn"]
+        stats["cargo"] *= fitting_effects["cargo"]
+        stats["sail_force"] = fitting_effects["sail_force"]
         self.player_max_hull = stats["hull"]
         return stats
+
+    def install_ship_customisation(self, ship_record, category, option):
+        catalogues = {key: options for key, _, options in CUSTOMISATION_CATEGORIES}
+        if category not in catalogues or option not in catalogues[category]:
+            return
+        if not ship_fitting_available(ship_record["type"], category, option):
+            self.toast_message(f"{option} is too heavy or complex for a {ship_record['type']}.", 3.0)
+            return
+        if ship_record["kind"] == "flagship":
+            customisation = self.ship_customisation
+            old_max = self.player_ship_stats()["hull"]
+            old_ratio = self.player_hull / max(1, old_max)
+        else:
+            escort = self.fleet[ship_record["index"]]
+            customisation = normalise_ship_customisation(getattr(escort, "customisation", None))
+            old_max = escort.max_hull
+            old_ratio = escort.hull / max(1, old_max)
+        if customisation.get(category) == option:
+            self.toast_message("That fitting is already installed aboard this vessel.", 2.6)
+            return
+        cost = ship_customisation_price(category, option)
+        if self.gold < cost:
+            self.toast_message(f"The {option} fitting costs {cost:,} gold. You have {self.gold:,}.", 3.2)
+            return
+        self.gold -= cost
+        customisation[category] = option
+        if ship_record["kind"] == "flagship":
+            self.ship_customisation = normalise_ship_customisation(customisation)
+            new_max = self.player_ship_stats()["hull"]
+            self.player_hull = max(1, min(new_max, int(round(new_max * old_ratio))))
+        else:
+            escort.customisation = normalise_ship_customisation(customisation)
+            effects = ship_customisation_effects(escort.customisation)
+            base_hull = SHIP_CLASSES[escort.ship_type]["hull"]
+            hull_upgrade = int((getattr(escort, "upgrades", {}) or {}).get("hull", 0)) * ESCORT_HULL_UPGRADE_AMOUNT
+            escort.max_hull = max(1, int(round(base_hull * effects["hull"])) + hull_upgrade)
+            escort.hull = max(1, min(escort.max_hull, int(round(escort.max_hull * old_ratio))))
+        self.ship_surface_cache = {}
+        if hasattr(self, "port_menu_thumbnail_cache"):
+            self.port_menu_thumbnail_cache.clear()
+        self.cannon_battery_timers = {-1: [], 1: []}
+        self.cannon_battery_rates = {-1: [], 1: []}
+        self.cannon_first_volley_fired = {-1: False, 1: False}
+        self.chaser_cooldowns = {"bow": 0.0, "stern": 0.0}
+        self.add_journal(f"Installed {option} on {ship_record['name']} at {self.docked_port} for {cost:,} gold.")
+        self.toast_message(f"{option} fitted to {ship_record['name']} for {cost:,} gold.", 3.3)
 
     def open_shipyard(self):
         if not self.docked_port:
@@ -150,6 +201,7 @@ class ShipyardFleetMixin:
             old_name = self.player_ship_name
             self.gold -= cost
             self.current_ship = key
+            self.ship_customisation = default_ship_customisation()
             for upgrade_key, level in list(self.upgrades.items()):
                 self.upgrades[upgrade_key] = min(max(0, int(level)), ship_upgrade_limit(self.current_ship, upgrade_key))
             self.player_ship_name = generate_ship_name(self.rng, self.used_ship_names)
@@ -158,7 +210,7 @@ class ShipyardFleetMixin:
                 self.cannon_first_volley_fired[side] = False
                 self.cannon_battery_timers[side] = []
                 self.cannon_battery_rates[side] = []
-            self.player_max_hull = stats["hull"] + self.upgrades["hull"] * 25
+            self.player_max_hull = self.player_ship_stats()["hull"]
             self.player_hull = self.player_max_hull
             self.ship_vx = 0.0
             self.ship_vy = 0.0
@@ -320,6 +372,9 @@ class ShipyardFleetMixin:
         return target_x, target_y
 
     def steer_escort_toward(self, escort, target_x, target_y, dt, turn_rate=54.0, thrust=58.0):
+        fitting_effects = ship_customisation_effects(getattr(escort, "customisation", None))
+        turn_rate *= fitting_effects["turn"]
+        thrust *= fitting_effects["sail_force"]
         dx = target_x - escort.x
         dy = target_y - escort.y
         distance = math.hypot(dx, dy)
@@ -334,9 +389,18 @@ class ShipyardFleetMixin:
             escort.vy += math.sin(angle) * acceleration * dt
 
     def aim_and_fire_fleet_broadside(self, escort, target, dt):
+        customisation = normalise_ship_customisation(getattr(escort, "customisation", None))
+        mount_mode = CANNON_MOUNTS[customisation["cannon_mount"]]["mode"]
         bearing = math.degrees(math.atan2(target.y - escort.y, target.x - escort.x))
-        heading_options = ((bearing - 90.0) % 360.0, (bearing + 90.0) % 360.0)
-        desired_heading = min(heading_options, key=lambda value: abs(angle_difference(value, escort.heading)))
+        if mount_mode == "turrets":
+            if escort.cooldown <= 0:
+                self.fire_fleet_broadside(escort, target)
+            return
+        if mount_mode == "chasers":
+            desired_heading = bearing % 360.0
+        else:
+            heading_options = ((bearing - 90.0) % 360.0, (bearing + 90.0) % 360.0)
+            desired_heading = min(heading_options, key=lambda value: abs(angle_difference(value, escort.heading)))
         difference = angle_difference(desired_heading, escort.heading)
         rudder_level = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
         aim_turn_rate = 66.0 * (1.0 + rudder_level * ESCORT_RUDDER_TURN_PER_LEVEL)
@@ -383,7 +447,8 @@ class ShipyardFleetMixin:
             escort.vy *= math.exp(-0.19 * dt)
             speed = math.hypot(escort.vx, escort.vy)
             escort_upgrades = getattr(escort, "upgrades", {}) or {}
-            max_speed = SHIP_CLASSES[escort.ship_type]["speed"] * 0.68 * (1.0 + escort_upgrades.get("rigging", 0) * ESCORT_RIGGING_SPEED_PER_LEVEL)
+            customisation_effects = ship_customisation_effects(getattr(escort, "customisation", None))
+            max_speed = SHIP_CLASSES[escort.ship_type]["speed"] * customisation_effects["speed"] * 0.68 * (1.0 + escort_upgrades.get("rigging", 0) * ESCORT_RIGGING_SPEED_PER_LEVEL)
             if speed > max_speed:
                 escort.vx *= max_speed / speed
                 escort.vy *= max_speed / speed
@@ -395,33 +460,66 @@ class ShipyardFleetMixin:
             self.apply_reef_damage(escort, dt, kind="npc", ship_radius=29.0)
 
     def fire_fleet_broadside(self, escort, target):
+        customisation = normalise_ship_customisation(getattr(escort, "customisation", None))
+        mount_mode = CANNON_MOUNTS[customisation["cannon_mount"]]["mode"]
+        cannon_profile = CANNON_TYPES[customisation["cannon_type"]]
         bearing = math.degrees(math.atan2(target.y - escort.y, target.x - escort.x))
-        options = []
-        for side in (-1, 1):
-            angle = (escort.heading + side * 90.0) % 360.0
-            options.append((abs(angle_difference(bearing, angle)), side))
-        alignment, side = min(options)
-        if alignment > 30:
-            return
         angle = math.radians(escort.heading)
         forward = (math.cos(angle), math.sin(angle))
-        broadside_angle = angle + side * math.pi / 2
-        broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
-        escort_upgrades = getattr(escort, "upgrades", {}) or {}
-        gun_count = min(max_broadside_guns(escort.ship_type), max(2, (SHIP_CLASSES[escort.ship_type]["guns"] + escort_upgrades.get("cannons", 0) * 2) // 2))
-        for index in range(gun_count):
-            offset = (index - (gun_count - 1) / 2) * 14
-            x = escort.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
-            y = escort.y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
-            vx = broadside[0] * 455 + escort.vx * 0.14
-            vy = broadside[1] * 455 + escort.vy * 0.14
-            self.projectiles.append(Cannonball(x, y, vx, vy, 1.4, "fleet"))
-            self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
-        self.apply_cannon_recoil(escort, broadside[0], broadside[1], 8.0)
+        if mount_mode == "turrets":
+            firing_angle = math.radians(bearing)
+            firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
+            ship_stats = SHIP_CLASSES[escort.ship_type]
+            escort_upgrades = getattr(escort, "upgrades", {}) or {}
+            total_guns = min(ship_stats["max_cannons"], ship_stats["guns"] * 2 + escort_upgrades.get("cannons", 0) * 2)
+            turret_count = max(1, min(4, total_guns // 12))
+            for index in range(turret_count):
+                offset = (index - (turret_count - 1) / 2) * 16.0
+                x = escort.x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
+                y = escort.y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
+                vx = firing_direction[0] * cannon_profile["speed"] + escort.vx * 0.14
+                vy = firing_direction[1] * cannon_profile["speed"] + escort.vy * 0.14
+                self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "fleet", damage=cannon_profile["damage"]))
+                self.spawn_cannon_smoke(x, y, firing_direction[0], firing_direction[1], amount=1)
+            self.apply_cannon_recoil(escort, firing_direction[0], firing_direction[1], 8.0)
+        elif mount_mode == "chasers":
+            difference = abs(angle_difference(bearing, escort.heading))
+            if difference > 30.0:
+                return
+            firing_direction = forward
+            x = escort.x + forward[0] * CANNON_MUZZLE_OFFSET
+            y = escort.y + forward[1] * CANNON_MUZZLE_OFFSET
+            vx = forward[0] * cannon_profile["speed"] + escort.vx * 0.14
+            vy = forward[1] * cannon_profile["speed"] + escort.vy * 0.14
+            self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "fleet", damage=cannon_profile["damage"]))
+            self.spawn_cannon_smoke(x, y, forward[0], forward[1], amount=1)
+            self.apply_cannon_recoil(escort, forward[0], forward[1], 8.0)
+        else:
+            options = []
+            for side in (-1, 1):
+                broadside_bearing = (escort.heading + side * 90.0) % 360.0
+                options.append((abs(angle_difference(bearing, broadside_bearing)), side))
+            alignment, side = min(options)
+            if alignment > 30:
+                return
+            broadside_angle = angle + side * math.pi / 2
+            broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
+            escort_upgrades = getattr(escort, "upgrades", {}) or {}
+            fitted_cannons = SHIP_CLASSES[escort.ship_type]["guns"] * 2 + escort_upgrades.get("cannons", 0) * 2
+            gun_count = min(max_broadside_guns(escort.ship_type), max(1, fitted_cannons // 2))
+            for index in range(gun_count):
+                offset = (index - (gun_count - 1) / 2) * 14
+                x = escort.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
+                y = escort.y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
+                vx = broadside[0] * cannon_profile["speed"] + escort.vx * 0.14
+                vy = broadside[1] * cannon_profile["speed"] + escort.vy * 0.14
+                self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "fleet", damage=cannon_profile["damage"]))
+                self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
+            self.apply_cannon_recoil(escort, broadside[0], broadside[1], 8.0)
         distance_to_player = math.hypot(escort.x - self.ship_x, escort.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.04, 0.25 * (1.0 - distance_to_player / 2700.0)))
         reload_base = SHIP_CLASSES[escort.ship_type]["reload"]
-        escort.cooldown = reload_base * max(0.72, 1.0 - escort_upgrades.get("cannons", 0) * ESCORT_CANNON_RELOAD_PER_LEVEL) + 0.25
+        escort.cooldown = reload_base * cannon_profile["reload"] * max(0.72, 1.0 - getattr(escort, "upgrades", {}).get("cannons", 0) * ESCORT_CANNON_RELOAD_PER_LEVEL) + 0.25
 
     def draw_shipyard(self):
         width, height = self.screen.get_size()

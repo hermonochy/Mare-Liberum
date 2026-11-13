@@ -12,7 +12,7 @@ mission "The Convoy That Never Arrived"
     on offer
         conversation
             `Investigate a merchant convoy whose ships vanished without a battle or wreckage.`
-            `Harbourmaster Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            `Harbourmaster Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
             choice
                 `(I will help uncover what happened.)`
                     accept

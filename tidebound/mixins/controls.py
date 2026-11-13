@@ -144,8 +144,11 @@ class ControlsMixin:
                     self.toast_message(f"OARS OUT! {rowers} oarsmen take their benches. Pull against the wind!", 3.6)
                 else:
                     self.toast_message("Oars shipped. Let the canvas carry you.", 2.8)
-        elif key == pygame.K_q and self.docked_port:
-            self.open_port_talk()
+        elif key == pygame.K_q:
+            if self.docked_port:
+                self.open_port_talk()
+            else:
+                self.fire_chaser_battery("bow")
         elif key == pygame.K_b:
             if self.docked_port:
                 self.open_shipyard()
@@ -161,7 +164,7 @@ class ControlsMixin:
                 else:
                     self.dock(self.near_port)
             else:
-                self.toast_message("No pier nearby. Find a harbour and come in slowly.", 2.5)
+                self.fire_chaser_battery("stern")
         elif key == pygame.K_z:
             self.set_cannon_held(-1, True)
         elif key == pygame.K_x:

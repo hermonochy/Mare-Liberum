@@ -1,3 +1,5 @@
+from .ship_fittings import default_ship_customisation
+
 from dataclasses import dataclass, field
 
 
@@ -80,6 +82,7 @@ class FleetShip:
     sink_cause: str = ""
     hit_flash: float = 0.0
     damage_marks: list = field(default_factory=list)
+    customisation: dict = field(default_factory=default_ship_customisation)
 
 
 @dataclass
@@ -131,6 +134,7 @@ class Cannonball:
     source_commander: str = ""
     source_faction: str = ""
     source_fleet_id: str = ""
+    damage: int = 1
 
 @dataclass
 class TreasureSite:

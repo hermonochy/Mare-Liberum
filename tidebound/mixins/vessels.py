@@ -62,10 +62,16 @@ class VesselsMixin:
 
     def ensure_cannon_battery(self, side):
         stats = self.player_ship_stats()
-        gun_count = min(max_broadside_guns(self.current_ship), stats["guns"] + self.upgrades["cannons"])
+        customisation = normalise_ship_customisation(getattr(self, "ship_customisation", None))
+        mount_mode = CANNON_MOUNTS[customisation["cannon_mount"]]["mode"]
+        fitted_guns = stats["guns"] + self.upgrades["cannons"]
+        if mount_mode == "chasers":
+            fitted_guns = max(0, fitted_guns - 1)
+        gun_count = min(max_broadside_guns(self.current_ship), fitted_guns)
         timers = self.cannon_battery_timers[side]
         rates = self.cannon_battery_rates[side]
-        base_reload = stats["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
+        cannon_profile = CANNON_TYPES[customisation["cannon_type"]]
+        base_reload = stats["reload"] * cannon_profile["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
         while len(timers) < gun_count:
             rate = base_reload * self.rng.uniform(0.84, 1.16)
             rates.append(rate)
@@ -75,23 +81,71 @@ class VesselsMixin:
             del rates[gun_count:]
         return gun_count
 
+    def nearest_turret_target(self):
+        candidates = [pirate for pirate in self.pirates if not pirate.dead and pirate.hull > 0 and not pirate.sinking]
+        candidates.extend(ship for ship in self.traffic_ships if ship.hull > 0 and not ship.sinking and
+                          (getattr(ship, "hostile_to_player", False) or getattr(ship, "under_attack", False)))
+        return min(candidates, key=lambda target: math.hypot(target.x - self.ship_x, target.y - self.ship_y), default=None)
+
+    def player_cannon_profile(self):
+        selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
+        return CANNON_TYPES[selected["cannon_type"]], CANNON_MOUNTS[selected["cannon_mount"]]["mode"]
+
     def fire_single_cannon(self, side, gun_index, gun_count, show_effect=False):
         heading = math.radians(self.ship_heading)
         forward = (math.cos(heading), math.sin(heading))
-        broadside_angle = heading + side * math.pi / 2
-        broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
-        spacing = 13.0
-        offset = (gun_index - (gun_count - 1) / 2) * spacing
-        x = self.ship_x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
-        y = self.ship_y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
-        vx = broadside[0] * 480 + self.ship_vx * 0.18
-        vy = broadside[1] * 480 + self.ship_vy * 0.18
-        self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "player"))
-        self.apply_cannon_recoil(self, broadside[0], broadside[1], 12.0 / max(1, gun_count))
-        self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
+        cannon_profile, mount_mode = self.player_cannon_profile()
+        if mount_mode == "turrets":
+            target = self.nearest_turret_target()
+            if target is None:
+                return
+            firing_angle = math.atan2(target.y - self.ship_y, target.x - self.ship_x)
+            firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
+            spacing = 13.0
+            offset = (gun_index - (gun_count - 1) / 2) * spacing
+            x = self.ship_x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
+            y = self.ship_y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
+        else:
+            firing_angle = heading + side * math.pi / 2
+            firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
+            spacing = 13.0
+            offset = (gun_index - (gun_count - 1) / 2) * spacing
+            x = self.ship_x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
+            y = self.ship_y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
+        vx = firing_direction[0] * cannon_profile["speed"] + self.ship_vx * 0.18
+        vy = firing_direction[1] * cannon_profile["speed"] + self.ship_vy * 0.18
+        self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "player", damage=cannon_profile["damage"]))
+        self.apply_cannon_recoil(self, firing_direction[0], firing_direction[1], 12.0 / max(1, gun_count))
+        self.spawn_cannon_smoke(x, y, firing_direction[0], firing_direction[1], amount=1)
         self.audio.play("cannon_fire", volume=0.30)
         if show_effect:
-            self.toast_message("BOOM! Port broadside!" if side < 0 else "BOOM! Starboard broadside!", 1.2)
+            self.toast_message("The turret battery fires!" if mount_mode == "turrets" else "The broadside fires!", 1.2)
+
+    def fire_chaser_battery(self, end):
+        if self.docked_port or self.player_sinking_active or self.player_lost or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "market_open", False) or getattr(self, "diplomacy_open", False):
+            return
+        _, mount_mode = self.player_cannon_profile()
+        if mount_mode != "chasers":
+            self.toast_message("Bow and stern chasers are not fitted to this vessel.", 2.4)
+            return
+        if self.chaser_cooldowns.get(end, 0.0) > 0.0:
+            return
+        stats = self.player_ship_stats()
+        cannon_profile, _ = self.player_cannon_profile()
+        angle = math.radians(self.ship_heading + (180.0 if end == "stern" else 0.0))
+        direction = (math.cos(angle), math.sin(angle))
+        hull_length = SHIP_CLASSES[self.current_ship]["length"] * ship_customisation_effects(self.ship_customisation)["length"]
+        offset = max(CANNON_MUZZLE_OFFSET + 8.0, hull_length * 0.45)
+        x = self.ship_x + direction[0] * offset
+        y = self.ship_y + direction[1] * offset
+        vx = direction[0] * cannon_profile["speed"] + self.ship_vx * 0.18
+        vy = direction[1] * cannon_profile["speed"] + self.ship_vy * 0.18
+        self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "player", damage=cannon_profile["damage"]))
+        self.apply_cannon_recoil(self, direction[0], direction[1], 8.0)
+        self.spawn_cannon_smoke(x, y, direction[0], direction[1], amount=1)
+        self.audio.play("cannon_fire", volume=0.30)
+        self.chaser_cooldowns[end] = stats["reload"] * cannon_profile["reload"] * 1.15
+        self.toast_message("Bow chaser fired!" if end == "bow" else "Stern chaser fired!", 1.4)
 
     def fire_broadside(self, side):
         if self.docked_port or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "market_open", False) or getattr(self, "diplomacy_open", False):
@@ -101,11 +155,17 @@ class VesselsMixin:
             self.fire_single_cannon(side, index, gun_count, show_effect=False)
             self.cannon_battery_timers[side][index] = self.cannon_battery_rates[side][index] * self.rng.uniform(0.72, 1.28)
         self.cannon_first_volley_fired[side] = True
-        self.toast_message("BOOM! The whole port battery fires!" if side < 0 else "BOOM! The whole starboard battery fires!", 1.3)
+        _, mount_mode = self.player_cannon_profile()
+        if mount_mode == "turrets":
+            self.toast_message("The rotating turret battery fires!", 1.3)
+        else:
+            self.toast_message("BOOM! The whole port battery fires!" if side < 0 else "BOOM! The whole starboard battery fires!", 1.3)
 
     def update_player_cannons(self, dt):
         if self.player_sinking_active or self.player_lost:
             return
+        for end in ("bow", "stern"):
+            self.chaser_cooldowns[end] = max(0.0, self.chaser_cooldowns.get(end, 0.0) - dt)
         for side in (-1, 1):
             gun_count = self.ensure_cannon_battery(side)
             timers = self.cannon_battery_timers[side]
@@ -146,6 +206,7 @@ class VesselsMixin:
             stats.get("oar_power", 34.0),
             self.world_time,
         )
+        thrust = oar_thrust + sail_thrust * stats.get("sail_force", 1.0)
         self.ship_vx += forward[0] * thrust * dt
         self.ship_vy += forward[1] * thrust * dt
         forward_speed = self.ship_vx * forward[0] + self.ship_vy * forward[1]
@@ -598,7 +659,7 @@ class VesselsMixin:
                         if ball.owner in {"player", "fleet"}:
                             source = "your flagship" if ball.owner == "player" else "your escort fleet"
                             self.record_player_attack_on_pirate(pirate, source)
-                        pirate.hull = max(0, pirate.hull - 1)
+                        pirate.hull = max(0, pirate.hull - max(1, int(getattr(ball, "damage", 1))))
                         pirate.hit_flash = 0.34
                         self.record_ship_damage_mark(pirate, ball.x, ball.y)
                         self.audio.play("cannon_impact", volume=0.25)
@@ -630,7 +691,7 @@ class VesselsMixin:
                         self.audio.play("cannon_impact", volume=0.26)
                         source = "Your broadside" if ball.owner == "player" else "Your escort fleet"
                         self.provoke_traffic_ship(traffic_hit, source)
-                        traffic_hit.hull = max(0, traffic_hit.hull - 1)
+                        traffic_hit.hull = max(0, traffic_hit.hull - max(1, int(getattr(ball, "damage", 1))))
                         traffic_hit.hit_flash = 0.34
                         self.record_ship_damage_mark(traffic_hit, ball.x, ball.y)
                         if traffic_hit.hull <= 0:

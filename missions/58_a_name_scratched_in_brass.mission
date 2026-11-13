@@ -12,7 +12,7 @@ mission "A Name Scratched in Brass"
     on offer
         conversation
             `Deliver the recovered token to an archivist who recognises the expedition's private seal.`
-            `Archivist Celia Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            `Archivist Celia Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
             choice
                 `(I will help uncover what happened.)`
                     accept

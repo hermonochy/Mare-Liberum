@@ -12,7 +12,7 @@ mission "The Sound Beneath the Soundings"
     on offer
         conversation
             `Test the observatory's theory at a stretch of water where the lead line rings like a struck glass.`
-            `Keeper Orlan studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            `Keeper Orlan studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
             choice
                 `(I will help uncover what happened.)`
                     accept

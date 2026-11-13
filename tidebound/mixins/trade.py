@@ -82,6 +82,8 @@ class TradeMixin:
         ship_name = ship_name or getattr(self, "current_ship", "Sloop")
         upgrade_values = upgrades if upgrades is not None else getattr(self, "upgrades", {})
         base = CARGO_CAPACITY_BY_SHIP.get(ship_name, 42.0)
+        if ship_name == getattr(self, "current_ship", None):
+            base *= ship_customisation_effects(getattr(self, "ship_customisation", None))["cargo"]
         return base + max(0, int(upgrade_values.get("cargo", 0))) * 12.0
 
     def cargo_capacity(self):

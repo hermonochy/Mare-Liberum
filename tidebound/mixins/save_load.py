@@ -126,6 +126,7 @@ class SaveLoadMixin:
                 "name": self.player_ship_name,
                 "class": self.current_ship,
                 "livery": self.player_livery,
+                "customisation": dict(self.ship_customisation),
                 "upgrades": dict(self.upgrades),
                 "hull": self.player_hull,
                 "maximum_hull": self.player_max_hull,
@@ -262,12 +263,16 @@ class SaveLoadMixin:
         if self.current_ship not in SHIP_CLASSES:
             self.current_ship = "Sloop"
         self.player_livery = max(0, min(len(SHIP_LIVERIES) - 1, int(ship.get("livery", 0))))
+        self.ship_customisation = normalise_ship_customisation(ship.get("customisation"))
         self.upgrades = {key: max(0, int(value)) for key, value in ship.get("upgrades", {}).items()}
         for key in ("cannons", "hull", "rigging", "rudder", "cargo"):
             self.upgrades.setdefault(key, 0)
             self.upgrades[key] = min(self.upgrades[key], ship_upgrade_limit(self.current_ship, key))
-        self.player_max_hull = max(1, int(ship.get("maximum_hull", PLAYER_HULL)))
-        self.player_hull = max(1, min(self.player_max_hull, int(ship.get("hull", self.player_max_hull))))
+        saved_max_hull = max(1, int(ship.get("maximum_hull", PLAYER_HULL)))
+        saved_hull = max(1, min(saved_max_hull, int(ship.get("hull", saved_max_hull))))
+        saved_hull_ratio = saved_hull / saved_max_hull
+        self.player_max_hull = self.player_ship_stats()["hull"]
+        self.player_hull = max(1, min(self.player_max_hull, int(round(self.player_max_hull * saved_hull_ratio))))
         self.sail_setting = max(0.0, min(1.0, float(ship.get("sail_setting", 0.72))))
         self.oars_deployed = False
         self.fleet_order = ship.get("fleet_order", "follow")
@@ -343,6 +348,7 @@ class SaveLoadMixin:
         for entry in data["fleet"]:
             entry = dict(entry)
             entry.setdefault("upgrades", {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0})
+            entry["customisation"] = normalise_ship_customisation(entry.get("customisation"))
             fleet_entries.append(FleetShip(**entry))
         self.fleet = fleet_entries
         self.used_ship_names.update(ship.name for ship in self.fleet)
@@ -460,6 +466,7 @@ class SaveLoadMixin:
         self.cannon_first_volley_fired = {-1: False, 1: False}
         self.cannon_battery_timers = {-1: [], 1: []}
         self.cannon_battery_rates = {-1: [], 1: []}
+        self.chaser_cooldowns = {"bow": 0.0, "stern": 0.0}
         self.ship_surface_cache = {}
         self.conversation = None
         self.shipyard_open = False
@@ -772,6 +779,8 @@ class SaveLoadMixin:
             ]),
             ("COMBAT & YOUR FLEET", [
                 "Hold Z to fire the port-side guns; hold X for starboard. Keep the enemy on the correct side of your ship and allow each gun time to reload.",
+                "A bow-and-stern chaser refit fires forward with Q and aft with E while at sea. Rotating turrets automatically track the nearest hostile vessel when you fire with Z or X.",
+                "Long Nines travel farther, Demi-cannons hit harder, Carronades devastate at close range and Swivel Guns reload rapidly. Each cannon type trades range, damage and reload speed.",
                 "Powder smoke, recoil and impact sounds help show when a broadside has fired or landed. Watch your hull indicator and repair at a shipyard.",
                 "Your escorts obey F (fight), H (hold fire), G (gather) and V (follow). Hold fire is useful around neutral traffic and friendly convoys.",
                 "A stray cannonball can turn a friendly ship hostile. Its faction and surviving squadron may remember the attack, so check your target before firing.",

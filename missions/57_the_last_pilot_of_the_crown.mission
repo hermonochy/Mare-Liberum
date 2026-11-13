@@ -12,7 +12,7 @@ mission "The Last Pilot of the Crown"
     on offer
         conversation
             `Find retired pilot Tomas Vale, whose family once guided the lost expedition.`
-            `Tomas Vale studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            `Tomas Vale studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
             choice
                 `(I will help uncover what happened.)`
                     accept

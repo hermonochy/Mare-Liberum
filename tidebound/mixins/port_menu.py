@@ -100,7 +100,7 @@ class PortMenuMixin:
         if page == "shipyard":
             return [("buy_flagship", "Buy as Flagship"), ("hire_escort", "Add as Escort")]
         if page == "outfitter":
-            return [("install", "Install Refit")]
+            return [("install", "Install Selected Fitting")]
         if page == "repairs":
             return [("repair_selected", "Repair Selected"), ("repair_all", "Repair Entire Fleet")]
         if page == "fleet":
@@ -117,12 +117,14 @@ class PortMenuMixin:
     def port_menu_ship_records(self):
         records = [{"kind": "flagship", "index": -1, "name": self.player_ship_name,
                     "type": self.current_ship, "hull": self.player_hull,
-                    "max_hull": self.player_max_hull, "upgrades": self.upgrades}]
+                    "max_hull": self.player_max_hull, "upgrades": self.upgrades,
+                    "customisation": self.ship_customisation}]
         for index, escort in enumerate(self.fleet):
             records.append({"kind": "escort", "index": index, "name": escort.name,
                             "type": escort.ship_type, "hull": escort.hull,
                             "max_hull": escort.max_hull,
-                            "upgrades": getattr(escort, "upgrades", {}) or {}})
+                            "upgrades": getattr(escort, "upgrades", {}) or {},
+                            "customisation": normalise_ship_customisation(getattr(escort, "customisation", None))})
         return records
 
     def port_menu_selected_ship(self):
@@ -143,8 +145,9 @@ class PortMenuMixin:
 
     def port_menu_refit_items(self):
         ship = self.port_menu_selected_ship()
-        stats = SHIP_CLASSES[ship["type"]]
-        keys = [key for key in stats["outfitting"] if key in {"hull", "cannons", "rigging", "rudder", "cargo"}]
+        base_stats = SHIP_CLASSES[ship["type"]]
+        upgrades = ship["upgrades"]
+        keys = [key for key in base_stats["outfitting"] if key in {"hull", "cannons", "rigging", "rudder", "cargo"}]
         if ship["kind"] == "escort":
             keys = [key for key in keys if key != "cargo"]
         items = []
@@ -152,19 +155,35 @@ class PortMenuMixin:
                   "rudder": "Balanced Rudder", "cargo": "Expanded Cargo Hold"}
         details = {
             "hull": "Strengthens the vessel's maximum hull and restores the added capacity.",
-            "cannons": f"Adds one cannon to each broadside. Fitted: {int(stats['guns']) * 2 + int(ship['upgrades'].get('cannons', 0)) * 2}/{int(stats['max_cannons'])} maximum.",
+            "cannons": "Adds one gun to each broadside, subject to this class's total cannon limit.",
             "rigging": "Improves sail power and maximum speed.",
             "rudder": "Improves turning response and manoeuvrability.",
             "cargo": "Adds 12 units to the flagship's cargo capacity.",
         }
         for key in keys:
-            level = int(ship["upgrades"].get(key, 0))
+            level = int(upgrades.get(key, 0))
             limit = ship_upgrade_limit(ship["type"], key)
             cost = (self.upgrade_cost(key) if ship["kind"] == "flagship"
                     else ESCORT_UPGRADE_BASE_COSTS.get(key, 300) + level * ESCORT_UPGRADE_COST_STEP)
-            items.append({"key": key, "label": f"{titles[key]}  ·  Level {level}/{limit}  ·  {cost:,}g",
-                          "detail": details[key], "cost": cost, "level": level, "limit": limit,
+            fitted = f" Fitted: {base_stats['guns'] * 2 + level * 2}/{base_stats['max_cannons']} cannons." if key == "cannons" else ""
+            items.append({"kind": "upgrade", "key": key,
+                          "label": f"{titles[key]}  ·  Level {level}/{limit}  ·  {cost:,}g",
+                          "detail": details[key] + fitted, "cost": cost, "level": level, "limit": limit,
                           "action": "upgrade" if ship["kind"] == "flagship" else "upgrade_escort"})
+        selected = normalise_ship_customisation(ship.get("customisation"))
+        for category, title, options in CUSTOMISATION_CATEGORIES:
+            for option, values in options.items():
+                if not ship_fitting_available(ship["type"], category, option):
+                    continue
+                installed = selected[category] == option
+                price = int(values["price"])
+                label = f"{title}: {option}  ·  {'INSTALLED' if installed else f'{price:,}g'}"
+                detail = values.get("detail", "A shipwright's custom fitting.")
+                if installed:
+                    detail = "Currently installed on this vessel. " + detail
+                items.append({"kind": "customisation", "category": category, "option": option,
+                              "label": label, "detail": detail, "cost": price,
+                              "installed": installed, "action": "none" if installed else "customise"})
         return items
 
     def port_menu_current_items(self):
@@ -266,14 +285,16 @@ class PortMenuMixin:
         if page == "outfitter" and selected:
             if action == "install":
                 ship = self.port_menu_selected_ship()
-                key = selected["key"]
-                ship_type = self.port_menu_selected_ship()["type"]
-                if selected["level"] >= ship_upgrade_limit(ship_type, key):
-                    self.toast_message("That vessel cannot take another level of this fitting.", 2.8)
-                elif ship["kind"] == "flagship":
-                    self.execute_shipyard_item({"action": "upgrade", "key": key})
+                if selected.get("kind") == "customisation":
+                    self.install_ship_customisation(ship, selected["category"], selected["option"])
                 else:
-                    self.execute_shipyard_item({"action": "upgrade_escort", "key": f"{ship['index']}:{key}", "cost": selected["cost"]})
+                    key = selected["key"]
+                    if selected["level"] >= ship_upgrade_limit(ship["type"], key):
+                        self.toast_message("That vessel cannot take another level of this fitting.", 2.8)
+                    elif ship["kind"] == "flagship":
+                        self.execute_shipyard_item({"action": "upgrade", "key": key})
+                    else:
+                        self.execute_shipyard_item({"action": "upgrade_escort", "key": f"{ship['index']}:{key}", "cost": selected["cost"]})
             return
         if page == "repairs":
             if action == "repair_selected":
@@ -355,17 +376,20 @@ class PortMenuMixin:
         value = max(90, int(base * 0.56 * max(0.25, self.player_hull / max(1, self.player_max_hull))))
         self.current_ship = promoted.ship_type
         self.player_ship_name = promoted.name[:24]
+        self.ship_customisation = normalise_ship_customisation(getattr(promoted, "customisation", None))
         self.upgrades = {key: int(value) for key, value in getattr(promoted, "upgrades", {}).items()}
         for key in ("cannons", "hull", "rigging", "rudder", "cargo"):
             self.upgrades.setdefault(key, 0)
             self.upgrades[key] = min(self.upgrades[key], ship_upgrade_limit(self.current_ship, key))
-        self.player_max_hull = SHIP_CLASSES[self.current_ship]["hull"] + self.upgrades["hull"] * 25
         hull_ratio = max(0.0, min(1.0, promoted.hull / max(1, promoted.max_hull)))
+        self.player_max_hull = self.player_ship_stats()["hull"]
         self.player_hull = max(1, min(self.player_max_hull, int(self.player_max_hull * hull_ratio)))
         self.cannon_held = {-1: False, 1: False}
         self.cannon_first_volley_fired = {-1: False, 1: False}
         self.cannon_battery_timers = {-1: [], 1: []}
         self.cannon_battery_rates = {-1: [], 1: []}
+        self.chaser_cooldowns = {"bow": 0.0, "stern": 0.0}
+        self.ship_surface_cache = {}
         self.gold += value
         self.port_menu_ship_selection = -1
         self.toast_message(f"Sold {old_name}; {promoted.name} has taken the flagship's place. Received {value:,} gold.", 4.5)
@@ -777,9 +801,17 @@ class PortMenuMixin:
                 details_y += 29
         elif page == "outfitter":
             ship = self.port_menu_selected_ship()
-            level = selected_item["level"]
-            for line in (f"Installed on: {ship['name']}", f"Current level: {level}/{selected_item['limit']}",
-                         f"Next installation: {selected_item['cost']:,} gold"):
+            values = [f"Installed on: {ship['name']} ({ship['type']})"]
+            if selected_item.get("kind") == "customisation":
+                values.extend([f"Category: {dict((key, title) for key, title, _ in CUSTOMISATION_CATEGORIES)[selected_item['category']]}",
+                               f"Fitting: {selected_item['option']}",
+                               "Already installed" if selected_item["installed"] else f"Installation: {selected_item['cost']:,} gold"])
+            else:
+                values.extend([f"Current level: {selected_item['level']}/{selected_item['limit']}",
+                               f"Next installation: {selected_item['cost']:,} gold"])
+            for line in values:
+                if details_y > detail_bottom:
+                    break
                 surf = fit_text_surface(self.small_font, line, (73, 47, 31), detail_rect.width - 24, 25)
                 self.screen.blit(surf, (detail_rect.x + 12, details_y))
                 details_y += 29
@@ -824,11 +856,14 @@ class PortMenuMixin:
             if selected:
                 pygame.draw.rect(self.screen, (144, 105, 66), row, 2, border_radius=4)
             tag = "FLAGSHIP" if ship["kind"] == "flagship" else "ESCORT"
-            thumbnail_key = (ship["kind"], ship["type"], self.player_livery if ship["kind"] == "flagship" else None)
+            customisation = normalise_ship_customisation(ship.get("customisation"))
+            customisation_key = tuple(sorted(customisation.items()))
+            thumbnail_key = (ship["kind"], ship["type"], self.player_livery if ship["kind"] == "flagship" else None,
+                             customisation_key)
             thumbnail = self.port_menu_thumbnail_cache.get(thumbnail_key)
             if thumbnail is None:
                 base_thumbnail = self.create_ship_surface(player=ship["kind"] == "flagship",
-                    allied=ship["kind"] == "escort", ship_type=ship["type"])
+                    allied=ship["kind"] == "escort", ship_type=ship["type"], customisation=customisation)
                 thumbnail = pygame.transform.smoothscale(base_thumbnail, (82, 60))
                 self.port_menu_thumbnail_cache[thumbnail_key] = thumbnail
             self.screen.blit(thumbnail, (row.x + 3, row.y + 7))

@@ -12,7 +12,7 @@ mission "The Wreck of the Saint Oria"
     on offer
         conversation
             `Recover a logbook from the expedition's flagship, wrecked beyond the outer reef.`
-            `Marda Quill studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."
+            `Marda Quill studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
             choice
                 `(I will help uncover what happened.)`
                     accept

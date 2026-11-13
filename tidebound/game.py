@@ -54,6 +54,7 @@ class Game(
         self.player_ship_name = STARTING_SHIP_NAME
         self.used_ship_names = {STARTING_SHIP_NAME}
         self.player_livery = STARTING_SHIP_LIVERY
+        self.ship_customisation = default_ship_customisation()
         self.ship_surface_cache = {}
         self.upgrades = dict(STARTING_SHIP_UPGRADES)
         self.player_max_hull = PLAYER_HULL
@@ -78,6 +79,7 @@ class Game(
         self.cannon_first_volley_fired = {-1: False, 1: False}
         self.cannon_battery_timers = {-1: [], 1: []}
         self.cannon_battery_rates = {-1: [], 1: []}
+        self.chaser_cooldowns = {"bow": 0.0, "stern": 0.0}
         self.projectiles = []
         self.cannon_smoke = []
         self.journal = list(STARTING_JOURNAL)

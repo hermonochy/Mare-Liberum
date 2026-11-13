@@ -355,6 +355,8 @@ class MissionParser:
                 nodes.append(GotoNode(text.split(None, 1)[1].strip()))
             elif text.startswith("`") and text.endswith("`"):
                 nodes.append(TextNode(text[1:-1]))
+            elif text.startswith("`") or text.endswith("`"):
+                raise ValueError(f"Unterminated conversation text in {self.path.name}: {text}")
             elif text in {"accept", "decline", "close", "launch"}:
                 nodes.append(CommandNode(text))
             elif text.startswith("log "):
@@ -374,6 +376,8 @@ class MissionParser:
             if indent != option_indent:
                 self.node_index += 1
                 continue
+            if text.startswith("`") != text.endswith("`"):
+                raise ValueError(f"Unterminated conversation text in {self.path.name}: {text}")
             if not (text.startswith("`") and text.endswith("`")):
                 self.node_index += 1
                 continue

@@ -6,6 +6,12 @@ import pygame
 
 from .config import *
 from .ships import generate_ship_name, max_broadside_guns, ship_upgrade_limit
+from .ship_fittings import (
+    CANNON_MOUNTS, CANNON_TYPES, CUSTOMISATION_CATEGORIES, DEFAULT_SHIP_CUSTOMISATION,
+    FLAG_DESIGNS, HULL_FINISHES, HULL_FORMS, SAIL_DESIGNS, SAIL_TYPES, VISUAL_UPGRADES,
+    default_ship_customisation, normalise_ship_customisation, ship_customisation_effects,
+    ship_customisation_price, ship_fitting_available,
+)
 from .geometry import *
 from .models import *
 from .mission_system import ChoiceNode, CommandNode, GotoNode, LabelNode, TextNode, OptionNode, load_missions
