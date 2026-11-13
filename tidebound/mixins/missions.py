@@ -197,7 +197,6 @@ class MissionMixin:
         return None
 
     def navigation_target(self):
-        """Prefer the story objective; otherwise guide toward the nearest active day job."""
         story_target = self.mission_navigation_target()
         if story_target:
             return story_target
@@ -266,8 +265,6 @@ class MissionMixin:
 
     def start_conversation(self, mission, event, on_end=None):
         nodes = mission.sections.get(event, []) if mission else []
-        if mission and event == "offer" and nodes:
-            nodes = [TextNode(self.mission_route_brief(mission))] + nodes
         if not nodes:
             if on_end:
                 on_end()
@@ -527,8 +524,6 @@ class MissionMixin:
                     )
                 return
 
-            # Record the call immediately on docking so it is never lost if the
-            # player saves or closes the waypoint conversation.
             self.mission_waypoint_index = waypoint_index + 1
             entry = f"Voyage waypoint {self.mission_waypoint_index}/{len(waypoints)} completed at {port.name}: {expected.objective}."
             self.add_journal(entry)
@@ -584,9 +579,6 @@ class MissionMixin:
             self.toast_message(f"The harbour guns of {port.name} refuse your entry. Press I near the harbour to seek safe conduct.", 5.0)
             return False
 
-        # The player takes the closest genuinely free slot at the moment E is
-        # pressed. NPC ships keep their berth; no slot is reserved for the
-        # flagship and no merchant is displaced to make room for it.
         slot = self.nearest_available_harbour_slot(port, self.ship_x, self.ship_y)
         if slot is None:
             self.toast_message(f"Every berth at {port.name} is occupied. Circle the harbour and try again shortly.", 4.5)
@@ -609,8 +601,6 @@ class MissionMixin:
         self.toast_message(f"Made fast at {port.name}, berth {slot + 1}. Q: speak to the harbourmaster.", 4.0)
         self.trigger_port_visit(port)
         self.complete_day_job_at_port(port)
-        # Docking is a safe harbour checkpoint. Keep a dedicated rolling
-        # autosave so a later fatal sinking never destroys the last safe port.
         try:
             self.save_game(AUTOSAVE_SLOT_NAME, notify=False)
             self.toast_message(f"Made fast at {port.name}, berth {slot + 1}. Autosaved.", 3.8)

@@ -3,7 +3,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MISSION_DIR = PROJECT_ROOT / "missions"
 MISSION_DIR = PROJECT_ROOT / "missions"
-# Authored world coordinates use a compact design grid and are scaled at startup.
 MAP_DESIGN_WIDTH = 19000
 MAP_DESIGN_HEIGHT = 11000
 WORLD_SCALE = 3.2
@@ -70,13 +69,10 @@ REGIONAL_PORT_FACTIONS = {
     "Bellweather Cay": "Independent", "San Aurelio": "Spanish Crown", "Gallows Key": "Independent",
 }
 
-# Several named ports now share a single large island. Bearings are measured
-# clockwise from the east in screen/world coordinates (positive Y points south).
-# Every location keeps its own faction, harbour office and mission identity.
 MULTI_PORT_ISLAND_GROUPS = [
     {
         "name": "The Windward Grand Isle", "center": (6500, 3700),
-        "radius": (1700, 1300),
+        "radius": (1200, 1000),
         "ports": [
             ("Saint Brigid", -115), ("Port Azure", 178),
             ("Pelican's Rest", 8), ("Cormorant Quay", 92),
@@ -84,7 +80,7 @@ MULTI_PORT_ISLAND_GROUPS = [
     },
     {
         "name": "The Leeward Continent", "center": (7000, 7700),
-        "radius": (3100, 2100),
+        "radius": (1000, 1500),
         "ports": [
             ("Blackwater Reach", 178), ("San Telmo", 138),
             ("Mariner's Rest", -82), ("Puerto Cielo", 4),
@@ -93,7 +89,7 @@ MULTI_PORT_ISLAND_GROUPS = [
     },
     {
         "name": "The Spanish Main", "center": (13300, 2800),
-        "radius": (3000, 1850),
+        "radius": (2000, 1850),
         "ports": [
             ("Nueva Esperanza", -145), ("San Aurelio", -82),
             ("Sugarhook", -25), ("Crown's Fall", 22),
@@ -102,7 +98,7 @@ MULTI_PORT_ISLAND_GROUPS = [
     },
     {
         "name": "The Outer Antilles", "center": (15700, 7750),
-        "radius": (2600, 2700),
+        "radius": (1500, 500),
         "ports": [
             ("Redoubt", -72), ("Mermaid's Rest", -22),
             ("Last Light", 43), ("Saint's Refuge", 124),
@@ -139,15 +135,12 @@ SCATTERED_CAY_ANCHORS = [
     (11200, 6500), (12800, 10400), (15400, 2500), (18100, 5600),
 ]
 
-# ---------------------------------------------------------------------------
-# Runtime and presentation settings
-# ---------------------------------------------------------------------------
 GAME_WINDOW_SIZE = (1280, 800)
 GAME_TARGET_FPS = 60
 GAME_FRAME_TIME_LIMIT = 0.04
-SAVE_FILE_EXTENSION = ".tide"
-SAVE_FORMAT_IDENTIFIER = "MARE_LIBERUM_VOYAGE"
-SETTINGS_FILE_NAME = "mare_liberum_settings.json"
+SAVE_FILE_EXTENSION = ".mare"
+SAVE_FORMAT_IDENTIFIER = "MARE_LIBERUM"
+SETTINGS_FILE_NAME = "settings.json"
 
 DEFAULT_TEXT_SCALE = 1.0
 MIN_TEXT_SCALE = 0.75
@@ -166,7 +159,6 @@ DEFAULT_EFFECTS_VOLUME = 1.0
 DEFAULT_AMBIENCE_VOLUME = 1.0
 VOLUME_STEP = 0.05
 
-# Audio device and soundscape tuning.
 AUDIO_MIXER_OPTIONS = {"frequency": 22050, "size": -16, "channels": 2, "buffer": 512}
 AUDIO_CHANNEL_COUNT = 24
 AUDIO_LOOP_CHANNELS = ("wind_at_sea", "rolling_waves", "harbour_ambience")
@@ -186,9 +178,6 @@ AUDIO_HARBOUR_MAX_VOLUME = 0.31
 AUDIO_SAIL_SPEED_THRESHOLD = 8.0
 AUDIO_SAIL_WIND_THRESHOLD = 0.45
 
-
-# Initial world layout and new-captain starting state. Coordinates use the design grid
-# and are scaled together when the chart is built.
 BASE_LAND_POLYGONS = [[(145, 258),
   (290, 170),
   (520, 174),
@@ -372,10 +361,7 @@ PORT_NEWS_TEXT = {
     "Havana": "The merchants complain that no convoy dares leave harbour. The governor promises safety, but the harbour guns have been loaded for days.",
 }
 
-# ---------------------------------------------------------------------------
-# Gameplay data tables and shared tuning
-# ---------------------------------------------------------------------------
-DAY_JOB_BOARD_SIZE = 5
+DAY_JOB_BOARD_SIZE = 10
 
 FACTION_NAMES = (
         "British Crown",
@@ -549,7 +535,6 @@ ADMIRAL_NAMES = {
 TRADE_GOODS_BY_ID = {good["id"]: good for good in TRADE_GOODS}
 
 
-# Harbour checkpoint saving and visible cannon powder effects.
 AUTOSAVE_SLOT_NAME = "Autosave"
 CANNON_MUZZLE_OFFSET = 27.0
 CANNON_SMOKE_LIFE_RANGE = (0.62, 0.88)
@@ -557,7 +542,6 @@ CANNON_SMOKE_RADIUS_RANGE = (7.0, 10.0)
 CANNON_SMOKE_GROWTH_RANGE = (4.0, 6.5)
 CANNON_SMOKE_DRIFT_RANGE = (8.0, 15.0)
 
-# Individual escort refits. Levels run from zero to three.
 ESCORT_UPGRADE_BASE_COSTS = {"hull": 240, "cannons": 360, "rigging": 290, "rudder": 250}
 ESCORT_UPGRADE_COST_STEP = 220
 ESCORT_HULL_UPGRADE_AMOUNT = 20

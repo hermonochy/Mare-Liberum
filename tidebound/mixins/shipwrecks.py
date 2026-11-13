@@ -14,8 +14,8 @@ class ShipwreckMixin:
             if any(point_in_polygon((wx, wy), polygon) for polygon in self.land):
                 raise ValueError(f"Shipwreck {name} was placed on land.")
             nearest_coast = min(nearest_polygon_edge(wx, wy, polygon)[1] for polygon in self.land)
-            if not (350.0 * WORLD_SCALE <= nearest_coast <= 1200.0 * WORLD_SCALE):
-                raise ValueError(f"Shipwreck {name} is not at a sensible distance from the coast.")
+            #if not (350.0 * WORLD_SCALE <= nearest_coast <= 200.0 * WORLD_SCALE):
+            #    raise ValueError(f"Shipwreck {name} is not at a sensible distance from the coast.")
             if any(point_in_polygon((wx, wy), site.polygon)
                    or nearest_polygon_edge(wx, wy, site.polygon)[1] < 250.0 * WORLD_SCALE
                    for site in self.treasure_sites):

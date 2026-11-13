@@ -76,7 +76,7 @@ class Conversation:
             self.finish()
             return True
         if node.command == "decline_day_job":
-            self.game.toast_message("You leave the day-work offer on the board. It will wait until you are ready.", 3.2)
+            self.game.toast_message("You leave the day-work offer on the board.", 3.2)
             self.finish()
             return True
         if node.command == "news":

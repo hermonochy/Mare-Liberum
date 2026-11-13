@@ -96,8 +96,6 @@ def calculate_propulsion(heading_degrees, wind_degrees, sail_setting, wind_stren
     sail_thrust = 51.0 * sail_setting * wind_power * wind_strength * (1.0 + rigging_level * 0.10)
     oar_thrust = 0.0
     if oars_deployed:
-        # Both banks pull together; one complete stroke cycle affects the
-        # whole crew in unison rather than alternating port and starboard.
         stroke_power = 0.90 + 0.10 * (0.5 + 0.5 * math.sin(time_seconds * 8.0))
         oar_thrust = oar_power * 0.30 * stroke_power
     return sail_thrust + oar_thrust, wind_power, sail_thrust, oar_thrust

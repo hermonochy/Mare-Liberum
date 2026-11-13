@@ -13,6 +13,7 @@ mission "An Old Captain's Farewell"
             `An old captain sits near the harbour office window, folding a faded chart with slow, careful hands. His coat is clean but worn at the cuffs, and a small brass compass rests beside his cup.`
             `"Elias Ward," he says when you approach. "Forty years under sail, and tomorrow I mean to wake up with no deck beneath my feet. Before I go, I promised an old quartermaster in Tortuga that she would have my sea chest and the letter inside it. My knees are done with the sea. Yours, by the look of you, are not."`
             `He studies your little ship through the window. "You seem new to command. No shame in that. A ship is a stubborn creature, and the sea is a patient teacher. Ask what you like; I have time enough for one last lesson."`
+            label Question
             choice
                 `"How do I handle the ship?"`
                     goto sailing
@@ -26,19 +27,16 @@ mission "An Old Captain's Farewell"
                     goto the_job
             label sailing
                 `"W raises your canvas; S takes it in. A and D turn your bow. Do not expect a ship to turn on a coin: she carries her way through the water, and the wind matters. When the wind is against you, O puts the oars out. They will pull you along even when the canvas sulks. E is for making fast at a pier or casting off again. Come in slowly; no harbour likes a captain who arrives at full speed."`
-                goto common_lesson
+                goto Question
             label work
                 `"Q brings up the harbour office. Ask after work and you will hear of proper ventures; the notice board is for ordinary business. There may be several postings: choose one, or take a handful if their courses suit. A shipwright can sell you a better hull or mend the one you have. Press B while ashore. M opens the sea atlas, and J keeps your journal. A captain who reads his chart saves more than a captain who only reads the wind."`
-                goto common_lesson
+                goto Question
             label treasure
                 `"Keep an eye on the water for bottles and odd scraps of chart. T lets you study the maps you have found; R is how you recover a bottle or search a marked place when close enough. Some clues are riddles. A wrong guess will not ruin the chart, so use your head and try again."`
-                goto common_lesson
+                goto Question
             label fighting
                 `"Z fires the guns to port, X to starboard. Give the broadside time to work; every cannon has its own temper once the first volley is away. If you keep company, F tells your escorts to fight, H holds their fire, G gathers them close, and V puts them back in sailing order. A lone captain can survive a bad day. A captain who watches his fleet may win one."`
-                goto common_lesson
-            label common_lesson
-                `Ward taps the brass compass. "And do not mistake every sail for an enemy. Merchants, fishing boats, packet ships and patrols cross these waters. Give them room. Two ships cannot occupy the same patch of sea, no matter how important their captains think they are."`
-                goto the_job
+                goto Question
             label the_job
                 `"Mara Bell keeps a chandlery in Tortuga. She sailed with me for twelve years before she took to shore. Take her this chest and letter. It is not a grand adventure, but it will give you a passage to make, a harbour to find, and a friendly face at the end of it."`
                 choice

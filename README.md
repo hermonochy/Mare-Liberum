@@ -138,7 +138,7 @@ The journal, opened with **J**, records story leads, discoveries and important e
 
 Choose **Load Voyage** from the main menu to browse your named saves. During play, press **F5** to create a new named save. You can keep multiple named voyages. The game also creates or replaces a rolling **Autosave** every time you successfully dock at a harbour; this records the safe port and berth you have just reached.
 
-A save records your last harbour and the actual berth you occupied. You can save while sailing; loading returns your flagship safely to that last berth, with your fleet and voyage progress restored. Gold, ship and refits, cargo, markets, active and completed missions, intermediate mission stops, jobs, treasure, wreck discoveries, faction economies, diplomacy and commander records are all stored in the human-readable `.tide` save file.
+A save records your last harbour and the actual berth you occupied. You can save while sailing; loading returns your flagship safely to that last berth, with your fleet and voyage progress restored. Gold, ship and refits, cargo, markets, active and completed missions, intermediate mission stops, jobs, treasure, wreck discoveries, faction economies, diplomacy and commander records are all stored in the human-readable `.mare` save file.
 
 Save regularly before a dangerous voyage. If your flagship sinks, load the most recent Autosave or another named voyage; unsaved progress since the last docking or manual save is lost. Mission-event timers, completed encounters, world flags and event fleets are saved as part of the voyage.
 

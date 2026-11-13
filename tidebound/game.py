@@ -39,8 +39,6 @@ class Game(
         self.conversation = None
         self.dialogue_speaker = "Harbourmaster"
         self.docked_port = STARTING_PORT_NAME
-        # The player uses an ordinary quay slot like every other vessel; no
-        # harbour slot is permanently reserved for the flagship.
         self.player_berth_slot = PORT_BERTH_CENTER_SLOT
         self.last_docked_port_slot = PORT_BERTH_CENTER_SLOT
         self.near_port = None
@@ -150,7 +148,6 @@ class Game(
         self.initialise_port_menu()
 
     def expand_world_layout(self, factor):
-        """Enlarge the whole chart coherently: islands, reefs, berths and passages."""
         factor = float(factor)
         self.land = [[(x * factor, y * factor) for x, y in polygon] for polygon in self.land]
         for port in self.ports:
@@ -181,13 +178,9 @@ class Game(
             self.camera_x, self.camera_y = self.ship_x, self.ship_y
 
     def make_regional_island_polygon(self, cx, cy, index):
-        """Build a substantial standalone island for a single-port harbour."""
         shape_rng = random.Random(7319 + index * 977)
         vertex_count = shape_rng.randint(11, 17)
         rotation = shape_rng.uniform(0.0, math.tau)
-        # Standalone islands deliberately span several size classes. The
-        # former near-uniform 200–300 unit cays made the four multi-port
-        # landmasses dominate the chart too strongly.
         size_classes = (
             (360.0, 480.0, 245.0, 340.0),
             (520.0, 690.0, 330.0, 470.0),
@@ -211,8 +204,7 @@ class Game(
         return points
 
     def make_megaisland_polygon(self, cx, cy, rx, ry, index):
-        """Generate a broad, irregular island capable of supporting many ports."""
-        shape_rng = random.Random(84191 + index * 1877)
+        shape_rng = random.Random(8419 + index * 187)
         vertex_count = shape_rng.randint(22, 30)
         rotation = shape_rng.uniform(-0.12, 0.12)
         points = []
@@ -256,7 +248,6 @@ class Game(
                 else:
                     continue
                 shore_x, shore_y, dx, dy = self.port_coast_point(polygon, cx, cy, bearing)
-                # Long breakwater and outer harbour approach, scaled with the chart.
                 harbour_length = 190.0
                 berth_x = shore_x + dx * harbour_length
                 berth_y = shore_y + dy * harbour_length
@@ -298,7 +289,7 @@ class Game(
         """Place extra faction strongholds on isolated islands without crowding existing harbours."""
         for index, (name, anchor_x, anchor_y, region, description, faction) in enumerate(FACTION_PORT_DATA):
             if name == "Puerto Escondido":
-                continue  # already placed as a second Spanish harbour on the Outer Antilles island
+                continue
             placement_rng = random.Random(9900 + index * 137)
             accepted = None
             for attempt in range(900):
