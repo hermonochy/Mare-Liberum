@@ -23,6 +23,13 @@ class MissionMixin:
     def mission_state(self, mission):
         return self.mission_states.get(mission.mission_id, "available")
 
+    def intro_mission_record(self):
+        return next((mission for mission in self.missions if mission.category == "intro"), None)
+
+    def intro_mission_completed(self):
+        mission = self.intro_mission_record()
+        return mission is None or self.mission_state(mission) == "done"
+
     def requirements_met(self, mission):
         for requirement in mission.requires_done:
             target = requirement.removesuffix(": done").strip()
@@ -59,13 +66,17 @@ class MissionMixin:
         return self.docked_port == location
 
     def mission_is_visible(self, mission):
+        intro = next((item for item in getattr(self, "missions", []) if getattr(item, "category", "main") == "intro"), None)
+        intro_done = intro is None or getattr(self, "mission_states", {}).get(intro.mission_id, "available") == "done"
+        if intro is not None and mission.mission_id != intro.mission_id and not intro_done:
+            return False
         for expression in (getattr(mission, "show_expression", ""), getattr(mission, "display_expression", "")):
             if expression and not self.evaluate_mission_script_expression(expression):
                 return False
         return True
 
     def available_missions_at_port(self):
-        if self.active_mission_id is not None or self.docked_port is None:
+        if self.active_mission_id is not None or self.docked_port is None or not self.intro_mission_completed():
             return []
         available = [
             mission for mission in self.missions
@@ -347,7 +358,10 @@ class MissionMixin:
                 on_end()
             return
         self.dialogue_speaker = mission.section_speakers.get(event, mission.speaker) if mission else "Harbourmaster"
-        self.conversation = Conversation(self, mission, nodes, on_end)
+        self.conversation = None
+        conversation = Conversation(self, mission, nodes, on_end)
+        if not conversation.ended:
+            self.conversation = conversation
 
     def story_lead_after(self, completed_mission):
         if completed_mission.category != "main":
@@ -385,11 +399,17 @@ class MissionMixin:
             nodes.append(TextNode(lead))
             self.add_journal(f"A new lead: {lead}")
         self.dialogue_speaker = mission.section_speakers.get("complete", mission.speaker)
-        self.conversation = Conversation(self, mission, nodes, on_end)
+        self.conversation = None
+        conversation = Conversation(self, mission, nodes, on_end)
+        if not conversation.ended:
+            self.conversation = conversation
 
     def start_custom_conversation(self, speaker, nodes):
         self.dialogue_speaker = speaker
-        self.conversation = Conversation(self, None, nodes)
+        self.conversation = None
+        conversation = Conversation(self, None, nodes)
+        if not conversation.ended:
+            self.conversation = conversation
 
     def open_port_talk(self):
         available = self.available_missions_at_port()
@@ -606,7 +626,7 @@ class MissionMixin:
             return False
         if self.mission_state(mission) != "active":
             return False
-        self.mission_states[mission.mission_id] = "failed"
+        self.mission_states[mission.mission_id] = "available" if getattr(mission, "category", "main") == "intro" else "failed"
         self.active_mission_id = None
         self.mission_kills = 0
         self.mission_waypoint_index = 0
@@ -623,7 +643,7 @@ class MissionMixin:
         mission = self.active_mission()
         if mission is None:
             return None
-        self.mission_states[mission.mission_id] = "failed"
+        self.mission_states[mission.mission_id] = "available" if getattr(mission, "category", "main") == "intro" else "failed"
         self.active_mission_id = None
         self.mission_kills = 0
         self.mission_waypoint_index = 0
@@ -672,7 +692,7 @@ class MissionMixin:
                 except MissionExpressionError as error:
                     self.add_journal(f"Mission '{active.title}' has an invalid completion condition: {error}")
             return
-        if self.conversation is not None:
+        if self.conversation is not None or not self.intro_mission_completed():
             return
         for mission in self.missions:
             expression = getattr(mission, "start_expression", "")

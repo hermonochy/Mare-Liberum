@@ -710,6 +710,14 @@ class RenderingMixin:
                 if inner.collidepoint(px, py):
                     color = (105, 222, 200) if traffic.role == "merchant" else (220, 216, 170) if traffic.role in {"fishing", "whaler"} else (140, 177, 231)
                     pygame.draw.circle(self.screen, color, (px, py), 2)
+        for escort in getattr(self, "fleet", []):
+            if escort.hull > 0 and not escort.sinking:
+                ex = inner.x + int((escort.x - left) * sx)
+                ey = inner.y + int((escort.y - top) * sy)
+                if inner.collidepoint(ex, ey):
+                    points = [(ex, ey - 4), (ex + 4, ey), (ex, ey + 4), (ex - 4, ey)]
+                    pygame.draw.polygon(self.screen, (15, 42, 52), points)
+                    pygame.draw.polygon(self.screen, (107, 221, 229), points, 1)
         navigation = self.mission_navigation_target()
         if navigation:
             target_name, target_x, target_y, target_kind = navigation
@@ -775,8 +783,8 @@ class RenderingMixin:
         self.screen.blit(title, title.get_rect(midtop=(box.centerx, box.y + 10)))
 
         content_top = box.y + 76
-        footer_y = box.bottom - 42
-        available_height = footer_y - content_top
+        controls_top = box.bottom - 78
+        available_height = controls_top - content_top
         legend_width = min(326, int(box.width * 0.29))
         gap = 18
         chart_width = box.width - 40 - legend_width - gap
@@ -786,24 +794,40 @@ class RenderingMixin:
             chart_width = int(chart_height * WORLD_WIDTH / WORLD_HEIGHT)
         chart = pygame.Rect(box.x + 20, content_top + (available_height - chart_height) // 2, chart_width, chart_height)
         legend = pygame.Rect(chart.right + gap, content_top, box.right - chart.right - gap - 18, available_height)
+        self.world_map_chart_rect = chart
 
         pygame.draw.rect(self.screen, (23, 84, 105), chart, border_radius=4)
         pygame.draw.rect(self.screen, (177, 146, 99), chart, 2, border_radius=4)
         sx = chart.width / WORLD_WIDTH
         sy = chart.height / WORLD_HEIGHT
+        zoom = float(getattr(self, "world_map_zoom", 1.0))
+        pan_x = float(getattr(self, "world_map_pan_x", 0.0))
+        pan_y = float(getattr(self, "world_map_pan_y", 0.0))
+
+        def map_point(world_x, world_y):
+            return (
+                int(chart.centerx + (world_x * sx - chart.width / 2) * zoom + pan_x),
+                int(chart.centery + (world_y * sy - chart.height / 2) * zoom + pan_y),
+            )
+
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(chart)
         for polygon in self.land:
-            points = [(chart.x + int(x * sx), chart.y + int(y * sy)) for x, y in polygon]
-            pygame.draw.polygon(self.screen, (83, 132, 82), points)
-            pygame.draw.lines(self.screen, (204, 184, 137), True, points, 1)
+            points = [map_point(x, y) for x, y in polygon]
+            if len(points) >= 3:
+                pygame.draw.polygon(self.screen, (83, 132, 82), points)
+                pygame.draw.lines(self.screen, (204, 184, 137), True, points, 1)
         for site in self.treasure_sites:
             if site.revealed:
-                points = [(chart.x + int(x * sx), chart.y + int(y * sy)) for x, y in site.polygon]
-                pygame.draw.polygon(self.screen, (102, 143, 85), points)
-        reef_overlay = pygame.Surface((chart.width, chart.height), pygame.SRCALPHA)
+                points = [map_point(x, y) for x, y in site.polygon]
+                if len(points) >= 3:
+                    pygame.draw.polygon(self.screen, (102, 143, 85), points)
+        reef_overlay = pygame.Surface(chart.size, pygame.SRCALPHA)
         for reef in getattr(self, "reefs", []):
-            points = [(int(x * sx), int(y * sy)) for x, y in reef.polygon]
-            pygame.draw.polygon(reef_overlay, (225, 55, 55, 92), points)
-            pygame.draw.lines(reef_overlay, (255, 133, 117, 195), True, points, 1)
+            points = [(x - chart.x, y - chart.y) for x, y in (map_point(px, py) for px, py in reef.polygon)]
+            if len(points) >= 3:
+                pygame.draw.polygon(reef_overlay, (225, 55, 55, 92), points)
+                pygame.draw.lines(reef_overlay, (255, 133, 117, 195), True, points, 1)
         self.screen.blit(reef_overlay, chart.topleft)
 
         regions = [
@@ -814,6 +838,13 @@ class RenderingMixin:
             ("OUTER ANTILLES", "Outer Antilles", None),
             ("THE FAR SHOALS", "The Far Shoals", None),
         ]
+        label_offsets = {
+            "Old Caribbean": (0, 0),
+            "Windward Reach": (0, -360),
+            "Leeward Expanse": (250, 150),
+            "Spanish Main": (0, -300),
+            "Outer Antilles": (180, 170),
+        }
         for label_text, region_name, fallback in regions:
             regional_ports = [port for port in self.ports if port.region == region_name]
             if regional_ports and region_name != "Old Caribbean":
@@ -821,55 +852,98 @@ class RenderingMixin:
                 world_y = sum(port.y for port in regional_ports) / len(regional_ports)
             else:
                 world_x, world_y = fallback
-            label_offsets = {
-                "Old Caribbean": (0, 0),
-                "Windward Reach": (0, -360),
-                "Leeward Expanse": (250, 150),
-                "Spanish Main": (0, -300),
-                "Outer Antilles": (180, 170),
-            }
             offset_x, offset_y = label_offsets.get(region_name, (0, 0))
-            pos = (chart.x + int((world_x + offset_x) * sx), chart.y + int((world_y + offset_y) * sy))
+            pos = map_point(world_x + offset_x, world_y + offset_y)
             label = fit_text_surface(self.map_heading_font, label_text, (239, 224, 179), 180, 26)
             self.screen.blit(label, label.get_rect(center=pos))
 
-        for index, port in enumerate(self.ports, start=1):
-            px = chart.x + int(port.x * sx)
-            py = chart.y + int(port.y * sy)
-            faction_colour = FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (255, 222, 152))
-            pygame.draw.circle(self.screen, faction_colour, (px, py), 4)
-            number = fit_text_surface(self.map_font, f"{index:02d}", (255, 245, 215), 24, 20)
-            self.screen.blit(number, (px + 4, py - 9))
+        port_entries = [(index, port, map_point(port.x, port.y)) for index, port in enumerate(self.ports, start=1)]
+        raw_port_points = [entry[2] for entry in port_entries]
+        display_port_points = self.spread_world_map_points(raw_port_points, 20) if zoom < 2.2 else raw_port_points
+        for (index, port, raw_point), (px, py) in zip(port_entries, display_port_points):
+            colour = self.world_map_port_colour(port)
+            if math.hypot(px - raw_point[0], py - raw_point[1]) > 3:
+                pygame.draw.line(self.screen, (23, 37, 35), raw_point, (px, py), 3)
+                pygame.draw.line(self.screen, colour, raw_point, (px, py), 1)
+            marker_radius = max(7, min(12, int(8 * min(1.5, zoom))))
+            pygame.draw.circle(self.screen, (18, 31, 31), (px, py), marker_radius + 3)
+            pygame.draw.circle(self.screen, colour, (px, py), marker_radius)
+            pygame.draw.circle(self.screen, (255, 239, 197), (px, py), 3)
+            pygame.draw.circle(self.screen, (245, 226, 187), (px, py), marker_radius + 2, 1)
+            if zoom >= 1.35:
+                label = fit_text_surface(self.map_font, port.name, (255, 246, 218), 145, 20)
+                label_rect = label.get_rect(midleft=(px + marker_radius + 5, py))
+                backing = label_rect.inflate(6, 3)
+                pygame.draw.rect(self.screen, (24, 37, 36), backing, border_radius=3)
+                self.screen.blit(label, label_rect)
+            else:
+                number = fit_text_surface(self.tiny_font, f"{index:02d}", (255, 250, 224), 22, 15)
+                self.screen.blit(number, number.get_rect(midtop=(px, py + marker_radius + 2)))
+
         for wreck in getattr(self, "shipwrecks", []):
             if wreck.discovered:
-                wx = chart.x + int(wreck.x * sx)
-                wy = chart.y + int(wreck.y * sy)
+                wx, wy = map_point(wreck.x, wreck.y)
                 if chart.collidepoint(wx, wy):
-                    pygame.draw.line(self.screen, (247, 219, 165), (wx - 4, wy - 4), (wx + 4, wy + 4), 2)
-                    pygame.draw.line(self.screen, (247, 219, 165), (wx - 4, wy + 4), (wx + 4, wy - 4), 2)
+                    pygame.draw.line(self.screen, (247, 219, 165), (wx - 5, wy - 5), (wx + 5, wy + 5), 2)
+                    pygame.draw.line(self.screen, (247, 219, 165), (wx - 5, wy + 5), (wx + 5, wy - 5), 2)
 
-        ship_point = (chart.x + int(self.ship_x * sx), chart.y + int(self.ship_y * sy))
-        if chart.collidepoint(ship_point):
-            pygame.draw.circle(self.screen, (255, 255, 229), ship_point, 6)
-            pygame.draw.circle(self.screen, (32, 31, 25), ship_point, 6, 1)
+        player_point = map_point(self.ship_x, self.ship_y)
+        if chart.collidepoint(player_point):
+            pygame.draw.circle(self.screen, (20, 30, 30), player_point, 10)
+            pygame.draw.circle(self.screen, (255, 255, 229), player_point, 7)
+            pygame.draw.circle(self.screen, (32, 31, 25), player_point, 7, 1)
+
+        living_escorts = [escort for escort in getattr(self, "fleet", []) if escort.hull > 0 and not escort.sinking]
+        raw_escort_points = [map_point(escort.x, escort.y) for escort in living_escorts]
+        reserved = [player_point] if chart.collidepoint(player_point) else []
+        display_escort_points = self.spread_world_map_points(raw_escort_points, 16, reserved)
+        for escort_index, (escort, raw_point, display_point) in enumerate(zip(living_escorts, raw_escort_points, display_escort_points), start=1):
+            ex, ey = display_point
+            if not chart.collidepoint(ex, ey):
+                continue
+            if math.hypot(ex - raw_point[0], ey - raw_point[1]) > 3:
+                pygame.draw.line(self.screen, (25, 61, 69), raw_point, (ex, ey), 2)
+            marker_size = max(6, min(9, int(7 * min(1.3, zoom))))
+            diamond = [(ex, ey - marker_size), (ex + marker_size, ey), (ex, ey + marker_size), (ex - marker_size, ey)]
+            pygame.draw.polygon(self.screen, (14, 35, 49), diamond)
+            pygame.draw.polygon(self.screen, (107, 221, 229), diamond, 2)
+            if zoom >= 1.2:
+                label = fit_text_surface(self.tiny_font, f"E{escort_index}", (206, 244, 237), 28, 16)
+                self.screen.blit(label, label.get_rect(midtop=(ex, ey + marker_size + 1)))
+
         navigation = self.mission_navigation_target()
         if navigation:
             target_name, target_x, target_y, target_kind = navigation
-            target = (chart.x + int(target_x * sx), chart.y + int(target_y * sy))
-            if chart.collidepoint(ship_point) and chart.collidepoint(target):
-                pygame.draw.line(self.screen, (255, 211, 126), ship_point, target, 2)
-                pygame.draw.circle(self.screen, (255, 210, 115), target, 6, 2)
+            target = map_point(target_x, target_y)
+            if chart.collidepoint(player_point) and chart.collidepoint(target):
+                pygame.draw.line(self.screen, (255, 211, 126), player_point, target, 2)
+                pygame.draw.circle(self.screen, (255, 210, 115), target, 7, 2)
 
-        pygame.draw.rect(self.screen, (37, 49, 43), legend, border_radius=4)
-        pygame.draw.rect(self.screen, (154, 119, 76), legend, 1, border_radius=4)
-        legend_title = fit_text_surface(self.map_heading_font, "HARBOURS • FACTIONS • REGIONS", (248, 224, 180), legend.width - 24, 23)
+        self.screen.set_clip(previous_clip)
+
+        mode = getattr(self, "world_map_sort_mode", "faction")
+        mode_label = "FACTION" if mode == "faction" else "HOSTILITY"
+        legend_title = fit_text_surface(self.map_heading_font, f"PORTS BY {mode_label}", (248, 224, 180), legend.width - 24, 23)
         self.screen.blit(legend_title, (legend.x + 12, legend.y + 7))
-        region_order = ["Old Caribbean", "Windward Reach", "Leeward Expanse", "Spanish Main", "Outer Antilles", "The Far Shoals"]
-        grouped = [(region_name, [(index, port) for index, port in enumerate(self.ports, start=1) if port.region == region_name])
-                   for region_name in region_order]
+        key_y = legend.y + 34
+        if mode == "hostility":
+            key_items = [("Hostile", (204, 69, 57)), ("Neutral", (211, 171, 82)), ("Friendly", (83, 166, 119))]
+        else:
+            key_items = [(name, colour) for name, colour in FACTION_COLOURS.items()]
+        key_x = legend.x + 12
+        key_gap = 8
+        for key_name, key_colour in key_items:
+            label = fit_text_surface(self.tiny_font, key_name, (239, 231, 207), 92, 16)
+            item_width = label.get_width() + 18
+            if key_x + item_width > legend.right - 8:
+                key_x = legend.x + 12
+                key_y += 18
+            pygame.draw.circle(self.screen, key_colour, (key_x + 4, key_y + 7), 4)
+            self.screen.blit(label, (key_x + 12, key_y))
+            key_x += item_width + key_gap
+
+        grouped = self.world_map_port_groups()
         grouped = [(name, ports) for name, ports in grouped if ports]
-        # Divide the list into two compact columns so every harbour remains visible
-        # at the largest text setting without drawing beyond the parchment panel.
         columns = [[], []]
         heights = [0, 0]
         for region_name, ports_in_region in grouped:
@@ -881,12 +955,12 @@ class RenderingMixin:
         target_port = navigation_target[0] if navigation_target and navigation_target[3] in {"port", "waypoint"} else None
         col_gap = 8
         col_width = (legend.width - 30 - col_gap) // 2
-        content_top_y = legend.y + 36
-        content_height = legend.height - 48
+        content_top_y = key_y + 20
+        content_height = legend.bottom - content_top_y - 24
         for col_index, sections in enumerate(columns):
             x = legend.x + 12 + col_index * (col_width + col_gap)
             total_rows = sum(1 + len(items) for _, items in sections)
-            row_step = min(18, max(12, content_height // max(1, total_rows)))
+            row_step = min(18, max(11, content_height // max(1, total_rows)))
             y = content_top_y
             for region_name, ports_in_region in sections:
                 heading_surf = fit_text_surface(self.map_heading_font, region_name.upper(), (238, 205, 145), col_width, row_step)
@@ -895,19 +969,41 @@ class RenderingMixin:
                 for index, port in ports_in_region:
                     label = f"{index:02d}  {port.name}"
                     if port.name == target_port:
-                        label = "› " + label
-                    pygame.draw.circle(self.screen, FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (246, 236, 210)),
+                        label = "> " + label
+                    pygame.draw.circle(self.screen, self.world_map_port_colour(port),
                                        (x + 4, y + max(3, row_step // 2)), max(2, min(4, row_step // 3)))
                     entry = fit_text_surface(self.map_font, label, (246, 236, 210), col_width - 12, row_step)
                     self.screen.blit(entry, (x + 12, y))
                     y += row_step
 
-        player_status = "YOUR SHIP: ON CHART" if chart.collidepoint(ship_point) else "YOUR SHIP: BEYOND THE CHART"
-        status = fit_text_surface(self.map_font, player_status, (255, 227, 172), chart.width - 16, 20)
-        self.screen.blit(status, (chart.x + 8, chart.bottom + 8))
-        footer_text = f"M / Esc: close  •  {len(self.ports)} ports  •  Red patches = reefs  •  Gold crosses = discovered shipwrecks  •  Faction colours mark harbours"
-        footer = fit_text_surface(self.map_font, footer_text, (248, 226, 188), box.width - 40, 22)
-        self.screen.blit(footer, footer.get_rect(midbottom=(box.centerx, box.bottom - 12)))
+        escorts_text = f"ESCORTS: {len(living_escorts)}"
+        status_text = "YOUR SHIP: ON CHART" if chart.collidepoint(player_point) else "YOUR SHIP: BEYOND THE CHART"
+        status = fit_text_surface(self.map_font, f"{status_text}  •  {escorts_text}", (255, 227, 172), chart.width - 16, 20)
+        self.screen.blit(status, (chart.x + 8, chart.bottom + 6))
+
+        selector = pygame.Rect(box.centerx - 118, box.bottom - 63, 236, 29)
+        self.world_map_sort_selector_rect = selector
+        pygame.draw.rect(self.screen, (37, 49, 43), selector, border_radius=4)
+        pygame.draw.rect(self.screen, (185, 147, 94), selector, 1, border_radius=4)
+        selector_text = fit_text_surface(self.map_font, f"Colour ports by: {mode_label}  v", (250, 232, 196), selector.width - 16, 22)
+        self.screen.blit(selector_text, selector_text.get_rect(center=selector.center))
+        self.world_map_sort_option_rects = {}
+        if getattr(self, "world_map_sort_menu_open", False):
+            options = [("faction", "Faction"), ("hostility", "Hostility")]
+            option_width = 150
+            option_height = 27
+            start_y = selector.y - len(options) * option_height - 5
+            for index, (option_mode, option_label) in enumerate(options):
+                option_rect = pygame.Rect(selector.centerx - option_width // 2, start_y + index * option_height, option_width, option_height)
+                self.world_map_sort_option_rects[option_mode] = option_rect
+                active_option = option_mode == mode
+                pygame.draw.rect(self.screen, (71, 79, 59) if active_option else (37, 49, 43), option_rect, border_radius=3)
+                pygame.draw.rect(self.screen, (190, 154, 104), option_rect, 1, border_radius=3)
+                option_text = fit_text_surface(self.map_font, option_label, (250, 232, 196), option_rect.width - 12, 21)
+                self.screen.blit(option_text, option_text.get_rect(center=option_rect.center))
+
+        hint = fit_text_surface(self.tiny_font, f"Wheel: zoom  •  Drag: pan  •  Home: reset  •  M / Esc: close  •  {len(self.ports)} ports  •  Gold crosses: discovered wrecks  •  Blue diamonds: escorts", (248, 226, 188), box.width - 40, 19)
+        self.screen.blit(hint, hint.get_rect(midbottom=(box.centerx, box.bottom - 12)))
 
     def draw_help(self):
         width, height = self.screen.get_size()
@@ -925,7 +1021,7 @@ class RenderingMixin:
             "E  Dock / cast off", "Q  Harbour office / jobs",
             "R  Interact / salvage / treasure", "B  Shipyard (in port)",
             "F / H / G / V  Escort orders", "M  Full sea chart", "C  Centre camera",
-            "Wheel / drag  Zoom / pan", "J  Captain's journal", "T  Treasure charts",
+            "Wheel / drag  Zoom / pan", "Home  Reset atlas", "J  Captain's journal", "T  Treasure charts",
             "N  Commanders' ledger", "I  Faction diplomacy", "F5  Save voyage", "Y  Trade market (in port)",
             "Esc / F9  Pause menu", "F1  Hide these orders",
             "Red water  Reef hazard", "Gold marker  Story objective", "Gold cross  Discovered wreck",

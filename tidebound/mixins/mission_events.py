@@ -210,7 +210,7 @@ class MissionEventsMixin:
             return
 
     def update_ambient_missions(self, dt):
-        if self.conversation is not None:
+        if self.conversation is not None or not self.intro_mission_completed():
             return
         candidates = sorted(
             (mission for mission in self.missions
@@ -935,6 +935,8 @@ class MissionEventsMixin:
         self.finish_mission_event(event, state, outcome)
 
     def update_mission_events(self, dt):
+        if not self.intro_mission_completed():
+            return
         for event in self.mission_events:
             state = self.mission_event_states[event["id"]]
             if state["status"] == "active":

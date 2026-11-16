@@ -27,6 +27,16 @@ class Game(
         self.camera_y = STARTING_SHIP_POSITION[1]
         self.camera_follow = True
         self.world_map_open = False
+        self.world_map_zoom = 1.0
+        self.world_map_pan_x = 0.0
+        self.world_map_pan_y = 0.0
+        self.world_map_dragging = False
+        self.world_map_drag_last = (0, 0)
+        self.world_map_sort_mode = "faction"
+        self.world_map_sort_menu_open = False
+        self.world_map_chart_rect = None
+        self.world_map_sort_selector_rect = None
+        self.world_map_sort_option_rects = {}
         self.camera_dragging = False
         self.camera_drag_last = (0, 0)
         self.toast = "Port Royal. Set sail with the arrow keys, or use the oars when the wind turns against you."

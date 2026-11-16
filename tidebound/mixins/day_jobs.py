@@ -147,6 +147,9 @@ class DayJobsMixin:
         return (source.x + dx * 0.5, source.y + dy * 0.5)
 
     def open_day_job_board(self):
+        if not self.intro_mission_completed():
+            self.toast_message("Complete Captain Ward's first voyage before taking other harbour work.", 4.5)
+            return
         if not self.docked_port:
             self.toast_message("The harbour job board is ashore. Make fast at a port first.", 3.0)
             return

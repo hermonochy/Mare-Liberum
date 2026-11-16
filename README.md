@@ -61,7 +61,7 @@ There is no single way to spend your time. Follow the main story, accept optiona
 
 Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. On oared craft such as launches, cutters, sloops, yawls and xebecs, deploy the oars with **O** when the wind is unfavourable. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches. Both banks row together in a synchronized stroke.
 
-The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag to pan, and press **C** to centre the view on your ship.
+The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag inside the chart to pan, and press **Home** to reset the atlas. The bottom selector groups and colours ports by faction or your diplomatic hostility towards them. Your living escorts appear as blue diamond markers. Press **C** outside the atlas to centre the sailing camera on your ship.
 
 Approach a harbour slowly and press **E** to take the nearest available berth. The nine quay slots are shared with visiting ships; no berth is permanently reserved for the player. If the harbour is full, wait for a vessel to leave and try again. Docking opens the port services screen automatically. Choose **Depart** to cast off; press **Esc** to close the screen and **E** to reopen it while still berthed.
 
@@ -132,8 +132,9 @@ The journal, opened with **J**, records story leads, discoveries and important e
 | View treasure charts | **T** |
 | Open world atlas | **M** |
 | Centre camera on ship | **C** |
-| Zoom in / out | Mouse wheel or **+ / -** |
-| Pan camera | Drag with mouse |
+| Zoom in / out on world atlas | Mouse wheel or **+ / -** |
+| Pan world atlas | Drag inside the chart |
+| Reset world atlas view | **Home** |
 | Open captain's journal | **J** |
 | Open Admirals' & Captains' Ledger | **N** |
 | Open diplomacy ledger | **I** |

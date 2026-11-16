@@ -14,6 +14,12 @@ class ControlsMixin:
         if getattr(self, "port_menu_open", False):
             self.handle_port_menu_key(key)
             return
+        if self.conversation:
+            if key == pygame.K_ESCAPE:
+                self.conversation.finish()
+            else:
+                self.conversation.handle_key(key)
+            return
         if self.docked_port and key == pygame.K_e:
             self.open_port_menu("overview")
             return
@@ -47,6 +53,14 @@ class ControlsMixin:
         if self.world_map_open:
             if key in (pygame.K_m, pygame.K_ESCAPE):
                 self.world_map_open = False
+                self.world_map_dragging = False
+                self.world_map_sort_menu_open = False
+            elif key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
+                self.zoom_world_map(1.18)
+            elif key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                self.zoom_world_map(1 / 1.18)
+            elif key == pygame.K_HOME:
+                self.reset_world_map_view()
             return
         if self.shipyard_open:
             if self.ship_rename_mode:
@@ -83,12 +97,6 @@ class ControlsMixin:
                     self.shipyard_selection = (self.shipyard_selection + 1) % len(items)
             elif key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_e):
                 self.execute_shipyard_selection()
-            return
-        if self.conversation:
-            if key == pygame.K_ESCAPE:
-                self.conversation.finish()
-            else:
-                self.conversation.handle_key(key)
             return
         if self.journal_open:
             if key in (pygame.K_ESCAPE, pygame.K_j):
@@ -192,6 +200,29 @@ class ControlsMixin:
                 self.handle_port_menu_click(event.pos)
             elif event.type == pygame.MOUSEWHEEL:
                 self.handle_port_menu_scroll(-event.y, pygame.mouse.get_pos())
+            return
+        if self.world_map_open:
+            if event.type == pygame.KEYDOWN:
+                self.handle_keydown(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2, 3):
+                self.handle_world_map_click(event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2, 3):
+                self.world_map_dragging = False
+            elif event.type == pygame.MOUSEMOTION and self.world_map_dragging:
+                dx = event.pos[0] - self.world_map_drag_last[0]
+                dy = event.pos[1] - self.world_map_drag_last[1]
+                self.pan_world_map(dx, dy)
+                self.world_map_drag_last = event.pos
+            elif event.type == pygame.MOUSEWHEEL:
+                anchor = getattr(event, "mouse_pos", None)
+                if anchor is None and hasattr(event, "mouse_x") and hasattr(event, "mouse_y"):
+                    anchor = (event.mouse_x, event.mouse_y)
+                if anchor is None:
+                    anchor = pygame.mouse.get_pos()
+                chart = getattr(self, "world_map_chart_rect", None)
+                if chart is not None and not chart.collidepoint(anchor):
+                    anchor = chart.center
+                self.zoom_world_map(1.16 ** event.y, anchor)
             return
         if event.type == pygame.TEXTINPUT and self.save_dialog_open:
             allowed = "".join(character for character in event.text if character.isprintable() and character not in "/\\:")

@@ -33,6 +33,9 @@ class PortMenuMixin:
     def open_port_menu(self, page="overview"):
         if not self.docked_port:
             return False
+        if page == "jobs" and not self.intro_mission_completed():
+            self.toast_message("Speak with Captain Ward and complete his first voyage before taking other harbour work.", 4.5)
+            return False
         page_names = {name for _, entries in self.PORT_MENU_PAGES for name, _ in entries}
         self.port_menu_page = page if page in page_names else "overview"
         self.port_menu_open = True
@@ -310,6 +313,9 @@ class PortMenuMixin:
         return []
 
     def port_menu_set_page(self, page):
+        if page == "jobs" and not self.intro_mission_completed():
+            self.toast_message("Complete Captain Ward's first voyage before taking other harbour work.", 4.5)
+            return
         if page == "trade" and self.port_attitude(self.ports_by_name[self.docked_port]) == "HOSTILE":
             self.toast_message("The harbour's factors refuse to trade with a hostile captain.", 3.2)
             return

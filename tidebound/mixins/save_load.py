@@ -814,7 +814,8 @@ class SaveLoadMixin:
                 "A stray cannonball can turn a friendly ship hostile. Its faction and surviving squadron may remember the attack, so check your target before firing.",
             ]),
             ("CHARTS & DISCOVERIES", [
-                "M opens the full atlas. Gold route markers show your active story objective; discovered wrecks and reefs are marked on the chart.",
+                "M opens the full atlas. Use the wheel or +/- to zoom, drag to pan, and Home to reset the chart. The bottom selector groups and colours ports by faction or hostility; blue diamonds mark your living escorts.",
+                "Gold route markers show your active story objective; discovered wrecks and reefs are marked on the chart.",
                 "Some voyages require several port calls. Dock at each marked waypoint in order; the compass and gold marker advance after every completed stop. Reaching the final port too early will not complete the contract.",
                 "Red shaded water marks reefs. Give them room: crossing a reef damages hull, and NPC captains try to steer clear of them.",
                 "Approach a shipwreck and press R to inspect it. Surface cargo is safer; deep salvage can be more rewarding but may damage your ship.",

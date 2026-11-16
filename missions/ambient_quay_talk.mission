@@ -5,7 +5,7 @@ mission "Talk at the Quay"
     repeatable true
     cooldown 300
     max_triggers 1
-    priority 2
+    priority 1
     offer_expression "docked and flag('quay_talk_heard') == false"
     speaker offer "Two sailors at the quay"
     on offer
