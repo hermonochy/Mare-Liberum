@@ -22,26 +22,26 @@ mission "Ashcombe's Last Wager"
         conversation
             `At Port Azure, the former Company purser gives Bonny the last of Ashcombe’s sailing orders. They reveal that six ships are preparing to seize Havana and hold the governor as a bargaining piece.`
             `The Meridian Star is among them. The Company hopes its flagship will convince the harbour batteries to surrender without firing.`
-            `The fleet is larger than any you have faced. The free captains will engage the escorts while you seek an opening against the named ships.`
+            `Bonny folds her arms beside the chart. "If you mean to take this on, you should know what lies behind the simple version."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"All right. Put me on the course."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Why has someone gone to such trouble to hide this?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"My ship has enough trouble without this. I will pass."`
                     goto decline_job
             label more_details
-                `The fleet is larger than any you have faced. The free captains will engage the escorts while you seek an opening against the named ships.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "The fleet is larger than any you have faced. The free captains will engage the escorts while you seek an opening against the named ships."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Mark the course. My ship is ready."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Not this voyage. Find another ship."`
                         goto decline_job
             label accept_job
                 `Bonny gives you command of the outer line. “Save the harbour, captain. He will not take Havana today.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny rolls the chart closed. "I will not mistake a reluctant captain for a useful ally. Fair winds to you."`
                 close
     on accept
         log "Accepted Ashcombe's Last Wager. Defeat the six Company warships at the Governor's Road, then return to Havana to learn whether Ashcombe escaped."

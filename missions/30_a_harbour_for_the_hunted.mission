@@ -13,26 +13,26 @@ mission "A Harbour for the Hunted"
         conversation
             `The people of Saint's Refuge have sheltered deserters from the Meridian Company and need a guarantee they will not be handed back.`
             `Several deserters are skilled gunners who know the Meridian Star. They will join the free captains if the refuge council protects their families.`
-            `The council asks you to carry a written pledge from Redoubt and meet the deserters before Company patrols return.`
+            `The harbourmaster taps the margin of the ledger. "There are details I would not put on the noticeboard. Ask, and I will explain."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"You can count on my ship. What is the first step?"`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Before I agree, tell me what I might be sailing into."`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"My crew did not sign on for this kind of trouble."`
                     goto decline_job
             label more_details
-                `The council asks you to carry a written pledge from Redoubt and meet the deserters before Company patrols return.`
+                `The harbourmaster leans closer and speaks plainly. "The council asks you to carry a written pledge from Redoubt and meet the deserters before Company patrols return."`
                 choice
-                    `(Then I will see it done.)`
+                    `"I will do what I can. We should get underway."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"That risk is not mine to take."`
                         goto decline_job
             label accept_job
                 `The militia at Redoubt signs the pledge. “A sailor who lays down his arms should have a chance to live by them again.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster sets the papers aside. "Then I shall trouble you no further. Good sailing, captain."`
                 close
     on accept
         log "Accepted A Harbour for the Hunted. Take the pledge to Saint's Refuge and speak with the refuge council."

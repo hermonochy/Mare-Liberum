@@ -13,26 +13,26 @@ mission "The Stormhaven Refuge"
         conversation
             `Stormhaven has become a refuge for crews driven from their homes by Company patrols.`
             `The harbour is full of damaged fishing boats and families living under sailcloth. The harbourmaster needs spare rigging, medicine, and a message from Ysabel.`
-            `No battle is required. Bring the news that the free captains are coming and that the Company can be challenged.`
+            `The harbourmaster closes the ledger with one hand. "That is the public account. There is a little more to it, if you care to hear."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will take the job. Mark the place on my chart."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"What exactly are you afraid will happen?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"Keep me out of it. I have other waters to sail."`
                     goto decline_job
             label more_details
-                `No battle is required. Bring the news that the free captains are coming and that the Company can be challenged.`
+                `The harbourmaster leans closer and speaks plainly. "No battle is required. Bring the news that the free captains are coming and that the Company can be challenged."`
                 choice
-                    `(Then I will see it done.)`
+                    `"I will take the next leg. Give me the heading."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I will keep clear of this matter. Good luck."`
                         goto decline_job
             label accept_job
                 `Ysabel gives you a list of safe coves and asks you to tell the refugees that the free captains have not forgotten them.`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster folds the posting. "Very well. You have your own course to keep, and I have other captains to ask."`
                 close
     on accept
         log "Accepted The Stormhaven Refuge. Deliver Ysabel's message to Harbourmaster Fen at Stormhaven."

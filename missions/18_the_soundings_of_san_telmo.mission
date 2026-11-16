@@ -14,26 +14,26 @@ mission "The Soundings of San Telmo"
         conversation
             `The magistrate needs proof that the Company is preparing to close the western convoy route.`
             `A pilot at San Telmo has found new buoys laid across the old passage. Some are false markers intended to drive ships toward hidden guns.`
-            `You must carry the magistrate's warrant and compare the pilot's soundings with the official sea chart.`
+            `Calderon rests a hand on the table. "There is more to this than the order itself. Ask what concerns you."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"Let us see where this trail leads. I am in."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"You are choosing your words carefully. Why?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I cannot spare the risk or the men."`
                     goto decline_job
             label more_details
-                `You must carry the magistrate's warrant and compare the pilot's soundings with the official sea chart.`
+                `Captain Ines Calderon leans closer and speaks plainly. "You must carry the magistrate's warrant and compare the pilot's soundings with the official sea chart."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then I will see it done. No more delays."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I will not be persuaded. Farewell."`
                         goto decline_job
             label accept_job
                 `Ortez seals the warrant with red wax. “A false buoy can sink more ships than a broadside. Find the truth before the next convoy sails.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Calderon turns back to the table. "Very well. I will not put your crew in danger against your judgment."`
                 close
     on accept
         log "Accepted The Soundings of San Telmo. Sail to San Telmo and collect the pilot's new chart from Captain Ines Calderon."

@@ -11,28 +11,28 @@ mission "The Convoy That Never Arrived"
         has "A Name Scratched in Brass: done"
     on offer
         conversation
-            `Investigate a merchant convoy whose ships vanished without a battle or wreckage.`
-            `Harbourmaster Rojas studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Three merchant captains have filed reports about a convoy that never reached port. There was no distress signal, no wreckage, and no survivors to say which way the ships turned.`
+            `Harbourmaster Rojas spreads the reports across the desk. "Ships do not simply vanish from a clear sea. Either someone took them, or someone made certain no one looked in the right place. I want the last known course checked against the expedition's records."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will help you get to the bottom of it."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Who else knows about this?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I will leave this to a captain with fewer reservations."`
                     close
             label details
-                `Harbourmaster Rojas lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Rojas points to two entries in the harbour book. "The convoy's departure was entered, but its arrival was never written down. Find the discrepancy. If the same hand altered both records, we may finally have a name."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"I will take the risk. Put the destination on my chart."`
                         accept
-                    `(Not today.)`
+                    `"I have other waters to cross. Good day."`
                         close
     on accept
         log "Accepted The Convoy That Never Arrived. Investigate a merchant convoy whose ships vanished without a battle or wreckage."
     on visit
         conversation
-            `Harbourmaster Rojas receives you at Santa Isabela. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Santa Isabela, Rojas lays the convoy reports beside the older expedition papers. "No battle, no wreck, no account of the cargo," Rojas says. "That is not a lost convoy. That is a convoy someone wanted erased."`
     on complete
         conversation
-            `Harbourmaster Rojas thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Rojas gathers the reports and ties them with cord. "I will keep copies in the harbour archive. If a governor asks for them, he can ask in front of the whole council. We are done letting one seal make a truth disappear."`
         log "Completed The Convoy That Never Arrived. Received 1200 gold. Investigate a merchant convoy whose ships vanished without a battle or wreckage."

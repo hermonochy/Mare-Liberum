@@ -13,26 +13,26 @@ mission "The Pilot's Ledger"
         conversation
             `A rescued pilot has a ledger listing Company ships, cargoes, and secret rendezvous points.`
             `The ledger is written in shorthand. Only a retired clerk at Port Azure can read it, and Company agents are watching the coast.`
-            `The names include ordinary merchants as well as privateers. Someone is financing the operation through respectable trading houses.`
+            `The harbourmaster lowers their voice. "I have told you what the work is. The reason for it is a different matter."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will take the job. Mark the place on my chart."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"What exactly are you afraid will happen?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"Keep me out of it. I have other waters to sail."`
                     goto decline_job
             label more_details
-                `The names include ordinary merchants as well as privateers. Someone is financing the operation through respectable trading houses.`
+                `The harbourmaster leans closer and speaks plainly. "The names include ordinary merchants as well as privateers. Someone is financing the operation through respectable trading houses."`
                 choice
-                    `(Then I will see it done.)`
+                    `"I will take the next leg. Give me the heading."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I will keep clear of this matter. Good luck."`
                         goto decline_job
             label accept_job
                 `The harbourmaster presses the ledger into your hands. “A quiet delivery, captain. The fewer people who know what you carry, the better.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster glances at the harbour. "No offence taken. There are always ships coming in with time to spare."`
                 close
     on accept
         log "Accepted The Pilot's Ledger. Carry the ledger to Elian Rusk at Port Azure. Keep it below deck and out of the inspectors' sight."

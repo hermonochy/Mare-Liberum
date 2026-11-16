@@ -1,0 +1,9 @@
+mission "An Uncharted Cay"
+    category "event"
+    event at_sea and speed > 25 and distance_to_port("Port Royal") > 3200 and flag('uncharted_cay_created') == false
+    event_delay 12 28
+    event_action spawn_island "Saint Elmo Cay" 1750 900 340
+    event_on_complete journal "A low green cay has been sighted and added to the chart. It was absent from the old pilot books."
+    event_on_complete toast "NEW LAND SIGHTED · SAINT ELMO CAY" 6
+    event_max_triggers 1
+    event_pause_while_docked true

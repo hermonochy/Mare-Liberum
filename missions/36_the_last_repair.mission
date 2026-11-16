@@ -13,26 +13,26 @@ mission "The Last Repair"
         conversation
             `The free captains need the Meridian Star's repair records to learn how much damage the flagship can survive.`
             `A shipwright who fled the yard is hiding at Mermaid's Rest. He has a copy of the damage ledger and knows which timbers were replaced in haste.`
-            `The records will tell you whether the flagship can withstand another full broadside or whether one careful strike could end the chase.`
+            `The harbourmaster closes the ledger with one hand. "That is the public account. There is a little more to it, if you care to hear."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will put my ship to it. Let us get underway."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Why ask a captain instead of going to the authorities?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I would rather not have my name in these papers."`
                     goto decline_job
             label more_details
-                `The records will tell you whether the flagship can withstand another full broadside or whether one careful strike could end the chase.`
+                `The harbourmaster leans closer and speaks plainly. "The records will tell you whether the flagship can withstand another full broadside or whether one careful strike could end the chase."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Agreed. Let us make certain the truth reaches daylight."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I have decided. I will not be sailing."`
                         goto decline_job
             label accept_job
                 `Fen gives you the shipwright's description. “He is no fighter, captain. Bring him back alive and let him do his talking ashore.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster glances at the harbour. "No offence taken. There are always ships coming in with time to spare."`
                 close
     on accept
         log "Accepted The Last Repair. Find the shipwright at Mermaid's Rest and bring his repair ledger to the fleet."

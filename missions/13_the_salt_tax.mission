@@ -13,26 +13,26 @@ mission "The Salt Tax"
         conversation
             `The people of Isla Verde are being charged a new harbour tax by agents claiming to speak for the Meridian Company.`
             `Tomas has copied the Company tariff book. It lists payments demanded from fishing boats, water sellers, and even the chapel that shelters shipwrecked sailors.`
-            `The Company insists the fees are lawful. The islanders say no one voted for them, and the governor who signed the charter has never visited the reach.`
+            `The harbourmaster glances toward the quay before speaking again. "The posting tells you where to go. It does not tell you why I am asking."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"All right. Put me on the course."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Why has someone gone to such trouble to hide this?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"My ship has enough trouble without this. I will pass."`
                     goto decline_job
             label more_details
-                `The Company insists the fees are lawful. The islanders say no one voted for them, and the governor who signed the charter has never visited the reach.`
+                `The harbourmaster leans closer and speaks plainly. "The Company insists the fees are lawful. The islanders say no one voted for them, and the governor who signed the charter has never visited the reach."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Mark the course. My ship is ready."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Not this voyage. Find another ship."`
                         goto decline_job
             label accept_job
                 `Tomas gives you a sealed copy of the tariff. “Ink can be more dangerous than powder when the wrong man reads it.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster shuts the ledger. "I had hoped to settle this before the next tide, but I will ask elsewhere."`
                 close
     on accept
         log "Accepted The Salt Tax. Take the tariff book to Sister Agnes at Saint Brigid. She keeps records of the old fishing rights and can prove the new tax was never agreed."

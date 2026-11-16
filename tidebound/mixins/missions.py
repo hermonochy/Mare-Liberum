@@ -1,4 +1,5 @@
 from ..common import *
+from ..mission_expression import MissionExpression, MissionExpressionError
 
 
 class MissionMixin:
@@ -12,6 +13,13 @@ class MissionMixin:
             return None
         return next((mission for mission in self.missions if mission.mission_id == self.active_mission_id), None)
 
+    def start_active_mission_hook(self, event_name):
+        mission = self.active_mission()
+        if mission and mission.sections.get(event_name):
+            self.start_conversation(mission, event_name)
+            return True
+        return False
+
     def mission_state(self, mission):
         return self.mission_states.get(mission.mission_id, "available")
 
@@ -21,6 +29,39 @@ class MissionMixin:
             matching = next((item for item in self.missions if item.title == target or item.name == target), None)
             if matching is None or self.mission_state(matching) != "done":
                 return False
+        expression = getattr(mission, "offer_expression", "")
+        if expression:
+            try:
+                return self.evaluate_mission_script_expression(expression)
+            except MissionExpressionError:
+                return False
+        return True
+
+    def mission_offer_location_matches(self, mission):
+        location = str(getattr(mission, "offer_at", "port") or "port").lower()
+        if location == "anywhere":
+            return True
+        if location == "sea":
+            return self.docked_port is None
+        if location == "port":
+            return self.docked_port is not None
+        if location.startswith("near:"):
+            port = self.ports_by_name.get(location.split(":", 1)[1].strip())
+            return bool(port and math.hypot(port.x - self.ship_x, port.y - self.ship_y) <= 1500.0)
+        if location in {"near_ship", "near_vessel"}:
+            vessels = [ship for ship in self.traffic_ships if ship.hull > 0]
+            vessels.extend(ship for ship in self.pirates if not ship.dead and ship.hull > 0)
+            return any(math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) <= 650.0 for ship in vessels)
+        if location in {"near_wreck", "near_shipwreck"}:
+            return any(math.hypot(site.x - self.ship_x, site.y - self.ship_y) <= 700.0 for site in self.shipwrecks if not site.surface_salvaged)
+        if location.startswith("region:"):
+            return self.current_player_region() == location.split(":", 1)[1].strip()
+        return self.docked_port == location
+
+    def mission_is_visible(self, mission):
+        for expression in (getattr(mission, "show_expression", ""), getattr(mission, "display_expression", "")):
+            if expression and not self.evaluate_mission_script_expression(expression):
+                return False
         return True
 
     def available_missions_at_port(self):
@@ -28,9 +69,13 @@ class MissionMixin:
             return []
         available = [
             mission for mission in self.missions
-            if mission.category != "intro"
+            if mission.category not in {"intro", "ambient", "event"}
+            and not mission.ambient
+            and not mission.event_expression
             and self.mission_state(mission) == "available"
-            and mission.source == self.docked_port
+            and (mission.source == self.docked_port or (mission.offer_at in {"anywhere", "port"} and not mission.source))
+            and self.mission_offer_location_matches(mission)
+            and self.mission_is_visible(mission)
             and self.requirements_met(mission)
         ]
         priority = {"main": 0, "side": 1}
@@ -43,6 +88,8 @@ class MissionMixin:
             mission for mission in self.missions
             if mission.category == "intro"
             and mission.source == self.docked_port
+            and self.mission_offer_location_matches(mission)
+            and self.mission_is_visible(mission)
             and self.mission_state(mission) == "available"
             and self.requirements_met(mission)
         ), None)
@@ -170,6 +217,12 @@ class MissionMixin:
         return "a major ocean crossing"
 
     def mission_route_brief(self, mission):
+        if mission.objective_type == "explore":
+            return f"Objective: sail to {mission.objective_target} and make a close survey of the island."
+        if mission.objective_type == "salvage":
+            return f"Objective: recover the surface and deep salvage from the wreck {mission.objective_target}."
+        if mission.objective_type == "discover_wreck":
+            return f"Objective: locate and identify the wreck {mission.objective_target}."
         distance = self.mission_route_distance(mission)
         description = self.mission_route_description(distance)
         route = f"The full chart distance is about {distance:,.0f} chart units: {description}. Allow extra time to skirt reefs and shoals."
@@ -189,6 +242,14 @@ class MissionMixin:
             if mission.battlefield_x is not None and mission.battlefield_y is not None:
                 return mission.battlefield, mission.battlefield_x, mission.battlefield_y, "battlefield"
             return mission.battlefield or "Enemy waters", self.ship_x, self.ship_y, "battlefield"
+        if mission.objective_type == "explore":
+            target = self.mission_objective_coordinates(mission)
+            if target:
+                return mission.objective_target, target[0], target[1], "island"
+        if mission.objective_type in {"salvage", "discover_wreck"}:
+            wreck = next((item for item in self.shipwrecks if item.wreck_id == mission.objective_target or item.name == mission.objective_target), None)
+            if wreck:
+                return wreck.name, wreck.x, wreck.y, "wreck"
         waypoints = getattr(mission, "waypoints", [])
         waypoint_index = max(0, int(getattr(self, "mission_waypoint_index", 0)))
         if waypoint_index < len(waypoints):
@@ -232,6 +293,12 @@ class MissionMixin:
             if self.mission_returning:
                 return f"RETURN TO {mission.destination.upper()}  •  berth there for your debrief"
             return f"SAIL TO {mission.battlefield.upper()}  •  SINK {self.mission_kills}/{mission.objective_count} TARGET SHIPS"
+        if mission.objective_type == "explore":
+            return f"EXPLORE {mission.objective_target.upper()}  •  CLOSE THE DISTANCE TO THE ISLAND"
+        if mission.objective_type == "salvage":
+            return f"SALVAGE THE WRECK OF {mission.objective_target.upper()}"
+        if mission.objective_type == "discover_wreck":
+            return f"LOCATE THE WRECK OF {mission.objective_target.upper()}"
         waypoints = getattr(mission, "waypoints", [])
         waypoint_index = max(0, int(getattr(self, "mission_waypoint_index", 0)))
         if waypoint_index < len(waypoints):
@@ -241,12 +308,16 @@ class MissionMixin:
             return f"ALL PORT CALLS COMPLETE  •  SAIL TO {mission.destination.upper()} FOR FINAL DELIVERY"
         return f"SAIL TO {mission.destination.upper()}  •  follow the gold route on your chart"
 
-    def accept_mission(self, mission):
+    def accept_mission(self, mission, start_accept_dialogue=True):
         if mission is None:
-            return
+            return False
+        accept_expression = getattr(mission, "accept_expression", "")
+        if accept_expression and not self.evaluate_mission_script_expression(accept_expression):
+            self.toast_message("This contract is not yet available for acceptance.", 4.0)
+            return False
         if self.active_mission_id is not None:
             self.toast_message("You already have a voyage to finish.")
-            return
+            return False
         self.mission_states[mission.mission_id] = "active"
         self.active_mission_id = mission.mission_id
         self.mission_kills = 0
@@ -255,10 +326,8 @@ class MissionMixin:
         self.mission_completion_started = False
         self.mission_fleet_spawned = False
         self.mission_result_timer = 0.0
+        self.mission_deadline_remaining = max(0.0, float(getattr(mission, "deadline_seconds", 0.0)))
         self.add_journal(f"Accepted: {mission.name}. {mission.description}")
-        for node in mission.sections.get("accept", []):
-            if isinstance(node, CommandNode) and node.command == "log":
-                self.add_journal(node.value)
         if mission.objective_type == "kills":
             self.spawn_mission_fleet(mission)
             self.toast_message(
@@ -267,6 +336,9 @@ class MissionMixin:
             )
         else:
             self.toast_message(f"Voyage accepted: {mission.name}. {self.mission_route_brief(mission)}", 5.0)
+        if start_accept_dialogue and mission.sections.get("accept"):
+            self.start_conversation(mission, "accept")
+        return True
 
     def start_conversation(self, mission, event, on_end=None):
         nodes = mission.sections.get(event, []) if mission else []
@@ -377,7 +449,13 @@ class MissionMixin:
                     message = f"The harbourmaster taps your chart. \"Your business is not finished. Sail to {active.destination}, captain. Follow the gold route on your chart.\""
             else:
                 message = "The harbourmaster turns a page in the ledger. \"No new work just now. Check the notice board another day, or listen for news in the taverns.\""
-            self.start_custom_conversation("Harbourmaster", [TextNode(message)])
+            nodes = [TextNode(message)]
+            if active:
+                nodes.append(ChoiceNode([
+                    OptionNode("Keep the contract. I will continue the voyage.", [CommandNode("close")]),
+                    OptionNode("Abandon this contract.", [CommandNode("abort_mission")]),
+                ]))
+            self.start_custom_conversation("Harbourmaster", nodes)
             return
         if len(available) == 1:
             self.start_conversation(available[0], "offer")
@@ -492,9 +570,125 @@ class MissionMixin:
         message = self.news_by_port.get(self.docked_port, "The harbour is full of rumours, though none worth repeating.")
         self.start_custom_conversation("A sailor at the quay", [TextNode(message)])
 
+    def mission_objective_coordinates(self, mission):
+        target = str(getattr(mission, "objective_target", ""))
+        for island in getattr(self, "dynamic_islands", []):
+            if island.get("name") == target:
+                polygon = island.get("polygon", [])
+                if polygon:
+                    return (sum(x for x, _ in polygon) / len(polygon), sum(y for _, y in polygon) / len(polygon))
+        for site in self.treasure_sites:
+            if site.island_name == target or site.treasure_id == target:
+                polygon = site.polygon
+                return (sum(x for x, _ in polygon) / len(polygon), sum(y for _, y in polygon) / len(polygon))
+        return None
+
+    def mission_objective_met(self, mission):
+        target = str(getattr(mission, "objective_target", ""))
+        if mission.objective_type == "explore":
+            point = self.mission_objective_coordinates(mission)
+            return bool(point and math.hypot(point[0] - self.ship_x, point[1] - self.ship_y) <= 900.0)
+        if mission.objective_type == "salvage":
+            wreck = next((item for item in self.shipwrecks if item.wreck_id == target or item.name == target), None)
+            return bool(wreck and wreck.fully_salvaged)
+        if mission.objective_type == "discover_wreck":
+            wreck = next((item for item in self.shipwrecks if item.wreck_id == target or item.name == target), None)
+            return bool(wreck and wreck.discovered)
+        if mission.objective_type == "visit_port":
+            return bool(self.world_flags.get(f"visited_port:{target}", False))
+        if mission.objective_type == "event":
+            return self.mission_event_states.get(target, {}).get("status") == "completed"
+        return False
+
+    def fail_active_mission(self, mission=None, reason="The contract has been marked as failed.", event_name="fail"):
+        mission = mission or self.active_mission()
+        if mission is None:
+            return False
+        if self.mission_state(mission) != "active":
+            return False
+        self.mission_states[mission.mission_id] = "failed"
+        self.active_mission_id = None
+        self.mission_kills = 0
+        self.mission_waypoint_index = 0
+        self.mission_returning = False
+        self.mission_completion_started = False
+        self.mission_fleet_spawned = False
+        self.mission_deadline_remaining = 0.0
+        self.add_journal(f"Failed: {mission.name}. {reason}")
+        self.toast_message(f"CONTRACT FAILED · {mission.name}", 6.0)
+        self.start_conversation(mission, event_name if mission.sections.get(event_name) else "fail")
+        return True
+
+    def abort_active_mission(self, start_abort_dialogue=True):
+        mission = self.active_mission()
+        if mission is None:
+            return None
+        self.mission_states[mission.mission_id] = "failed"
+        self.active_mission_id = None
+        self.mission_kills = 0
+        self.mission_waypoint_index = 0
+        self.mission_returning = False
+        self.mission_completion_started = False
+        self.mission_fleet_spawned = False
+        self.mission_deadline_remaining = 0.0
+        self.pirates = [
+            pirate for pirate in self.pirates
+            if pirate.mission_id != mission.mission_id or not pirate.objective_target
+        ]
+        self.add_journal(f"Abandoned: {mission.name}. The contract has been marked as failed.")
+        self.toast_message(f"CONTRACT ABANDONED · {mission.name}", 5.0)
+        if start_abort_dialogue and mission.sections.get("abort"):
+            self.start_conversation(mission, "abort")
+        return mission
+
+    def update_mission_script_conditions(self, dt):
+        active = self.active_mission()
+        if active is not None:
+            if active.objective_type in {"explore", "salvage", "discover_wreck", "visit_port", "event"} and self.mission_objective_met(active):
+                if not self.mission_completion_started:
+                    self.mission_completion_started = True
+                    self.start_conversation(active, "complete", lambda: self.complete_mission(active))
+                return
+            if self.mission_deadline_remaining > 0.0:
+                self.mission_deadline_remaining = max(0.0, self.mission_deadline_remaining - dt)
+                if self.mission_deadline_remaining <= 0.0:
+                    self.fail_active_mission(active, "The agreed deadline passed before the work was completed.", "timeup")
+                    return
+            expression = getattr(active, "fail_expression", "")
+            if expression:
+                try:
+                    if self.evaluate_mission_script_expression(expression):
+                        self.fail_active_mission(active, "A condition in the contract was broken.")
+                        return
+                except MissionExpressionError as error:
+                    self.add_journal(f"Mission '{active.title}' has an invalid failure condition: {error}")
+            expression = getattr(active, "complete_expression", "")
+            if expression and not self.mission_completion_started:
+                try:
+                    if self.evaluate_mission_script_expression(expression):
+                        self.mission_completion_started = True
+                        self.start_conversation(active, "complete", lambda: self.complete_mission(active))
+                        return
+                except MissionExpressionError as error:
+                    self.add_journal(f"Mission '{active.title}' has an invalid completion condition: {error}")
+            return
+        if self.conversation is not None:
+            return
+        for mission in self.missions:
+            expression = getattr(mission, "start_expression", "")
+            if not expression or self.mission_state(mission) != "available":
+                continue
+            try:
+                if self.evaluate_mission_script_expression(expression):
+                    self.accept_mission(mission)
+                    return
+            except MissionExpressionError as error:
+                self.add_journal(f"Mission '{mission.title}' has an invalid start condition: {error}")
+                self.mission_states[mission.mission_id] = "failed"
+
     def complete_mission(self, mission):
         self.reward_mission_diplomacy(mission)
-        self.mission_states[mission.mission_id] = "done"
+        self.mission_states[mission.mission_id] = "available" if getattr(mission, "repeatable", False) else "done"
         self.gold += mission.reward
         self.add_journal(f"Completed {mission.name}. Received {mission.reward} gold.")
         self.mission_result_title = mission.name
@@ -507,6 +701,7 @@ class MissionMixin:
         self.mission_returning = False
         self.mission_completion_started = False
         self.mission_fleet_spawned = False
+        self.mission_deadline_remaining = 0.0
         self.pirates = [
             pirate for pirate in self.pirates
             if pirate.mission_id != mission.mission_id or not pirate.objective_target
@@ -515,6 +710,8 @@ class MissionMixin:
     def trigger_port_visit(self, port):
         mission = self.active_mission()
         if not mission:
+            return
+        if mission.objective_type in {"explore", "salvage", "discover_wreck", "visit_port", "event"}:
             return
 
         waypoints = getattr(mission, "waypoints", [])
@@ -536,6 +733,10 @@ class MissionMixin:
             event = f"waypoint_{waypoint_index + 1}"
             if mission.sections.get(event):
                 self.start_conversation(mission, event)
+            elif mission.sections.get("stopover"):
+                self.start_conversation(mission, "stopover")
+            elif mission.sections.get("waypoint"):
+                self.start_conversation(mission, "waypoint")
             return
 
         if mission.destination != port.name:
@@ -571,6 +772,8 @@ class MissionMixin:
                 4.0,
             )
             self.add_journal(f"Mission target destroyed: {pirate.name} ({self.mission_kills}/{mission.objective_count}).")
+            if mission.sections.get("kill"):
+                self.start_conversation(mission, "kill")
             if self.mission_kills >= mission.objective_count:
                 self.mission_returning = True
                 self.toast_message(
@@ -604,7 +807,11 @@ class MissionMixin:
         self.ship_vy = 0.0
         self.near_port = port
         self.toast_message(f"Made fast at {port.name}, berth {slot + 1}. Q: speak to the harbourmaster.", 4.0)
-        self.trigger_port_visit(port)
+        active = self.active_mission()
+        if active and active.sections.get("enter"):
+            self.start_conversation(active, "enter", lambda: self.trigger_port_visit(port))
+        else:
+            self.trigger_port_visit(port)
         self.complete_day_job_at_port(port)
         try:
             self.save_game(AUTOSAVE_SLOT_NAME, notify=False)
@@ -621,4 +828,6 @@ class MissionMixin:
         if hasattr(self, "close_port_menu"):
             self.close_port_menu()
         self.docked_port = None
+        if not self.start_active_mission_hook("depart"):
+            self.start_active_mission_hook("leave")
         self.toast_message("Cast off! Keep the wind in your sails and the rocks off your keel.", 3.0)

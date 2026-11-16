@@ -147,8 +147,6 @@ class ControlsMixin:
         elif key == pygame.K_q:
             if self.docked_port:
                 self.open_port_talk()
-            else:
-                self.fire_chaser_battery("bow")
         elif key == pygame.K_b:
             if self.docked_port:
                 self.open_shipyard()
@@ -163,11 +161,13 @@ class ControlsMixin:
                     self.toast_message("Too much way on! Reef the sails and come alongside slowly.", 3.0)
                 else:
                     self.dock(self.near_port)
-            else:
-                self.fire_chaser_battery("stern")
-        elif key == pygame.K_z:
+        elif key == pygame.K_w:
+            self.fire_chaser_battery("bow")
+        elif key == pygame.K_s:
+            self.fire_chaser_battery("stern")
+        elif key == pygame.K_a:
             self.set_cannon_held(-1, True)
-        elif key == pygame.K_x:
+        elif key == pygame.K_d:
             self.set_cannon_held(1, True)
         elif key == pygame.K_f:
             self.set_fleet_order("fight")
@@ -206,9 +206,9 @@ class ControlsMixin:
         elif event.type == pygame.KEYDOWN:
             self.handle_keydown(event)
         elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_z:
+            if event.key == pygame.K_a:
                 self.set_cannon_held(-1, False)
-            elif event.key == pygame.K_x:
+            elif event.key == pygame.K_d:
                 self.set_cannon_held(1, False)
         elif event.type == pygame.MOUSEBUTTONDOWN and self.job_board_open and event.button == 1:
             self.handle_day_job_board_click(event.pos)

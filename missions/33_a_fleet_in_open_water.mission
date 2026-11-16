@@ -20,26 +20,26 @@ mission "A Fleet in Open Water"
         conversation
             `At Port Azure, Commodore Bonny has received the convoy master’s report: four hired Company ships have formed a blockade in the Blue Expanse between the old Caribbean and the Leeward Reach.`
             `They are not protecting a port. They are forcing the free captains into a narrow approach where the Meridian Star can strike from behind.`
-            `The battle is in open ocean, with no nearby island to shelter behind. Keep your escorts together and use the room to manoeuvre.`
+            `Bonny turns the paper so the light catches its marks. "The route is only part of it. I would rather you knew the risk before you take the work."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will help you get to the bottom of it."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Who else knows about this?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will leave this to a captain with fewer reservations."`
                     goto decline_job
             label more_details
-                `The battle is in open ocean, with no nearby island to shelter behind. Keep your escorts together and use the room to manoeuvre.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "The battle is in open ocean, with no nearby island to shelter behind. Keep your escorts together and use the room to manoeuvre."`
                 choice
-                    `(Then I will see it done.)`
+                    `"I will take the risk. Put the destination on my chart."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I have other waters to cross. Good day."`
                         goto decline_job
             label accept_job
                 `Bonny points to a broad empty patch of sea. “No reefs, no coves, no safe anchorage. Make the open water work for you.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny gives a small nod. "Then that is settled. I will find another ship, and you can keep your own counsel."`
                 close
     on accept
         log "Accepted A Fleet in Open Water. Sink the four blockade ships in the Blue Expanse, then sail to Blackwater Reach for the next signal."

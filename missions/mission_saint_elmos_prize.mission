@@ -1,0 +1,21 @@
+mission "The Paymaster's Strongbox"
+    category "side"
+    offer_at "near_wreck"
+    offer_expression "at_sea and near_wreck('saint_elmos_prize') and wreck_known('saint_elmos_prize')"
+    objective salvage "saint_elmos_prize"
+    reward 340
+    deadline 1800
+    speaker offer "A salvage runner"
+    speaker complete "A salvage runner"
+    on offer
+        conversation
+            `A narrow salvage boat comes around the wreck, its crew hauling a chain of soaked timbers aboard. The man at the tiller studies your ship, then points towards the broken Spanish barque.`
+            `"Saint Elmo's Prize," he says. "She went down with a colonial payroll aboard. I've taken what I can from the upper deck, but the strongbox is still below and the powder locker makes the whole job dangerous."`
+            `He offers you a folded salvage claim. "I cannot manage the deep work with this boat. Bring up the rest of the cargo, and the claim is yours. I'll take a fair share for finding it."`
+            choice
+                `"I'll finish the salvage. Keep your boat clear while I work."`
+                    accept
+                `"I won't risk my crew for a rumour about a strongbox."`
+                    defer
+    on complete
+        `The salvage runner checks the recovered cargo and nods with satisfaction. "That's the last of it. The strongbox is empty of coin, but the barque's remaining stores and a few pieces of silver are worth the trouble." He signs the claim and leaves you to divide the proceeds.`

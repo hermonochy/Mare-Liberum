@@ -11,28 +11,28 @@ mission "The Wreck of the Saint Oria"
         has "The False Beacon: done"
     on offer
         conversation
-            `Recover a logbook from the expedition's flagship, wrecked beyond the outer reef.`
-            `Marda Quill studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The outer reef has given up a section of hull from the Saint Oria. The ship's name is still visible beneath the weed, and the wreck lies beyond the usual salvage grounds.`
+            `Marda Quill studies the name on the timber. "The Saint Oria was the expedition's flagship. If her logbook survived, it may tell us why she was sent west and why no official chart admits she was ever there."`
             choice
-                `(I will help uncover what happened.)`
+                `"You can count on my ship. What is the first step?"`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Before I agree, tell me what I might be sailing into."`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"My crew did not sign on for this kind of trouble."`
                     close
             label details
-                `Marda Quill lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Marda marks the reef on your chart. "The wreck lies beyond the outer reef. The water is not forgiving, so take only what you can recover safely. I want the logbook, not another ship added to the wreck list."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"I will do what I can. We should get underway."`
                         accept
-                    `(Not today.)`
+                    `"That risk is not mine to take."`
                         close
     on accept
         log "Accepted The Wreck of the Saint Oria. Recover a logbook from the expedition's flagship, wrecked beyond the outer reef."
     on visit
         conversation
-            `Marda Quill receives you at Wreckers' Moon. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Wreckers' Moon, Marda examines the logbook's water-stained pages. The entries point to a place deliberately removed from every official chart. "They were sent farther west than the public orders admit," she says. "The log may finally tell us why."`
     on complete
         conversation
-            `Marda Quill thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Marda closes the logbook with both hands. "This is the first account from someone aboard the Saint Oria. It deserves to be read, not locked away. We will copy it and let the island councils judge what it means."`
         log "Completed The Wreck of the Saint Oria. Received 1785 gold. Recover a logbook from the expedition's flagship, wrecked beyond the outer reef."

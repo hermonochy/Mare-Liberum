@@ -14,26 +14,26 @@ mission "A Chart Beyond the Trade Winds"
         conversation
             `A stranger arrives with a salt-stained chart bearing the mark of a survey ship that vanished beyond the eastern trade winds.`
             `Nell recognises the seal as belonging to the Meridian Company, a chartered concern buying harbours and hiring private warships. The chart points east to the Windward Reach, beyond the nearest familiar ports but still within a manageable passage.`
-            `The chart is not a treasure map. It is a survey of deep-water routes, anchorages, and fresh-water springs. Whoever owns it could move a fleet unseen.`
+            `Bonny rests two fingers on the chart. "There is a reason I have not put all of this in the public notice. Ask, and I will tell you what I can."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will lend a hand. Tell me where to begin."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"There is more here than you have told me. What is it?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not put my crew between old enemies."`
                     goto decline_job
             label more_details
-                `The chart is not a treasure map. It is a survey of deep-water routes, anchorages, and fresh-water springs. Whoever owns it could move a fleet unseen.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "The chart is not a treasure map. It is a survey of deep-water routes, anchorages, and fresh-water springs. Whoever owns it could move a fleet unseen."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then you have my word. I will see it through."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Then we part here. Fair winds."`
                         goto decline_job
             label accept_job
                 `Nell marks the first new harbour on your chart. “This is beyond the waters Vane usually sailed. Keep your eyes open; the old ports are only the beginning.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny gives a small nod. "Then that is settled. I will find another ship, and you can keep your own counsel."`
                 close
     on accept
         log "Accepted A Chart Beyond the Trade Winds. Carry the chart to Isla Verde and find the pilot named Tomas Vale. He once mapped the Windward Reach for the Company."

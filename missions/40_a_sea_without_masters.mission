@@ -15,24 +15,24 @@ mission "A Sea Without Masters"
             `Some island councils want the Company dissolved. Others want its warehouses returned to the people who built them. Bonny insists no new governor should inherit the same power under a different flag.`
             `The final journey is not a battle. Carry the signed harbour articles to Port Royal, where the captains and island councils will establish a shared sea charter.`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"You have my attention. What needs doing first?"`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Who stands to gain if the truth stays buried?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I have no wish to become a pawn in someone else's quarrel."`
                     goto decline_job
             label more_details
-                `The final journey is not a battle. Carry the signed harbour articles to Port Royal, where the captains and island councils will establish a shared sea charter.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "The final journey is not a battle. Carry the signed harbour articles to Port Royal, where the captains and island councils will establish a shared sea charter."`
                 choice
-                    `(Then I will see it done.)`
+                    `"All right. I will follow the evidence."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"My answer has not changed. I will not sail."`
                         goto decline_job
             label accept_job
                 `The Havana harbourmaster gives you the signed articles. “You have brought us a quieter sort of victory, captain. Let it last longer than the last one.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny folds the chart and gives you a level look. "Fair enough, captain. I would rather have your ship on the course, but I will not press a captain who has already made up their mind."`
                 close
     on accept
         log "Accepted A Sea Without Masters. Take the articles to Port Royal and attend the final council."

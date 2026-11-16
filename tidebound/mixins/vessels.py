@@ -70,9 +70,14 @@ class VesselsMixin:
         gun_count = min(max_broadside_guns(self.current_ship), fitted_guns)
         timers = self.cannon_battery_timers[side]
         rates = self.cannon_battery_rates[side]
-        cannon_profile = CANNON_TYPES[customisation["cannon_type"]]
-        base_reload = stats["reload"] * cannon_profile["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
+        sequence = cannon_loadout_sequence(
+            self.player_cannon_loadout(), self.current_ship,
+            customisation["cannon_type"], self.upgrades["cannons"],
+        )
         while len(timers) < gun_count:
+            gun_index = len(timers)
+            profile = CANNON_TYPES[sequence[min(gun_index, len(sequence) - 1)]]
+            base_reload = stats["reload"] * profile["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
             rate = base_reload * self.rng.uniform(0.84, 1.16)
             rates.append(rate)
             timers.append(self.rng.uniform(0.4, 1.2) * rate if self.cannon_first_volley_fired[side] else 0.0)
@@ -87,14 +92,32 @@ class VesselsMixin:
                           (getattr(ship, "hostile_to_player", False) or getattr(ship, "under_attack", False)))
         return min(candidates, key=lambda target: math.hypot(target.x - self.ship_x, target.y - self.ship_y), default=None)
 
+    def player_cannon_loadout(self):
+        selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
+        self.cannon_loadout = normalise_cannon_loadout(
+            getattr(self, "cannon_loadout", None), self.current_ship,
+            selected["cannon_type"], self.upgrades.get("cannons", 0),
+        )
+        return self.cannon_loadout
+
     def player_cannon_profile(self):
         selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
-        return CANNON_TYPES[selected["cannon_type"]], CANNON_MOUNTS[selected["cannon_mount"]]["mode"]
+        sequence = cannon_loadout_sequence(
+            self.player_cannon_loadout(), self.current_ship,
+            selected["cannon_type"], self.upgrades.get("cannons", 0),
+        )
+        return CANNON_TYPES[sequence[0]], CANNON_MOUNTS[selected["cannon_mount"]]["mode"]
 
     def fire_single_cannon(self, side, gun_index, gun_count, show_effect=False):
         heading = math.radians(self.ship_heading)
         forward = (math.cos(heading), math.sin(heading))
-        cannon_profile, mount_mode = self.player_cannon_profile()
+        _, mount_mode = self.player_cannon_profile()
+        selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
+        cannon_type = cannon_type_for_gun(
+            self.player_cannon_loadout(), self.current_ship, gun_index,
+            selected["cannon_type"], self.upgrades.get("cannons", 0),
+        )
+        cannon_profile = CANNON_TYPES[cannon_type]
         if mount_mode == "turrets":
             target = self.nearest_turret_target()
             if target is None:
@@ -131,7 +154,13 @@ class VesselsMixin:
         if self.chaser_cooldowns.get(end, 0.0) > 0.0:
             return
         stats = self.player_ship_stats()
-        cannon_profile, _ = self.player_cannon_profile()
+        selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
+        sequence = cannon_loadout_sequence(
+            self.player_cannon_loadout(), self.current_ship,
+            selected["cannon_type"], self.upgrades.get("cannons", 0),
+        )
+        cannon_type = sequence[-1]
+        cannon_profile = CANNON_TYPES[cannon_type]
         angle = math.radians(self.ship_heading + (180.0 if end == "stern" else 0.0))
         direction = (math.cos(angle), math.sin(angle))
         hull_length = SHIP_CLASSES[self.current_ship]["length"] * ship_customisation_effects(self.ship_customisation)["length"]
@@ -180,14 +209,14 @@ class VesselsMixin:
         if self.docked_port or self.player_sinking_active or self.player_lost:
             return
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
+        if keys[pygame.K_UP]:
             self.sail_setting = clamp(self.sail_setting + 0.58 * dt, 0.0, 1.0)
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        if keys[pygame.K_DOWN]:
             self.sail_setting = clamp(self.sail_setting - 0.75 * dt, 0.0, 1.0)
         rudder = 0.0
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        if keys[pygame.K_LEFT]:
             rudder -= 1.0
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        if keys[pygame.K_RIGHT]:
             rudder += 1.0
         speed = math.hypot(self.ship_vx, self.ship_vy)
         stats = self.player_ship_stats()
@@ -765,6 +794,16 @@ class VesselsMixin:
         self.mission_result_timer = max(0.0, self.mission_result_timer - dt)
         self.wind_angle = 24.0 + math.sin(self.world_time * 0.035) * 11.0
         self.wind_strength = 0.92 + math.sin(self.world_time * 0.06) * 0.08
+        wind_override = getattr(self, "mission_wind_override", None)
+        if wind_override:
+            wind_override["remaining"] = max(0.0, float(wind_override.get("remaining", 0.0)) - dt)
+            if wind_override["remaining"] > 0.0:
+                self.wind_angle = float(wind_override.get("angle", self.wind_angle)) % 360.0
+                self.wind_strength = max(0.0, min(1.0, float(wind_override.get("strength", self.wind_strength))))
+            else:
+                self.mission_wind_override = None
+        if hasattr(self, "update_mission_script_conditions"):
+            self.update_mission_script_conditions(dt)
         nearest_harbour = min((math.hypot(self.ship_x - port.x, self.ship_y - port.y) for port in self.ports), default=None)
         self.audio.update(
             dt, docked=bool(self.docked_port), near_port_distance=nearest_harbour,

@@ -13,26 +13,26 @@ mission "The Edge of the Chart"
         conversation
             `Captain Calderon has found a fresh chart leading beyond the Spanish Main to the Outer Antilles.`
             `The chart shows remote islands where the Company has established a private repair station. The waters are poorly sounded and currents are strong.`
-            `A navigator at Mermaid's Rest has crossed the passage before. He can guide you through the shoals and explain why the Company chose this strategically placed base just beyond the main Spanish Main trade lane.`
+            `Bonny folds her arms beside the chart. "If you mean to take this on, you should know what lies behind the simple version."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"You have my attention. What needs doing first?"`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Who stands to gain if the truth stays buried?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I have no wish to become a pawn in someone else's quarrel."`
                     goto decline_job
             label more_details
-                `A navigator at Mermaid's Rest has crossed the passage before. He can guide you through the shoals and explain why the Company chose this strategically placed base just beyond the main Spanish Main trade lane.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "A navigator at Mermaid's Rest has crossed the passage before. He can guide you through the shoals and explain why the Company chose this strategically placed base just beyond the main Spanish Main trade lane."`
                 choice
-                    `(Then I will see it done.)`
+                    `"All right. I will follow the evidence."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"My answer has not changed. I will not sail."`
                         goto decline_job
             label accept_job
                 `Calderon watches your ship prepare to leave. “Beyond these islands, the old charts end. Trust your compass, your crew, and the soundings you can take.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny gathers the papers. "I had hoped you would take it, but I will not ask twice. Keep your powder dry."`
                 close
     on accept
         log "Accepted The Edge of the Chart. Carry Calderon's chart to Navigator Ysabel at Mermaid's Rest."

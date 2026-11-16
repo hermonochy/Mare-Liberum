@@ -13,26 +13,26 @@ mission "A House Above the Reefs"
         conversation
             `The convoy manifests identify a Company storehouse above the reefs at Puerto Cielo.`
             `The harbour clerk has been ordered to destroy the old shipping records. He has sent a private request for help before the papers are burned.`
-            `The storehouse is guarded, but the original orders are hidden in the customs archive rather than the warehouse.`
+            `Calderon turns the chart toward you. "The route is the easy part. Before you agree, you should know what has made this so urgent."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will help you get to the bottom of it."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Who else knows about this?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will leave this to a captain with fewer reservations."`
                     goto decline_job
             label more_details
-                `The storehouse is guarded, but the original orders are hidden in the customs archive rather than the warehouse.`
+                `Captain Ines Calderon leans closer and speaks plainly. "The storehouse is guarded, but the original orders are hidden in the customs archive rather than the warehouse."`
                 choice
-                    `(Then I will see it done.)`
+                    `"I will take the risk. Put the destination on my chart."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I have other waters to cross. Good day."`
                         goto decline_job
             label accept_job
                 `The freed captains hand over their manifests. One asks you to remember that the cargo was ordinary food and medicine, not a king's treasure.`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Calderon rolls the chart closed. "Then I will find another ship. Keep clear of the Company patrols, captain; they are not in a forgiving mood."`
                 close
     on accept
         log "Accepted A House Above the Reefs. Carry the convoy manifests to Clerk Mateo at Puerto Cielo and help him secure the archive."

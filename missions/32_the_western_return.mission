@@ -14,26 +14,26 @@ mission "The Western Return"
         conversation
             `The free captains have called a council at Port Royal to plan the pursuit of Ashcombe.`
             `The Meridian Star sails west across open water. Its stores are low, but it remains faster and better armed than most ships in the islands.`
-            `Bring the patrol schedule and the deserters' testimony to Commodore Bonny. She will decide where the free fleet should intercept Ashcombe.`
+            `Bonny rests two fingers on the chart. "There is a reason I have not put all of this in the public notice. Ask, and I will tell you what I can."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will hear the whole story, then take the work."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"What have the records left out?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"There are limits to what I will take on. This is one."`
                     goto decline_job
             label more_details
-                `Bring the patrol schedule and the deserters' testimony to Commodore Bonny. She will decide where the free fleet should intercept Ashcombe.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "Bring the patrol schedule and the deserters' testimony to Commodore Bonny. She will decide where the free fleet should intercept Ashcombe."`
                 choice
-                    `(Then I will see it done.)`
+                    `"You can rely on me. I will start at once."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"No. Do not wait for me."`
                         goto decline_job
             label accept_job
                 `Last Light's harbourmaster watches your ship leave. “You have sailed beyond every chart I own, captain. Bring that knowledge home.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny rolls the chart closed. "I will not mistake a reluctant captain for a useful ally. Fair winds to you."`
                 close
     on accept
         log "Accepted The Western Return. Sail back to Port Royal and deliver the Outer Antilles reports to Commodore Bonny."

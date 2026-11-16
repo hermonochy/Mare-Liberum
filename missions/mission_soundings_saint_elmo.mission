@@ -1,0 +1,19 @@
+mission "Soundings at Saint Elmo Cay"
+    category "side"
+    offer_at "anywhere"
+    offer_expression "island_known('Saint Elmo Cay') and mission('Soundings at Saint Elmo Cay') == 'available'"
+    objective explore "Saint Elmo Cay"
+    reward 260
+    speaker offer "A hydrographer's note"
+    speaker complete "A hydrographer's note"
+    on offer
+        conversation
+            `A message crackles through the speaking trumpet on your quarterdeck. A hydrographer from the nearest survey vessel has heard that a new cay has appeared on the charts.`
+            `"Captain, if you've sighted the new land, would you take a proper sounding around it? The old charts are no use to us. We need a safe approach, the depth of the anchorage, and a note of any reefs close to shore."`
+            choice
+                `"I'll make the survey. The sea could use a better chart."`
+                    accept
+                `"I have other business to attend to."`
+                    defer
+    on complete
+        `Your close survey of Saint Elmo Cay is finished. The hydrographer's launch finds you by signal flag and takes your soundings, bearings and notes. The new island is now marked on the working charts.`

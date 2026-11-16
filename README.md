@@ -73,9 +73,11 @@ The port services screen brings the harbour's activities into one place. Its nav
 
 Some authored missions have several required port calls. Follow the route in order: collect passengers, documents or other items at each waypoint, then continue to the final destination. The compass and journal show the next required stop. Visiting the final port early will not complete a mission if an intermediate call remains outstanding.
 
-The **Shipyard** and **Outfitter** share a persistent **Your Ships** panel. Select either the flagship or any escort to inspect its class and hull condition, rename it, jump directly to its refits, or sell it from the same panel. The shipyard lets you commission a replacement flagship or add a new escort without leaving the screen. Selling the flagship transfers command to a surviving escort when one is available; the promoted vessel remains safely moored at the current berth. The outfitter offers eight fitting groups for each selected vessel: hull form, hull finish, sail design, sail type, flag, cannon type, cannon mounting and visual upgrades. Installations are charged per ship and persist in the existing voyage save. Repairs can be made to one vessel or to the entire fleet.
+The **Shipyard** and **Outfitter** share a persistent **Your Ships** panel. Select either the flagship or any escort to inspect its class and hull condition, rename it, jump directly to its refits, or sell it from the same panel. The shipyard lets you commission a replacement flagship or add a new escort without leaving the screen. Its catalogue is grouped into **Couriers & Scouts**, **Light Warships**, **Medium Warships**, **Large Warships**, **Battleships** and **Merchantmen**, so you can browse by the vessel's intended role instead of scanning one long list. Selling the flagship transfers command to a surviving escort when one is available; the promoted vessel remains safely moored at the current berth.
 
-Hull forms change strength, speed, turning, cargo capacity and the silhouette of the vessel. Sail types affect speed and sail power, while sail designs change the canvas pattern and colours. Pirate captains can fly their colours on weathered canvas with a skull-and-crossbones mark, or commission the Black Jolly Roger Canvas at the shipyard. Choose from different ensigns, hull finishes and deck fittings such as carved figureheads, gilded rails, stern galleries, lanterns and reinforced bulwarks. Cannon types have distinct projectile speed, range, damage and reload characteristics: Long Nines reach farther, Demi-cannons hit harder, Carronades deliver heavy close-range damage and Swivel Guns reload quickly. Broadside batteries remain the standard installation; Bow & Stern Chasers add forward and aft shots, while Rotating Turrets automatically track nearby hostile ships. Mounting choices are restricted by ship size, so small craft cannot carry the heaviest turret installations. Chasers fire with **Q** (forward) and **E** (aft) while at sea; rotating turrets fire with **Z / X** and turn toward the nearest hostile target.
+The Outfitter is organised into **Hull**, **Weapons**, **Sails & Rigging**, **Crew & Oars**, **Cargo & Handling**, **Flags & Colours** and **Deck Appearance**. Each section shows only the fittings relevant to that category for the selected vessel. Cannon types are installed one pair at a time, allowing a ship to mix Long Nines, Demi-cannons, Carronades, Swivel Guns and Standard Culverins in the same battery. Installations are charged per ship and persist in the existing voyage save. Repairs can be made to one vessel or to the entire fleet.
+
+Hull forms change strength, speed, turning, cargo capacity and the silhouette of the vessel. Sail types affect speed and sail power, while sail designs change the canvas pattern and colours. Pirate captains can fly their colours on weathered canvas with a skull-and-crossbones mark, or commission the Black Jolly Roger Canvas at the shipyard. Choose from different ensigns, hull finishes and deck fittings such as carved figureheads, gilded rails, stern galleries, lanterns and reinforced bulwarks. Cannon types have distinct projectile speed, range, damage and reload characteristics: Long Nines reach farther, Demi-cannons hit harder, Carronades deliver heavy close-range damage and Swivel Guns reload quickly. Broadside batteries remain the standard installation; Bow & Stern Chasers add forward and aft shots, while Rotating Turrets automatically track nearby hostile ships. Mounting choices are restricted by ship size, so small craft cannot carry the heaviest turret installations. Chasers fire with **W** (forward) and **S** (aft) while at sea; rotating turrets fire with **A / D** and turn toward the nearest hostile target. Each side can carry a mixture of cannon types: fit individual cannon pairs from the Outfitter. All ship classes can use auxiliary oars. Hire additional rowers from the Outfitter, up to the hull's capacity, then press **O** to ship or deploy the oars. Rowing provides steady headway when the wind is unfavourable.
 
 The ship catalogue ranges from small launches, cutters and sloops to xebecs, schooners, brigs, corvettes, frigates, merchantmen, galleons and ships of the line. Classes have distinct hull dimensions, handling, speed, cargo, strength, sail plans and refit limits. Cannon capacities are class-specific: a sloop can carry up to 10 guns, a frigate up to 30, and a ship of the line up to 48. Some light or cargo-focused vessels cannot take every kind of refit. Ship names are assembled from a large prefix-and-suffix pool, providing more than 12,000 combinations before the fallback naming system is needed.
 
@@ -89,7 +91,7 @@ Trading affects more than your purse. Supplying wanted goods can ease shortages 
 
 ### Combat and your fleet
 
-Hold **Z** to fire the port-side battery or **X** to fire starboard. Standard batteries fire in broadsides; after the first volley, individual cannons reload independently. Rotating turrets instead track the nearest hostile vessel, and Bow & Stern Chasers fire forward with **Q** or aft with **E** while at sea. Cannon types change projectile range, damage and reload time. Cannon impacts leave visible scorch and splinter damage. Smoke puffs originate at the firing guns, and a broadside gives the ship a brief recoil.
+Hold **A** to fire the port-side battery or **D** to fire starboard. Standard batteries fire in broadsides; after the first volley, individual cannons reload independently. Rotating turrets instead track the nearest hostile vessel, and Bow & Stern Chasers fire forward with **W** or aft with **S** while at sea. The arrow keys alone control the sails and helm. Cannon types change projectile range, damage and reload time. Cannon impacts leave visible scorch and splinter damage. Smoke puffs originate at the firing guns, and a broadside gives the ship a brief recoil.
 
 Your escorts can fight alongside you. Give them orders with **F** to fight, **H** to hold fire, **G** to gather around the flagship, or **V** to follow in formation. Firing on a normally friendly vessel turns it hostile; its surviving squadron may join the fight, and the attack can damage your standing with its faction.
 
@@ -115,11 +117,11 @@ The journal, opened with **J**, records story leads, discoveries and important e
 
 | Action | Control |
 | --- | --- |
-| Set sails / reduce sail | **W / S** |
-| Steer | **A / D** |
+| Set sails / reduce sail | **Up / Down arrow** |
+| Steer | **Left / Right arrow** |
 | Deploy / stow oars | **O** |
-| Fire port / starboard cannons or rotating turrets | Hold **Z / X** |
-| Fire bow / stern chasers (when fitted, at sea) | **Q / E** |
+| Fire port / starboard cannons or rotating turrets | Hold **A / D** |
+| Fire bow / stern chasers (when fitted, at sea) | **W / S** |
 | Dock at nearest available berth / reopen port services | **E** |
 | Depart from port services screen | **E** or choose **Depart** |
 | Speak with harbour office | Choose **Harbourmaster** (or **Q** when the port screen is closed) |
@@ -163,3 +165,7 @@ The Captain's Guide is available from the main menu and pause menu. It contains 
 
 
 The dockside interface uses the same dark nautical palette as the rest of the game. Conversations opened from the dock remain within that interface, and the harbourmaster is reserved for special mission commissions; ordinary local work remains on the job board.
+
+## Mission scripting
+
+See [docs/mission_scripting.md](docs/mission_scripting.md) for the expanded `.mission` authoring reference.

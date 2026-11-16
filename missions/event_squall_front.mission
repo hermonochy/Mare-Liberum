@@ -1,0 +1,10 @@
+mission "A Sudden Squall"
+    category "event"
+    event at_sea and world_time > 240 and flag('squall_front_seen') == false
+    event_delay 8 18
+    event_action set_sea_state rough 180
+    event_action set_flag "squall_front_seen" true
+    event_announcement "A dark squall line is rolling across the sea. Reef your canvas and mind the breaking water." 7
+    event_journal_entry "A sudden squall swept across the route. The wind rose sharply before the front passed."
+    event_max_triggers 1
+    event_pause_while_docked true

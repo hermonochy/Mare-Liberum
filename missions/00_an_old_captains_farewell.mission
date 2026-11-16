@@ -4,7 +4,7 @@ mission "An Old Captain's Farewell"
     description "Carry Captain Elias Ward's final sea chest and letter to his old quartermaster in Tortuga."
     source "Port Royal"
     destination "Tortuga"
-    reward 120000
+    reward 120
     speaker offer "Captain Elias Ward"
     speaker visit "Mara Bell"
     speaker complete "Mara Bell"

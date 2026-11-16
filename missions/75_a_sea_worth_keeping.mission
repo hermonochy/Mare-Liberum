@@ -11,28 +11,28 @@ mission "A Sea Worth Keeping"
         has "The Crown's True Owner: done"
     on offer
         conversation
-            `Return to Port Royal with the council's compact and choose how the secret of the drowned kingdom will be shared.`
-            `Commodore Anne Bonny studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The council's compact is ready to be carried home. The secret of the drowned kingdom is no longer held by one archive or one captain, but the islands must still agree how much to share.`
+            `Commodore Bonny reads the compact once more. "We can publish the whole chart, seal it away, or share only what navigators need to avoid danger. None of those choices is without a cost. I would rather the islands decide together than have a governor decide for them."`
             choice
-                `(I will help uncover what happened.)`
+                `"Very well. I will take responsibility for the next leg."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Tell me the part you have not put on the table."`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I will not be drawn into it. Good day."`
                     close
             label details
-                `Commodore Anne Bonny lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `She folds the compact and gives it to you. "Take this to Port Royal and put it before the captains and councils. The secret must be handled carefully; it should not become another excuse for conquest."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Then let us stop talking and set sail."`
                         accept
-                    `(Not today.)`
+                    `"Not for me. Let another captain take the work."`
                         close
     on accept
         log "Accepted A Sea Worth Keeping. Return to Port Royal with the council's compact and choose how the secret of the drowned kingdom will be shared."
     on visit
         conversation
-            `Commodore Anne Bonny receives you at Port Royal. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Port Royal, the councils and free captains review the compact and agree how the secret will be shared. Bonny watches the last signatures dry. "We have chosen to keep the knowledge in common, and to put the safety of the islands before any claim to glory."`
     on complete
         conversation
-            `Commodore Anne Bonny thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Bonny looks out toward the harbour. "The chart will travel, but no one will own the sea. There will still be storms, privateers, and foolish governors. At least now there is a charter to remind them that these waters are lived in, not merely crossed."`
         log "Completed A Sea Worth Keeping. Received 2240 gold. Return to Port Royal with the council's compact and choose how the secret of the drowned kingdom will be shared."

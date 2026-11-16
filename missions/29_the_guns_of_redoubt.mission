@@ -19,26 +19,26 @@ mission "The Guns of Redoubt"
         conversation
             `Four Company patrol ships guard the channel below Redoubt and relay signals from the captured fort.`
             `The fort controls the safest passage through the Outer Antilles. If its signal station remains in Company hands, every refuge will be exposed.`
-            `The patrol ships sail in pairs. Draw one pair away from the channel before turning your broadside on the second.`
+            `The harbourmaster glances toward the quay before speaking again. "The posting tells you where to go. It does not tell you why I am asking."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"If there is a truth to find, I will help find it."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"What does this have to do with the old expedition?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not chase a secret on promises alone."`
                     goto decline_job
             label more_details
-                `The patrol ships sail in pairs. Draw one pair away from the channel before turning your broadside on the second.`
+                `The harbourmaster leans closer and speaks plainly. "The patrol ships sail in pairs. Draw one pair away from the channel before turning your broadside on the second."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Very well. Let us bring this into the open."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I have heard enough. I must be on my way."`
                         goto decline_job
             label accept_job
                 `Fen gives you a storm lantern. “When the lantern shines from the old tower again, every ship will know the Company has lost its eyes.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster glances at the harbour. "No offence taken. There are always ships coming in with time to spare."`
                 close
     on accept
         log "Accepted The Guns of Redoubt. Sink the four patrol ships at Redoubt Soundings, then return to Redoubt and help the militia restore the signal fort."

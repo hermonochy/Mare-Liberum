@@ -17,26 +17,26 @@ mission "A Signal at Pelican Point"
         conversation
             `A fishing family has lit a distress beacon at Pelican Point. Company men are searching their village for a missing tariff book.`
             `The family hid a Company paymaster who deserted after learning that the firm planned to seize the Windward harbours by force.`
-            `Two armed launches are circling the point. The family cannot leave until the launches are driven away.`
+            `The harbourmaster closes the ledger with one hand. "That is the public account. There is a little more to it, if you care to hear."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"If there is a truth to find, I will help find it."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"What does this have to do with the old expedition?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not chase a secret on promises alone."`
                     goto decline_job
             label more_details
-                `Two armed launches are circling the point. The family cannot leave until the launches are driven away.`
+                `The harbourmaster leans closer and speaks plainly. "Two armed launches are circling the point. The family cannot leave until the launches are driven away."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Very well. Let us bring this into the open."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I have heard enough. I must be on my way."`
                         goto decline_job
             label accept_job
                 `Elian gives you a copy of the decoded ledger. “If Ashcombe is building a navy, he will need men, powder, and safe anchorages.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster sets the papers aside. "Then I shall trouble you no further. Good sailing, captain."`
                 close
     on accept
         log "Accepted A Signal at Pelican Point. Break the two launches at Pelican Point, then sail to Pelican's Rest and escort the paymaster ashore."

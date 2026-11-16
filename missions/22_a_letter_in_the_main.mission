@@ -13,26 +13,26 @@ mission "A Letter in the Main"
         conversation
             `A sealed letter from Magistrate Ortez must reach an honest judge in Nueva Esperanza.`
             `The letter names Ashcombe and the governors who signed the false charter. It asks the judge to protect witnesses travelling between the islands.`
-            `The Spanish Main is more heavily patrolled than the outer islands. Keep the letter hidden and avoid unnecessary fights.`
+            `Bonny watches your expression. "I have given you the outline. The rest is less comfortable, but you may as well hear it before deciding."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will not leave this unanswered. Tell me where to go."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Is this about the Company, or someone behind it?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"The sea is dangerous enough without old grudges. No."`
                     goto decline_job
             label more_details
-                `The Spanish Main is more heavily patrolled than the outer islands. Keep the letter hidden and avoid unnecessary fights.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "The Spanish Main is more heavily patrolled than the outer islands. Keep the letter hidden and avoid unnecessary fights."`
                 choice
-                    `(Then I will see it done.)`
+                    `"The trail is mine to follow. I will sail now."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Leave me out of it. I am done here."`
                         goto decline_job
             label accept_job
                 `Ortez gives you a brass seal to prove the letter is genuine. “The judge is cautious, but he still believes a law should mean something.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny tucks the chart away. "I will respect your answer. Should you change your mind, you know where to find me."`
                 close
     on accept
         log "Accepted A Letter in the Main. Deliver Ortez's letter to Judge Valera at Nueva Esperanza."

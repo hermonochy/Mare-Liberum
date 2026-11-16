@@ -11,28 +11,28 @@ mission "The Monk Who Burned His Maps"
         has "The Observatory's Blue Flame: done"
     on offer
         conversation
-            `Find Brother Mateo, who has been hiding a forbidden chart from a royal collector.`
-            `Brother Mateo studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Brother Mateo keeps the door barred. A bundle of map fragments smoulders in the brazier, while one chart remains hidden beneath a stack of monastery papers.`
+            `Brother Mateo glances toward the door. "A royal collector has been asking after this chart. I burned the copies, but I will not destroy the original until I know why the expedition needed it hidden."`
             choice
-                `(I will help uncover what happened.)`
+                `"You have my attention. What needs doing first?"`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Who stands to gain if the truth stays buried?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I have no wish to become a pawn in someone else's quarrel."`
                     close
             label details
-                `Brother Mateo lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `He places one finger on the western edge of the surviving map. "This passage does not appear in the Crown's atlases. If the collector takes the chart, it will disappear into a private archive—and so will the only lead we have."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"All right. I will follow the evidence."`
                         accept
-                    `(Not today.)`
+                    `"My answer has not changed. I will not sail."`
                         close
     on accept
         log "Accepted The Monk Who Burned His Maps. Find Brother Mateo, who has been hiding a forbidden chart from a royal collector."
     on visit
         conversation
-            `Brother Mateo receives you at San Aurelio. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At San Aurelio, Mateo unrolls the chart beneath a candle. The old marks lead to a place deliberately removed from official maps. "The expedition did not sail west for treasure alone," he says. "It was sent to find somewhere the authorities wanted forgotten."`
     on complete
         conversation
-            `Brother Mateo thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Mateo rolls the chart carefully. "I will keep it safe, but it should belong neither to a collector nor to a monastery. The people who live beside that water have the first claim to its story."`
         log "Completed The Monk Who Burned His Maps. Received 810 gold. Find Brother Mateo, who has been hiding a forbidden chart from a royal collector."

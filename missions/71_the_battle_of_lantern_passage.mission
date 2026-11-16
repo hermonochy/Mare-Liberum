@@ -15,28 +15,28 @@ mission "The Battle of Lantern Passage"
     enemy "Wycliffe's Second"
     on offer
         conversation
-            `Defeat the syndicate's hired escort squadron before it can seize the scholar's charts.`
-            `Commodore Wycliffe studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The scholar's charts are being moved under guard at Lantern Passage. A hired squadron has taken station across the channel, close enough to seize the papers before the survey ships can clear the harbour.`
+            `Commodore Wycliffe watches the squadron through a spyglass. "The syndicate has hired warships to take the charts. They do not need the islands if they can own the only route into them. I need that squadron broken before the papers change hands."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will help you get to the bottom of it."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Who else knows about this?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I will leave this to a captain with fewer reservations."`
                     close
             label details
-                `Commodore Wycliffe lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Wycliffe points to the chart boats. "Keep the channel open for the scholars. Scatter the escorts before they can close around the boats; the papers matter more than a chase after every fleeing ship."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"I will take the risk. Put the destination on my chart."`
                         accept
-                    `(Not today.)`
+                    `"I have other waters to cross. Good day."`
                         close
     on accept
         log "Accepted The Battle of Lantern Passage. Defeat the syndicate's hired escort squadron before it can seize the scholar's charts."
     on visit
         conversation
-            `Commodore Wycliffe receives you at Port de Lune. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Port de Lune, Wycliffe counts the returned charts and confirms that the hired squadron has been driven off. "They came for the papers, not the harbour," he says. "That tells us who is truly afraid of what the scholars have found."`
     on complete
         conversation
-            `Commodore Wycliffe thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Wycliffe secures the charts in a dispatch case. "The papers are safe, and the syndicate has lost its hired screen. A ship can be replaced. A record, once burned, is gone. You understood which was worth defending."`
         log "Completed The Battle of Lantern Passage. Received 1980 gold. Defeat the syndicate's hired escort squadron before it can seize the scholar's charts."

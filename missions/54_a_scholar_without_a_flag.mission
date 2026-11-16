@@ -11,28 +11,28 @@ mission "A Scholar Without a Flag"
         has "The Monk Who Burned His Maps: done"
     on offer
         conversation
-            `Meet Doctor Inez Salvatierra and learn why she is buying every chart of the western shoals.`
-            `Doctor Inez Salvatierra studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Doctor Inez Salvatierra has filled one end of the room with charts of the western shoals. Several bear fresh annotations; others have been bought from captains who would rather not say where they found them.`
+            `Inez sets two charts side by side. "I am buying every copy I can find because they disagree in exactly the wrong places. The missing passages are not mistakes. It looks as though someone has been correcting the sea on paper."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will take the job. Mark the place on my chart."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"What exactly are you afraid will happen?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"Keep me out of it. I have other waters to sail."`
                     close
             label details
-                `Doctor Inez Salvatierra lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `She turns one of the charts toward you. "I need another pair of eyes, captain. A scholar can compare marks until the ink runs, but someone who has sailed these shoals can tell a false channel from a dangerous one."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"I will take the next leg. Give me the heading."`
                         accept
-                    `(Not today.)`
+                    `"I will keep clear of this matter. Good luck."`
                         close
     on accept
         log "Accepted A Scholar Without a Flag. Meet Doctor Inez Salvatierra and learn why she is buying every chart of the western shoals."
     on visit
         conversation
-            `Doctor Inez Salvatierra receives you at Port de Lune. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Port de Lune, Inez lays your chart beside the others. The old expedition's route begins to emerge, but its destination has been cut from every official copy. "They were not searching for gold alone," she says. "Someone has spent a long time making sure we never learn what they found."`
     on complete
         conversation
-            `Doctor Inez Salvatierra thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Inez gathers the charts into a leather case. "I owe you more than a fee. Each copy was only a fragment; together they are beginning to tell the same story. I would rather the truth reached the islands before another flag lays claim to it."`
         log "Completed A Scholar Without a Flag. Received 875 gold. Meet Doctor Inez Salvatierra and learn why she is buying every chart of the western shoals."

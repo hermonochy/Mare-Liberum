@@ -1,0 +1,21 @@
+mission "A Passing Sailor's Warning"
+    category "ambient"
+    ambient true
+    offer_at "near_ship"
+    repeatable true
+    cooldown 240
+    max_triggers 1
+    priority 20
+    offer_expression "at_sea and ships_nearby(650) > 0 and flag('passing_sailor_warned') == false"
+    speaker offer "A captain aboard a nearby vessel"
+    on offer
+        conversation
+            `A small merchant vessel draws close enough for its captain to hail you. He keeps one hand on the tiller and the other raised to shade his eyes.`
+            `"Well met! Keep a little west of the next headland. There's a line of broken water hiding just below the surface. I lost a boat there last season, and I'd sooner not see another captain pay the same price."`
+            choice
+                `"Thank you. I'll mark the warning on my chart."`
+                    set_flag "passing_sailor_warned" true
+                    close
+                `"I know these waters. Fair winds."`
+                    set_flag "passing_sailor_warned" true
+                    close

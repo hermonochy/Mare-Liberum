@@ -4,6 +4,7 @@ import pygame
 
 from .config import SHIP_CLASSES, SHIP_LIVERIES
 from .sail_rendering import draw_ship_sails
+from .ship_armament import cannon_loadout_sequence
 from .ship_fittings import (
     CANNON_MOUNTS,
     FLAG_DESIGNS,
@@ -111,7 +112,7 @@ def _draw_visual_fittings(surface, style, start_x, end_x, center_y, beam, trim_c
         _line(surface, (95, 73, 53), (start_x + 10, center_y + beam * 0.39), (end_x - 8, center_y + beam * 0.39), max(2, int(beam * 0.045)))
 
 
-def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery, world_time, customisation=None):
+def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery, world_time, customisation=None, sail_setting=1.0, rower_count=None, cannon_loadout=None, cannon_upgrade=0):
     stats = SHIP_CLASSES.get(ship_type, SHIP_CLASSES["Sloop"])
     selected = normalise_ship_customisation(customisation) if player or allied else None
     effects = ship_customisation_effects(selected) if selected else None
@@ -227,7 +228,7 @@ def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery
     sail_type = selected["sail_type"] if selected else "Standard Canvas"
     flag_mark = FLAG_DESIGNS.get(flag_design, {}).get("mark")
     pirate_mark = faction == "pirate" or flag_mark in {"skull", "crossbones"} or sail_pattern == "corsair"
-    draw_ship_sails(surface, stats, mast_positions, center_y, half_beam, rig, sail_color, sail_pattern, sail_type, pirate_mark)
+    draw_ship_sails(surface, stats, mast_positions, center_y, half_beam, rig, sail_color, sail_pattern, sail_type, pirate_mark, sail_setting, world_time)
     for mast_x in mast_positions:
         pygame.draw.circle(surface, (48, 33, 24), (mast_x, center_y), max(3, int(beam * 0.075)))
         pygame.draw.circle(surface, (192, 160, 111), (mast_x, center_y), max(1, int(beam * 0.035)))
@@ -247,18 +248,21 @@ def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery
         "Carronades": (107, 76, 49),
         "Swivel Guns": (180, 151, 92),
     }
-    cannon_color = cannon_detail[cannon_type]
+    default_cannon_type = selected["cannon_type"] if selected else cannon_type
+    cannon_sequence = cannon_loadout_sequence(cannon_loadout, ship_type, default_cannon_type, cannon_upgrade)
     if mount_mode == "turrets":
         turret_count = max(2, min(5, int(stats["max_cannons"]) // 6))
         for index in range(turret_count):
             ratio = 0.20 + (0.61 * index / max(1, turret_count - 1))
             turret_x = int(start_x + length * ratio)
             turret_radius = max(3, int(beam * 0.075))
+            cannon_type_for_turret = cannon_sequence[min(index, len(cannon_sequence) - 1)] if cannon_sequence else default_cannon_type
+            cannon_color = cannon_detail.get(cannon_type_for_turret, cannon_detail["Standard Culverins"])
             pygame.draw.circle(surface, (31, 28, 25), (turret_x, center_y), turret_radius + 2)
             pygame.draw.circle(surface, (176, 142, 92), (turret_x, center_y), turret_radius)
             _line(surface, cannon_color, (turret_x, center_y), (turret_x + turret_radius * 2, center_y), max(2, turret_radius // 2))
     else:
-        gun_count = max(1, int(stats["guns"]))
+        gun_count = max(1, len(cannon_sequence) if cannon_sequence else int(stats["guns"]))
         gun_start = start_x + length * 0.25
         gun_end = end_x - length * 0.15
         if mount_mode == "chasers":
@@ -266,12 +270,16 @@ def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery
         for index in range(gun_count):
             ratio = index / max(1, gun_count - 1)
             gun_x = int(gun_start + (gun_end - gun_start) * ratio)
+            cannon_type_for_gun = cannon_sequence[min(index, len(cannon_sequence) - 1)] if cannon_sequence else default_cannon_type
+            cannon_color = cannon_detail.get(cannon_type_for_gun, cannon_detail["Standard Culverins"])
             for side in (-1, 1):
                 gun_y = int(center_y + side * half_beam * 0.39)
                 pygame.draw.circle(surface, cannon_color, (gun_x, gun_y), max(2, int(beam * 0.052)))
                 pygame.draw.circle(surface, (194, 153, 99), (gun_x, gun_y), max(1, int(beam * 0.026)), 1)
         if mount_mode == "chasers":
             for gun_x, direction in ((end_x + 1, 1), (start_x + 2, -1)):
+                selected_type = cannon_sequence[-1] if cannon_sequence else default_cannon_type
+                cannon_color = cannon_detail.get(selected_type, cannon_detail["Standard Culverins"])
                 pygame.draw.circle(surface, (37, 30, 25), (gun_x, center_y), max(3, int(beam * 0.065)))
                 _line(surface, cannon_color, (gun_x, center_y), (gun_x + direction * max(7, int(beam * 0.24)), center_y), 3)
 
@@ -279,9 +287,10 @@ def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery
     flag_x = mast_positions[0] if mast_positions else start_x + length * 0.5
     _draw_flag(surface, int(flag_x), int(center_y - half_beam * 0.54), faction, flag_design)
 
-    if rowing and stats["oar_power"] > 0 and stats["rowers"] >= 8:
+    visible_rowers = max(0, int(rower_count if rower_count is not None else stats.get("rowers", 0)))
+    if rowing and visible_rowers >= 8:
         stroke = math.sin(world_time * 8.0) * 3.5
-        oar_count = max(4, min(12, int(stats["rowers"] / 3)))
+        oar_count = max(4, min(24, int(visible_rowers / 3)))
         for index in range(oar_count):
             ratio = index / max(1, oar_count - 1)
             oar_x = int(start_x + length * (0.27 + ratio * 0.52))

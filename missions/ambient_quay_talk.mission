@@ -1,0 +1,21 @@
+mission "Talk at the Quay"
+    category "ambient"
+    ambient true
+    offer_at "port"
+    repeatable true
+    cooldown 300
+    max_triggers 1
+    priority 2
+    offer_expression "docked and flag('quay_talk_heard') == false"
+    speaker offer "Two sailors at the quay"
+    on offer
+        conversation
+            `As you cross the quay, two sailors fall quiet beside a stack of water casks. One waits until you have passed, then mutters, "That one has the look of a captain who might listen."`
+            `"I heard the governor's customs men have been searching every vessel from the western passage," says the other. "Not for contraband, neither. They're looking for a passenger who isn't supposed to exist."`
+            choice
+                `"Do you know who they're looking for?"`
+                `"Best not to get mixed up in another man's business."`
+                    set_flag "quay_talk_heard" true
+                    close
+            `The first sailor shakes his head. "Only that the order came from the governor's own office. That's enough for me to keep my head down."`
+            set_flag "quay_talk_heard" true

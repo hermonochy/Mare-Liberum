@@ -13,26 +13,26 @@ mission "The Bells of Port Royal"
         conversation
             `Port Royal is preparing for the arrival of the Meridian Star and its captain.`
             `The harbourmaster has ordered the old chain boom repaired, and every battery along the quay is being loaded. Bonny wants the free fleet to keep the harbour clear for the final engagement.`
-            `Carry the shipwright's report to the harbourmaster and help prepare the old port for a fleet action.`
+            `Bonny watches your expression. "I have given you the outline. The rest is less comfortable, but you may as well hear it before deciding."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will lend a hand. Tell me where to begin."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"There is more here than you have told me. What is it?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not put my crew between old enemies."`
                     goto decline_job
             label more_details
-                `Carry the shipwright's report to the harbourmaster and help prepare the old port for a fleet action.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "Carry the shipwright's report to the harbourmaster and help prepare the old port for a fleet action."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then you have my word. I will see it through."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Then we part here. Fair winds."`
                         goto decline_job
             label accept_job
                 `Last Light rings its warning bell as you leave. The crews line the quay, knowing the next signal may be the sound of battle.`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny folds the chart and gives you a level look. "Fair enough, captain. I would rather have your ship on the course, but I will not press you."`
                 close
     on accept
         log "Accepted The Bells of Port Royal. Return to Port Royal and report to the harbourmaster and Commodore Bonny."

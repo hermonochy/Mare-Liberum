@@ -11,28 +11,28 @@ mission "A Door in the Reef"
         has "The Battle of Lantern Passage: done"
     on offer
         conversation
-            `Carry the tideglass to the reef entrance and wait for the moon-pulled current.`
-            `Doctor Inez Salvatierra studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Doctor Inez places the tideglass in a padded case. It catches the light whenever the moon shifts above the reef, and the old notes say the current opens a passage only briefly.`
+            `Inez checks the tideglass against the moon's position. "Carry this to the reef entrance and wait for the moon-pulled current. It will show us whether the drowned settlement can be reached without breaking a ship against the coral."`
             choice
-                `(I will help uncover what happened.)`
+                `"Fair enough. Give me a heading and I will sail."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"What would happen if we leave it alone?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I have my own course to keep. Find another ship."`
                     close
             label details
-                `Doctor Inez Salvatierra lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `She closes the case and hands it to you. "Do not force the passage. Watch the glass and wait for the water to turn; the channel is brief, and a captain who mistakes impatience for courage will lose a vessel."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"That settles it. Let us be about it."`
                         accept
-                    `(Not today.)`
+                    `"I cannot take this on. Find another captain."`
                         close
     on accept
         log "Accepted A Door in the Reef. Carry the tideglass to the reef entrance and wait for the moon-pulled current."
     on visit
         conversation
-            `Doctor Inez Salvatierra receives you at Mermaid's Rest. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Mermaid's Rest, Inez checks the tideglass against the current. The moon-pulled flow opens the reef entrance, revealing a route toward the drowned settlement. "It is real," she says. "And it is only open while the sea allows it."`
     on complete
         conversation
-            `Doctor Inez Salvatierra thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Inez puts the tideglass away. "You have shown us the way in, not the right to take what lies there. That distinction matters. We will bring the councils into this before anyone goes below."`
         log "Completed A Door in the Reef. Received 2045 gold. Carry the tideglass to the reef entrance and wait for the moon-pulled current."

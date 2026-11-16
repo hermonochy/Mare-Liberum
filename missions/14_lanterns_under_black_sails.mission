@@ -17,26 +17,26 @@ mission "Lanterns Under Black Sails"
         conversation
             `Two Company cutters have seized the pilot boats that guide ships through the Lantern Shoals.`
             `The pilots know the safe channels. Without them, the Company can strand independent traders on reefs and claim the cargo as salvage.`
-            `The cutters are quick and likely carry a prize crew. The harbourmaster at Lantern Bay has sent a signal asking for help.`
+            `The harbourmaster taps the margin of the ledger. "There are details I would not put on the noticeboard. Ask, and I will explain."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"You have my attention. What needs doing first?"`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Who stands to gain if the truth stays buried?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I have no wish to become a pawn in someone else's quarrel."`
                     goto decline_job
             label more_details
-                `The cutters are quick and likely carry a prize crew. The harbourmaster at Lantern Bay has sent a signal asking for help.`
+                `The harbourmaster leans closer and speaks plainly. "The cutters are quick and likely carry a prize crew. The harbourmaster at Lantern Bay has sent a signal asking for help."`
                 choice
-                    `(Then I will see it done.)`
+                    `"All right. I will follow the evidence."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"My answer has not changed. I will not sail."`
                         goto decline_job
             label accept_job
                 `Sister Agnes blesses the voyage. “Do not mistake a small ship for a harmless one. Those cutters know every channel in these waters.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster folds the posting. "Very well. You have your own course to keep, and I have other captains to ask."`
                 close
     on accept
         log "Accepted Lanterns Under Black Sails. Sail to the Lantern Shoals, sink the two Company cutters, then return to Lantern Bay and report to the harbourmaster."

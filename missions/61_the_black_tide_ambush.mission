@@ -15,28 +15,28 @@ mission "The Black Tide Ambush"
     enemy "Voss's Second"
     on offer
         conversation
-            `Break a pirate screen that is preventing the scholar's launch from reaching the shoals.`
-            `Captain Sabine Voss studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `A scholar's launch lies outside the harbour, unable to reach the shoals. Pirate ships have formed a loose screen across the approach.`
+            `Captain Sabine Voss points toward the waiting launch. "It carries the instruments we need. Those pirates are not merely robbing passers-by; they are keeping the scholar from reaching the water where the old expedition's trail leads."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will not leave this unanswered. Tell me where to go."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Is this about the Company, or someone behind it?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"The sea is dangerous enough without old grudges. No."`
                     close
             label details
-                `Captain Sabine Voss lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Voss marks the channel on your chart. "Break the screen, but do not chase every sail over the horizon. We need the channel open long enough for the launch to get through."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"The trail is mine to follow. I will sail now."`
                         accept
-                    `(Not today.)`
+                    `"Leave me out of it. I am done here."`
                         close
     on accept
         log "Accepted The Black Tide Ambush. Break a pirate screen that is preventing the scholar's launch from reaching the shoals."
     on visit
         conversation
-            `Captain Sabine Voss receives you at Mariner's Rest. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Mariner's Rest, Voss studies the cleared approach. The scholar's launch can now reach the shoals and continue the survey. "They were paid to keep us away," Voss says. "That tells me we are getting close."`
     on complete
         conversation
-            `Captain Sabine Voss thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Voss gives you a brief nod. "The launch is through, and the scholar has the water they need. I would rather have done it without firing a shot, but pirates rarely leave a channel open out of courtesy."`
         log "Completed The Black Tide Ambush. Received 1330 gold. Break a pirate screen that is preventing the scholar's launch from reaching the shoals."

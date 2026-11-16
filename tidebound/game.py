@@ -29,7 +29,7 @@ class Game(
         self.world_map_open = False
         self.camera_dragging = False
         self.camera_drag_last = (0, 0)
-        self.toast = "Port Royal. Sail with W, or ship the oars with O when the wind turns against you."
+        self.toast = "Port Royal. Set sail with the arrow keys, or use the oars when the wind turns against you."
         self.toast_time = 6.0
         self.show_help = True
         self.journal_open = False
@@ -57,6 +57,7 @@ class Game(
         self.ship_customisation = default_ship_customisation()
         self.ship_surface_cache = {}
         self.upgrades = dict(STARTING_SHIP_UPGRADES)
+        self.cannon_loadout = default_cannon_loadout(self.current_ship, self.ship_customisation["cannon_type"], self.upgrades["cannons"])
         self.player_max_hull = PLAYER_HULL
         self.player_hull = PLAYER_HULL
         self.player_hit_flash = 0.0

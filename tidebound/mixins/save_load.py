@@ -127,6 +127,7 @@ class SaveLoadMixin:
                 "class": self.current_ship,
                 "livery": self.player_livery,
                 "customisation": dict(self.ship_customisation),
+                "cannon_loadout": dict(self.cannon_loadout),
                 "upgrades": dict(self.upgrades),
                 "hull": self.player_hull,
                 "maximum_hull": self.player_max_hull,
@@ -154,7 +155,9 @@ class SaveLoadMixin:
                 "mission_completion_started": self.mission_completion_started,
                 "mission_result_title": self.mission_result_title,
                 "mission_result_reward": self.mission_result_reward,
+                "mission_deadline_remaining": float(getattr(self, "mission_deadline_remaining", 0.0)),
                 "mission_event_states": getattr(self, "mission_event_states", {}),
+                "ambient_mission_states": getattr(self, "ambient_mission_states", {}),
                 "world_flags": getattr(self, "world_flags", {}),
             },
             "treasure": [
@@ -199,6 +202,12 @@ class SaveLoadMixin:
                 "commander_records": getattr(self, "commander_records", {}),
                 "commander_fleets": getattr(self, "commander_fleets", {}),
                 "floating_debris": list(getattr(self, "floating_debris", [])),
+                "mission_wind_override": getattr(self, "mission_wind_override", None),
+                "dynamic_islands": [
+                    {"name": island["name"], "polygon": [[float(x), float(y)] for x, y in island["polygon"]], "revealed": bool(island.get("revealed", True))}
+                    for island in getattr(self, "dynamic_islands", [])
+                ],
+                "port_factions": {port.name: port.faction for port in self.ports},
                 "diplomacy": {
                     "faction_relations": dict(getattr(self, "faction_relations", {})),
                     "port_standings": dict(getattr(self, "port_standings", {})),
@@ -265,9 +274,13 @@ class SaveLoadMixin:
         self.player_livery = max(0, min(len(SHIP_LIVERIES) - 1, int(ship.get("livery", 0))))
         self.ship_customisation = normalise_ship_customisation(ship.get("customisation"))
         self.upgrades = {key: max(0, int(value)) for key, value in ship.get("upgrades", {}).items()}
-        for key in ("cannons", "hull", "rigging", "rudder", "cargo"):
+        for key in ("cannons", "hull", "rigging", "rudder", "cargo", "rowers"):
             self.upgrades.setdefault(key, 0)
             self.upgrades[key] = min(self.upgrades[key], ship_upgrade_limit(self.current_ship, key))
+        self.cannon_loadout = normalise_cannon_loadout(
+            ship.get("cannon_loadout"), self.current_ship,
+            self.ship_customisation.get("cannon_type", "Standard Culverins"), self.upgrades.get("cannons", 0),
+        )
         saved_max_hull = max(1, int(ship.get("maximum_hull", PLAYER_HULL)))
         saved_hull = max(1, min(saved_max_hull, int(ship.get("hull", saved_max_hull))))
         saved_hull_ratio = saved_hull / saved_max_hull
@@ -294,9 +307,19 @@ class SaveLoadMixin:
         self.mission_completion_started = bool(story.get("mission_completion_started", False))
         self.mission_result_title = str(story.get("mission_result_title", ""))
         self.mission_result_reward = max(0, int(story.get("mission_result_reward", 0)))
+        self.mission_deadline_remaining = max(0.0, float(story.get("mission_deadline_remaining", 0.0)))
+        self.mission_wind_override = world.get("mission_wind_override")
+        for port_name, faction in world.get("port_factions", {}).items():
+            if port_name in self.ports_by_name:
+                self.ports_by_name[port_name].faction = str(faction)
         self.mission_result_timer = 0.0
         if hasattr(self, "restore_mission_event_state"):
-            self.restore_mission_event_state(story.get("mission_event_states", {}), story.get("world_flags", {}))
+            self.restore_mission_event_state(
+                story.get("mission_event_states", {}),
+                story.get("world_flags", {}),
+                story.get("ambient_mission_states", {}),
+                world.get("dynamic_islands", []),
+            )
 
         treasure_flags = {entry.get("id"): entry for entry in data["treasure"]}
         for site in self.treasure_sites:
@@ -347,8 +370,13 @@ class SaveLoadMixin:
         fleet_entries = []
         for entry in data["fleet"]:
             entry = dict(entry)
-            entry.setdefault("upgrades", {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0})
+            entry.setdefault("upgrades", {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0, "rowers": 0})
             entry["customisation"] = normalise_ship_customisation(entry.get("customisation"))
+            entry["cannon_loadout"] = normalise_cannon_loadout(
+                entry.get("cannon_loadout"), entry.get("ship_type", "Sloop"),
+                entry["customisation"].get("cannon_type", "Standard Culverins"),
+                (entry.get("upgrades") or {}).get("cannons", 0),
+            )
             fleet_entries.append(FleetShip(**entry))
         self.fleet = fleet_entries
         self.used_ship_names.update(ship.name for ship in self.fleet)
@@ -773,13 +801,13 @@ class SaveLoadMixin:
         return [
             ("GETTING UNDER WAY", [
                 "Your first voyage begins at Port Royal. The old captain nearby introduces the basics; talk to him with Q while docked.",
-                "W sets more sail; S reefs it. A and D steer. O deploys oars when the wind is unhelpful. Momentum matters, so slow down before entering a harbour.",
+                "Up sets more sail; Down reefs it. Left and Right steer. O deploys oars when the wind is unhelpful. Momentum matters, so slow down before entering a harbour.",
                 "E casts off or takes the nearest available harbour berth. When close to a pier, the prompt tells you when docking is possible.",
                 "Use the mouse wheel to zoom around the pointer, drag the chart to look around, and press C to centre the view on your ship.",
             ]),
             ("COMBAT & YOUR FLEET", [
-                "Hold Z to fire the port-side guns; hold X for starboard. Keep the enemy on the correct side of your ship and allow each gun time to reload.",
-                "A bow-and-stern chaser refit fires forward with Q and aft with E while at sea. Rotating turrets automatically track the nearest hostile vessel when you fire with Z or X.",
+                "Hold A to fire the port-side guns; hold D for starboard. Keep the enemy on the correct side of your ship and allow each gun time to reload.",
+                "A bow-and-stern chaser refit fires forward with W and aft with S while at sea. Rotating turrets automatically track the nearest hostile vessel when you fire with A or D.",
                 "Long Nines travel farther, Demi-cannons hit harder, Carronades devastate at close range and Swivel Guns reload rapidly. Each cannon type trades range, damage and reload speed.",
                 "Powder smoke, recoil and impact sounds help show when a broadside has fired or landed. Watch your hull indicator and repair at a shipyard.",
                 "Your escorts obey F (fight), H (hold fire), G (gather) and V (follow). Hold fire is useful around neutral traffic and friendly convoys.",

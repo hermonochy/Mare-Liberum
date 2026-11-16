@@ -15,28 +15,28 @@ mission "The Fleet at the Blue Line"
     enemy "Vale's Second"
     on offer
         conversation
-            `Protect the survey ships from a squadron that has mistaken their lantern code for a treasure signal.`
-            `Admiral Horatio Vale studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The survey ships are taking their lantern stations along the blue line. Their code marks safe water, but another squadron has mistaken it for a signal to a treasure fleet.`
+            `Admiral Horatio Vale watches the approaching sails. "If those ships reach the survey vessels before we explain the code, they will fire first and ask questions after. I need you between them long enough for the captains to understand."`
             choice
-                `(I will help uncover what happened.)`
+                `"All right. Put me on the course."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Why has someone gone to such trouble to hide this?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"My ship has enough trouble without this. I will pass."`
                     close
             label details
-                `Admiral Horatio Vale lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Vale points to the survey line. "Keep our ships together and drive the attackers off. Do not let a false signal turn this passage into a battle neither side intended."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Mark the course. My ship is ready."`
                         accept
-                    `(Not today.)`
+                    `"Not this voyage. Find another ship."`
                         close
     on accept
         log "Accepted The Fleet at the Blue Line. Protect the survey ships from a squadron that has mistaken their lantern code for a treasure signal."
     on visit
         conversation
-            `Admiral Horatio Vale receives you at Stormhaven. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Stormhaven, Vale reviews the lantern reports. The attackers mistook the survey signal for a treasure marker, and the survey ships are safe. "A few lamps nearly cost us a fleet," he says. "We must be clearer next time."`
     on complete
         conversation
-            `Admiral Horatio Vale thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Vale dismisses the signalmen and turns to you. "The survey ships are safe, and the captains have corrected their signal book. You have saved more than timber and canvas today; you have kept a misunderstanding from becoming a war."`
         log "Completed The Fleet at the Blue Line. Received 1590 gold. Protect the survey ships from a squadron that has mistaken their lantern code for a treasure signal."

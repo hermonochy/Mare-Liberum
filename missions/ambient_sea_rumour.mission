@@ -1,0 +1,22 @@
+mission "A Rumour on the Water"
+    category "ambient"
+    ambient true
+    offer_at "sea"
+    repeatable true
+    cooldown 180
+    max_triggers 1
+    priority 10
+    offer_expression "at_sea and speed > 5 and flag('sea_rumour_heard') == false"
+    speaker offer "A sailor in a passing launch"
+    on offer
+        conversation
+            `A little launch comes alongside at a respectful distance. Its sail is patched in three places, and the man at the tiller has the weathered look of someone who has spent more nights at sea than ashore.`
+            `"Captain! A word, if you please. I've come down from the northern cays. There's talk of a new pirate captain buying powder and shot in every harbour from here to Havana."`
+            choice
+                `"What name are they giving this captain?"`
+                `"Rumour travels faster than a good ship. I'll keep my eyes open."`
+                    set_flag "sea_rumour_heard" true
+                    close
+            `"No name yet, captain. Only that the ships are gathering, and that someone has paid very well to keep their business quiet."`
+            `The sailor raises two fingers in farewell and turns his launch back towards the islands.`
+            set_flag "sea_rumour_heard" true

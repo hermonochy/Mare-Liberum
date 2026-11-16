@@ -11,28 +11,28 @@ mission "A Chart Beneath the Bell"
         has "A Sea Without Masters: done"
     on offer
         conversation
-            `A salvager has recovered a bell-shaped brass token from a wreck that should be three hundred years old.`
-            `Marda Quill studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `A salvager lays a bell-shaped brass token on Marda Quill's table. It is green with age, and the wreck it came from should have been under the sea for three centuries.`
+            `Marda turns the token between two fingers. "The metal is old enough. The question is why an expedition that should have vanished from memory left a mark somebody still recognises."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will lend a hand. Tell me where to begin."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"There is more here than you have told me. What is it?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I will not put my crew between old enemies."`
                     close
             label details
-                `Marda Quill lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Marda slides an old chart toward you. "Someone has taken great care to remove this voyage from the books. I want to know what they were so anxious to hide."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Then you have my word. I will see it through."`
                         accept
-                    `(Not today.)`
+                    `"Then we part here. Fair winds."`
                         close
     on accept
         log "Accepted A Chart Beneath the Bell. A salvager has recovered a bell-shaped brass token from a wreck that should be three hundred years old."
     on visit
         conversation
-            `Marda Quill receives you at Wreckers' Moon. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Bellweather Cay, Marda matches the token against the marks on her chart. "This is no merchant's tally. The expedition was searching for a place someone had taken off every official chart—not simply another pile of gold."`
     on complete
         conversation
-            `Marda Quill thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Marda wraps the chart in oilcloth. "A good find, captain, but not a comfortable one. Every answer points to another hand that would rather this story stayed buried. The people of these islands deserve the truth before a crown or company claims it."`
         log "Completed A Chart Beneath the Bell. Received 680 gold. A salvager has recovered a bell-shaped brass token from a wreck that should be three hundred years old."

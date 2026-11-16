@@ -11,28 +11,28 @@ mission "The Crown's True Owner"
         has "The Kingdom Below: done"
     on offer
         conversation
-            `Present the stone record to the island councils and decide who may claim the discovery.`
-            `Commodore Anne Bonny studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The stone record has been placed before the island councils. Each wants the discovery protected; each also knows that the first claimant may try to turn it into a crown's possession.`
+            `Commodore Bonny waits until the room has quieted. "We have a choice now. We can let one flag claim the drowned kingdom, or make certain the discovery is held in common. I want the councils to hear the record before anyone writes a new charter around it."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will put my ship to it. Let us get underway."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Why ask a captain instead of going to the authorities?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I would rather not have my name in these papers."`
                     close
             label details
-                `Commodore Anne Bonny lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Bonny leaves the record in the centre of the table. "There will be arguments. Some will ask who has the right to speak for a place under the sea; others will ask who is paying to keep it secret. Keep the record in view and let the councils decide together."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Agreed. Let us make certain the truth reaches daylight."`
                         accept
-                    `(Not today.)`
+                    `"I have decided. I will not be sailing."`
                         close
     on accept
         log "Accepted The Crown's True Owner. Present the stone record to the island councils and decide who may claim the discovery."
     on visit
         conversation
-            `Commodore Anne Bonny receives you at Crown's Fall. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Crown's Fall, Bonny presents the stone record to the island councils. They agree that no single crown or company may claim the discovery. "It belongs to the sea and the people around it," she says. "We must decide its future together."`
     on complete
         conversation
-            `Commodore Anne Bonny thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Bonny rests a hand on the closed record. "You have helped prevent a new war over an old secret. A discovery is not a prize simply because someone reaches it first. Let the councils keep the record, and let the people decide what it means."`
         log "Completed The Crown's True Owner. Received 2175 gold. Present the stone record to the island councils and decide who may claim the discovery."

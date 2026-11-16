@@ -492,6 +492,7 @@ class TrafficMixin:
         if not was_hostile:
             self.add_journal(f"{source} struck {ship.name}. {ship.name} and any surviving ships in its fleet now regard your vessel as hostile.")
             self.toast_message(f"{ship.name} turns hostile and brings its guns to bear!", 3.2)
+            self.start_active_mission_hook("provoke")
 
     def _combat_target_for_pirate(self, pirate):
         if pirate.npc_target_name == "__player__":

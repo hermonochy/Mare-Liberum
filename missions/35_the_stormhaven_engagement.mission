@@ -20,26 +20,26 @@ mission "The Stormhaven Engagement"
         conversation
             `Five Company escorts have taken station in the Outer Roadstead while the Meridian Star is being repaired.`
             `The repair crews work day and night. If the escorts hold their line until the flagship is ready, Ashcombe will escape again.`
-            `The ships are spread across a wide anchorage. The free fleet must disable the screen before the repair work is complete.`
+            `The harbourmaster lowers their voice. "I have told you what the work is. The reason for it is a different matter."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will not leave this unanswered. Tell me where to go."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Is this about the Company, or someone behind it?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"The sea is dangerous enough without old grudges. No."`
                     goto decline_job
             label more_details
-                `The ships are spread across a wide anchorage. The free fleet must disable the screen before the repair work is complete.`
+                `The harbourmaster leans closer and speaks plainly. "The ships are spread across a wide anchorage. The free fleet must disable the screen before the repair work is complete."`
                 choice
-                    `(Then I will see it done.)`
+                    `"The trail is mine to follow. I will sail now."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Leave me out of it. I am done here."`
                         goto decline_job
             label accept_job
                 `Fen sends a pilot boat to guide your fleet. “Do not waste time chasing wreckage. The flagship is the prize, and the clock is running.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster folds the posting. "Very well. You have your own course to keep, and I have other captains to ask."`
                 close
     on accept
         log "Accepted The Stormhaven Engagement. Sink the five escorts in the Outer Roadstead, then return to Stormhaven and secure the repair yard."

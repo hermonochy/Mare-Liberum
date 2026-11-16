@@ -14,26 +14,26 @@ mission "The Shipwrights of Port de Lune"
         conversation
             `A broker named Luc Vautrin has sent word from Port de Lune. The shipwrights there have been forced to build gun decks for the Meridian Company.`
             `They hid the plans for Ashcombe's new flagship inside a sailmaker's pattern book. The foreman will hand them over if you guarantee the workers safe passage.`
-            `The plans show a broadside twice as heavy as Vane's old ship. They also reveal a weakness in the stern galleries.`
+            `The harbourmaster glances toward the quay before speaking again. "The posting tells you where to go. It does not tell you why I am asking."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will lend a hand. Tell me where to begin."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"There is more here than you have told me. What is it?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not put my crew between old enemies."`
                     goto decline_job
             label more_details
-                `The plans show a broadside twice as heavy as Vane's old ship. They also reveal a weakness in the stern galleries.`
+                `The harbourmaster leans closer and speaks plainly. "The plans show a broadside twice as heavy as Vane's old ship. They also reveal a weakness in the stern galleries."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then you have my word. I will see it through."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Then we part here. Fair winds."`
                         goto decline_job
             label accept_job
                 `The island council pays for the workers' passage. “No one should have to build the chain that binds them,” the speaker says.`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster replaces the papers in the ledger. "No matter. I will find a vessel with room in its schedule."`
                 close
     on accept
         log "Accepted The Shipwrights of Port de Lune. Sail to Port de Lune and collect the plans from Master Shipwright Lenoir."

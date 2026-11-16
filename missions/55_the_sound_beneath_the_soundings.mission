@@ -11,28 +11,28 @@ mission "The Sound Beneath the Soundings"
         has "A Scholar Without a Flag: done"
     on offer
         conversation
-            `Test the observatory's theory at a stretch of water where the lead line rings like a struck glass.`
-            `Keeper Orlan studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Keeper Orlan's lead line has been brought back from the test waters. The glass bead at its end is scored, and the sounding notes show an impossible change in depth.`
+            `Orlan holds the lead line out for you to inspect. "At one stretch it rings like struck glass. That is no ordinary reef or shoal. The observatory's theory is that something beneath the seabed is changing the sound."`
             choice
-                `(I will help uncover what happened.)`
+                `"If there is a truth to find, I will help find it."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"What does this have to do with the old expedition?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I will not chase a secret on promises alone."`
                     close
             label details
-                `Keeper Orlan lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Orlan marks a narrow patch of water on the chart. "Take the sounding carefully. If the old expedition used this passage, the bottom may explain why its charts were altered."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Very well. Let us bring this into the open."`
                         accept
-                    `(Not today.)`
+                    `"I have heard enough. I must be on my way."`
                         close
     on accept
         log "Accepted The Sound Beneath the Soundings. Test the observatory's theory at a stretch of water where the lead line rings like a struck glass."
     on visit
         conversation
-            `Keeper Orlan receives you at Bellweather Cay. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Bellweather Cay, Orlan compares your soundings with the observatory's old measurements. The notes fit the hidden route. "The expedition was not hunting gold alone," Orlan says. "It was looking for a place the official charts have been made to forget."`
     on complete
         conversation
-            `Keeper Orlan thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Orlan coils the lead line and sets it beside the chart. "We have a place to search, not a final answer. Still, the sea has given up one secret. We should be careful who gets to write the next chart."`
         log "Completed The Sound Beneath the Soundings. Received 940 gold. Test the observatory's theory at a stretch of water where the lead line rings like a struck glass."

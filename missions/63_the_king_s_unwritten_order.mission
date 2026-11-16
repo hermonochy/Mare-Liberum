@@ -11,28 +11,28 @@ mission "The King's Unwritten Order"
         has "A Debt in the Admiralty: done"
     on offer
         conversation
-            `Recover the missing page from an old monastery register before the governor's agents arrive.`
-            `Brother Mateo studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Brother Mateo has opened the monastery register to a page where the binding has been cut. The missing leaf was removed carefully, not torn out by accident.`
+            `Mateo runs a finger along the cut binding. "The governor's agents are on their way. I need that page before they arrive; it is the one part of the register that records the expedition's order."`
             choice
-                `(I will help uncover what happened.)`
+                `"Very well. I will take responsibility for the next leg."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Tell me the part you have not put on the table."`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I will not be drawn into it. Good day."`
                     close
             label details
-                `Brother Mateo lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `He closes the book before anyone can see the gap. "Do not let them know you are looking for it. Find the page and bring it back without giving them a reason to search the rest of the house."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Then let us stop talking and set sail."`
                         accept
-                    `(Not today.)`
+                    `"Not for me. Let another captain take the work."`
                         close
     on accept
         log "Accepted The King's Unwritten Order. Recover the missing page from an old monastery register before the governor's agents arrive."
     on visit
         conversation
-            `Brother Mateo receives you at San Aurelio. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At San Aurelio, Mateo compares the recovered page with the monastery's surviving entries. "The expedition was given a sealed order," he says. "The register names the authority behind it, but not the destination."`
     on complete
         conversation
-            `Brother Mateo thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Mateo returns the page to the register and closes the cover. "A record should not be kept in a drawer where a governor's man can take it away. I will keep it with the rest of the history, where it belongs."`
         log "Completed The King's Unwritten Order. Received 1460 gold. Recover the missing page from an old monastery register before the governor's agents arrive."

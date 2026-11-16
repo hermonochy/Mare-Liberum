@@ -31,6 +31,18 @@ CONDITION_TYPES = {
     "cargo_quantity",
     "cargo_load",
     "cargo_free_space",
+    "wind_strength",
+    "sail_setting",
+    "speed",
+    "nearby_ships",
+    "near_port",
+    "near_island",
+    "island_known",
+    "near_wreck",
+    "wreck_known",
+    "distance_to_port",
+    "port_faction",
+    "current_port_faction",
     "random",
     "constant",
 }
@@ -52,6 +64,12 @@ ACTION_TYPES = {
     "add_cargo",
     "remove_cargo",
     "retreat_fleet",
+    "reveal_island",
+    "spawn_island",
+    "reveal_wreck",
+    "set_port_faction",
+    "set_wind",
+    "set_sea_state",
 }
 
 COMPARISON_OPERATORS = {"==", "!=", ">", ">=", "<", "<=", "in", "not_in", "contains"}
@@ -128,6 +146,16 @@ def validate_actions(actions, source):
                 raise ValueError(f"Action '{kind}' requires a finite amount in {source}")
         if kind in {"schedule_event", "enable_event", "disable_event"} and not action.get("event"):
             raise ValueError(f"Action '{kind}' requires an event id in {source}")
+        if kind in {"reveal_island", "spawn_island", "reveal_wreck"} and not action.get("name"):
+            raise ValueError(f"Action '{kind}' requires a name in {source}")
+        if kind == "set_port_faction" and (not action.get("port") or not action.get("faction")):
+            raise ValueError(f"Action '{kind}' requires a port and faction in {source}")
+        if kind == "set_wind" and (not math.isfinite(float(action.get("angle", 0))) or not 0.0 <= float(action.get("strength", 0)) <= 1.0):
+            raise ValueError(f"Action '{kind}' has invalid wind values in {source}")
+        if kind in {"set_wind", "set_sea_state"} and (not math.isfinite(float(action.get("duration", 240.0))) or float(action.get("duration", 240.0)) <= 0):
+            raise ValueError(f"Action '{kind}' requires a positive duration in {source}")
+        if kind == "set_sea_state" and str(action.get("state", "")) not in {"calm", "swell", "rough", "storm"}:
+            raise ValueError(f"Action '{kind}' requires calm, swell, rough or storm in {source}")
 
 
 def validate_event_references(condition, event_ids, source):
@@ -167,6 +195,10 @@ EVENT_VARIABLES = {
     "cargo_load": "cargo_load",
     "cargo_free_space": "cargo_free_space",
     "random": "random",
+    "wind_strength": "wind_strength",
+    "sail_setting": "sail_setting",
+    "speed": "speed",
+    "nearby_ships": "nearby_ships",
 }
 
 EVENT_FUNCTIONS = {
@@ -178,6 +210,14 @@ EVENT_FUNCTIONS = {
     "upgrade": ("ship_upgrade", "key"),
     "cargo": ("cargo_quantity", "good"),
     "event": ("event_state", "event"),
+    "near_port": ("near_port", "port"),
+    "ships_nearby": ("nearby_ships", "radius"),
+    "near_island": ("near_island", "name"),
+    "island_known": ("island_known", "name"),
+    "near_wreck": ("near_wreck", "name"),
+    "wreck_known": ("wreck_known", "name"),
+    "distance_to_port": ("distance_to_port", "port"),
+    "port_faction": ("port_faction", "port"),
 }
 
 
@@ -328,11 +368,17 @@ def load_mission_events(directory):
             validate_condition(cancel_if, path.name)
         spawn_config = data.get("spawn_fleet")
         actions = list(data.get("actions", []))
+        for action in actions:
+            if action.get("type") == "spawn_fleet":
+                action.setdefault("faction", data.get("faction", "pirate"))
+                action.setdefault("attitude", data.get("attitude", "hostile"))
         if spawn_config:
             fleet_action = dict(spawn_config)
             fleet_action["type"] = "spawn_fleet"
             fleet_action["ship_types"] = data.get("ship_types") or ["Schooner", "Brigantine", "Brig", "Corvette", "Frigate", "Ship of the Line"]
             fleet_action["ship_names"] = data.get("ship_names", [])
+            fleet_action["faction"] = data.get("faction", "pirate")
+            fleet_action["attitude"] = data.get("attitude", "hostile")
             for key in ("announcement", "announcement_seconds", "journal_entry"):
                 if key in data:
                     fleet_action[key] = data[key]

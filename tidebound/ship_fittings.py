@@ -67,9 +67,9 @@ CANNON_TYPES = {
 }
 
 CANNON_MOUNTS = {
-    "Broadside Batteries": {"price": 0, "mode": "broadside", "detail": "Traditional port and starboard batteries. Fire with Z and X."},
-    "Bow & Stern Chasers": {"price": 1950, "mode": "chasers", "detail": "One gun is reassigned to each end of the ship. Fire forward with Q and aft with E."},
-    "Rotating Turrets": {"price": 4250, "mode": "turrets", "detail": "Deck turrets rotate to track nearby hostile vessels. Fire with Z or X to engage the nearest target."},
+    "Broadside Batteries": {"price": 0, "mode": "broadside", "detail": "Traditional port and starboard batteries. Hold A and D to fire."},
+    "Bow & Stern Chasers": {"price": 1950, "mode": "chasers", "detail": "One gun is reassigned to each end of the ship. Fire forward with W and aft with S."},
+    "Rotating Turrets": {"price": 4250, "mode": "turrets", "detail": "Deck turrets rotate to track nearby hostile vessels. Hold A or D to engage the nearest target."},
 }
 
 VISUAL_UPGRADES = {

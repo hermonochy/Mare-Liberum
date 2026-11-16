@@ -20,26 +20,26 @@ mission "The Storm Line"
         conversation
             `Five Company warships patrol the storm line, screening the Meridian Star.`
             `The deserters have given you the patrol schedule. If the screen is broken, Ashcombe must choose between fleeing into open ocean or defending his repair base.`
-            `This is the largest fleet you have faced. Use your escorts, keep the wind on your quarter, and do not let all five ships bring their broadsides to bear.`
+            `The harbourmaster lowers their voice. "I have told you what the work is. The reason for it is a different matter."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"Let us see where this trail leads. I am in."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"You are choosing your words carefully. Why?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I cannot spare the risk or the men."`
                     goto decline_job
             label more_details
-                `This is the largest fleet you have faced. Use your escorts, keep the wind on your quarter, and do not let all five ships bring their broadsides to bear.`
+                `The harbourmaster leans closer and speaks plainly. "This is the largest fleet you have faced. Use your escorts, keep the wind on your quarter, and do not let all five ships bring their broadsides to bear."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then I will see it done. No more delays."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I will not be persuaded. Farewell."`
                         goto decline_job
             label accept_job
                 `The deserters mark the route in chalk. “They believe the storm will hide them. Let the weather hide us instead.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster draws a neat line through the posting. "I will not press you, captain. The offer can stand until another ship takes it."`
                 close
     on accept
         log "Accepted The Storm Line. Break the five warships at the Storm Line, then return to Last Light to meet the free captains."

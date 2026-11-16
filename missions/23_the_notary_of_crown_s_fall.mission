@@ -13,26 +13,26 @@ mission "The Notary of Crown's Fall"
         conversation
             `The former notary at Crown's Fall holds the original charter that gave the Meridian Company its supposed authority.`
             `He hid the document in a church archive after discovering that the royal seal on it was copied.`
-            `The Company knows he kept a copy and has offered a reward for his arrest. He will only show the evidence to a captain who arrives without a Company flag.`
+            `The harbourmaster lowers their voice. "I have told you what the work is. The reason for it is a different matter."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"I will put my ship to it. Let us get underway."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Why ask a captain instead of going to the authorities?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I would rather not have my name in these papers."`
                     goto decline_job
             label more_details
-                `The Company knows he kept a copy and has offered a reward for his arrest. He will only show the evidence to a captain who arrives without a Company flag.`
+                `The harbourmaster leans closer and speaks plainly. "The Company knows he kept a copy and has offered a reward for his arrest. He will only show the evidence to a captain who arrives without a Company flag."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Agreed. Let us make certain the truth reaches daylight."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I have decided. I will not be sailing."`
                         goto decline_job
             label accept_job
                 `Judge Valera supplies a plain merchant pennant. “Let them think you are carrying salt. The truth will make enough noise when it is read aloud.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster sets the papers aside. "Then I shall trouble you no further. Good sailing, captain."`
                 close
     on accept
         log "Accepted The Notary of Crown's Fall. Sail to Crown's Fall and collect the original charter from Notary Bell."

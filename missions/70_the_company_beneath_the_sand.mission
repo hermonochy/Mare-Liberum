@@ -11,28 +11,28 @@ mission "The Company Beneath the Sand"
         has "The Captain's Other Journal: done"
     on offer
         conversation
-            `Uncover the modern syndicate financing the search and free its imprisoned mapmaker.`
-            `Mapmaker Jules Ardent studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The mapmaker's name has been struck from the syndicate's papers. Jules Ardent is being held at Sugarhook, while the men financing the search keep their own names out of the ledgers.`
+            `Ardent's last message reached the council through a dockworker. "They hired me to copy the old charts, then locked me away when I started asking why the same islands were missing from every version. I can tell you who paid for the work, but first I need to get out."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will hear the whole story, then take the work."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"What have the records left out?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"There are limits to what I will take on. This is one."`
                     close
             label details
-                `Mapmaker Jules Ardent lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `The note is brief, but the warning is plain. "The syndicate is buying the search quietly. Free me and we can follow the payments back to the people who want the drowned settlement found—and owned."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"You can rely on me. I will start at once."`
                         accept
-                    `(Not today.)`
+                    `"No. Do not wait for me."`
                         close
     on accept
         log "Accepted The Company Beneath the Sand. Uncover the modern syndicate financing the search and free its imprisoned mapmaker."
     on visit
         conversation
-            `Mapmaker Jules Ardent receives you at Sugarhook. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Sugarhook, Jules is free and has recovered the account book. The entries identify the syndicate that financed the search. "They were not paying for scholarship," Ardent says. "They wanted the map before anyone else could see it."`
     on complete
         conversation
-            `Mapmaker Jules Ardent thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Ardent holds the account book against his chest. "I will testify about the money and the charts. The men who paid for this thought a mapmaker could be bought and buried. They were wrong about both."`
         log "Completed The Company Beneath the Sand. Received 1915 gold. Uncover the modern syndicate financing the search and free its imprisoned mapmaker."

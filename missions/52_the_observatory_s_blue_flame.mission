@@ -11,28 +11,28 @@ mission "The Observatory's Blue Flame"
         has "A Chart Beneath the Bell: done"
     on offer
         conversation
-            `Carry the brass token to the island observatory; its old instruments may explain the blue lights.`
-            `Keeper Orlan studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `The observatory's brass instruments are laid out beneath a shuttered window. The blue lights have been seen again, and Keeper Orlan has set the recovered token beside the old sighting records.`
+            `Keeper Orlan turns the token toward the lamplight. "This may belong to the expedition that vanished west. The observatory keeps instruments older than the Company, and they may tell us whether those blue lights were signal, warning, or something else."`
             choice
-                `(I will help uncover what happened.)`
+                `"All right. Put me on the course."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Why has someone gone to such trouble to hide this?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"My ship has enough trouble without this. I will pass."`
                     close
             label details
-                `Keeper Orlan lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Orlan taps the old sighting book. "I have tried to make these instruments agree with the modern charts. They do not. Bring the token here, and we may learn why the expedition's route was left blank."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Mark the course. My ship is ready."`
                         accept
-                    `(Not today.)`
+                    `"Not this voyage. Find another ship."`
                         close
     on accept
         log "Accepted The Observatory's Blue Flame. Carry the brass token to the island observatory; its old instruments may explain the blue lights."
     on visit
         conversation
-            `Keeper Orlan receives you at Bellweather Cay. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Bellweather Cay, Orlan fits the token against a worn brass mount. The old instruments point toward a place missing from modern charts. "They were not looking for gold alone," Orlan says. "Someone removed the destination from every official record."`
     on complete
         conversation
-            `Keeper Orlan thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Orlan closes the shutters over the instruments. "The blue flame has given us a direction, not an answer. Still, a direction is more than we had yesterday. Let us keep the finding in the hands of those who live here."`
         log "Completed The Observatory's Blue Flame. Received 745 gold. Carry the brass token to the island observatory; its old instruments may explain the blue lights."

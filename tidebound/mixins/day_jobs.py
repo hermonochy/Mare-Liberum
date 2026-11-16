@@ -45,9 +45,10 @@ class DayJobsMixin:
             title = "A Few Honest Barrels"
             speaker = self.rng.choice(["A merchant's factor", "The quay master", "A warehouse keeper"])
             offer_text = (
-                f"A merchant's factor beckons you over. \"Nothing grand, captain. We have {amount} lots of {goods} "
-                f"that need carrying to {destination.name}. The regular coaster is laid up for want of a mast, "
-                f"and these goods are wanted before the next market day. No privateers, no secrets — just freight.\""
+                f"{speaker} catches your eye beside the warehouse doors, a ledger tucked beneath one arm. "
+                f"\"Captain, I have {amount} lots of {goods} that must reach {destination.name} before market day. "
+                f"Our regular coaster is laid up for want of a mast, and the buyers will not wait. No contraband, "
+                f"no privateering, and no mystery cargo—just honest freight for a captain who keeps an appointment.\""
             )
             payload = f"{amount} lots of {goods}"
         elif kind == "letter":
@@ -57,9 +58,10 @@ class DayJobsMixin:
             title = "A Sealed Letter"
             speaker = "A local clerk"
             offer_text = (
-                f"A local clerk holds out a small packet sealed with red wax. \"Would you carry this to {destination.name} "
-                f"and put it into the hands of {recipient}? It is a letter from {sender}. Nothing dangerous, "
-                f"I assure you, and certainly not for curious eyes. It should reach them before the week's end.\""
+                f"A local clerk checks the red wax on a small packet before offering it to you. "
+                f"\"This is from {sender}, for {recipient} at {destination.name}. I would be obliged if you put it "
+                f"directly into their hands. It is not a dangerous letter, captain, but it is a private one; "
+                f"I would rather it did not take the grand tour of every tavern between here and there.\""
             )
             payload = f"a sealed letter for {recipient}"
         elif kind == "passenger":
@@ -68,9 +70,10 @@ class DayJobsMixin:
             title = "Passage for a Passenger"
             speaker = "A tavern keeper"
             offer_text = (
-                f"The tavern keeper introduces you to {passenger} who needs passage to {destination.name}. "
-                f"\"They have paid their fare and travel with one sea chest. A calm voyage is all they ask. "
-                f"No need to hurry, and no need to go looking for trouble.\""
+                f"The tavern keeper brings {passenger} over from a quiet table near the window. "
+                f"\"The fare is paid, and there is only one sea chest. {passenger.capitalize()} needs passage to "
+                f"{destination.name}. They ask for a steady berth and a little privacy; I told them you were "
+                f"a captain who knows how to bring a passenger into port without making a story of it.\""
             )
             payload = passenger
         else:
@@ -79,10 +82,10 @@ class DayJobsMixin:
             speaker = "A fishing master"
             rescue_x, rescue_y = self.find_day_job_rescue_position(source_name, destination.name)
             offer_text = (
-                f"A fishing master describes a small longboat seen drifting between {source_name} and {destination.name}. "
-                f"\"There were people aboard, waving cloth for a signal. They may be sailors from a coaster that lost its way. "
-                f"Find them, bring them aboard, and see them safely to {destination.name}. There is no call to fight anyone — "
-                f"they simply need a hand.\""
+                f"A fishing master comes ashore with salt dried white on his sleeves. "
+                f"\"I saw a longboat drifting between {source_name} and {destination.name}. There were people aboard, "
+                f"waving a bit of cloth until their arms gave out. Could be a coaster's crew, or folk from a fishing boat. "
+                f"Find them, get them aboard, and put them ashore at {destination.name}. They need a rescue, not a fight.\""
             )
             payload = "a stranded crew"
 

@@ -20,26 +20,26 @@ mission "The Meridian Screen"
         conversation
             `Five remaining Company warships protect the Meridian Star in the Last Light Passage.`
             `Ashcombe has no repair yard left and cannot afford another delay. His ships will fight hard to keep the flagship clear of the free fleet.`
-            `The battle will decide whether the Meridian Star reaches the open ocean. The free captains are closing in from three directions.`
+            `The harbourmaster glances toward the quay before speaking again. "The posting tells you where to go. It does not tell you why I am asking."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"Very well. I will take responsibility for the next leg."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Tell me the part you have not put on the table."`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not be drawn into it. Good day."`
                     goto decline_job
             label more_details
-                `The battle will decide whether the Meridian Star reaches the open ocean. The free captains are closing in from three directions.`
+                `The harbourmaster leans closer and speaks plainly. "The battle will decide whether the Meridian Star reaches the open ocean. The free captains are closing in from three directions."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then let us stop talking and set sail."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Not for me. Let another captain take the work."`
                         goto decline_job
             label accept_job
                 `The shipwright gives you the weak point on the chart. “One clean quartering pass. Do not let him turn his stern away.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster sets the papers aside. "Then I shall trouble you no further. Good sailing, captain."`
                 close
     on accept
         log "Accepted The Meridian Screen. Sink the five screen ships in the Last Light Passage, then return to Last Light for the final pursuit orders."

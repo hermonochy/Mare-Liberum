@@ -18,26 +18,26 @@ mission "The Cane Wharf Raid"
         conversation
             `Three Company vessels are loading chained labourers and seized cargo at Sugarhook Roads.`
             `The governor claims the workers are debtors. The manifests show that many were taken from fishing villages that refused to pay the new harbour taxes.`
-            `The ships are guarded by hired marines. Stop the transfer before they clear the roads.`
+            `The harbourmaster closes the ledger with one hand. "That is the public account. There is a little more to it, if you care to hear."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"Very well. I will take responsibility for the next leg."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Tell me the part you have not put on the table."`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I will not be drawn into it. Good day."`
                     goto decline_job
             label more_details
-                `The ships are guarded by hired marines. Stop the transfer before they clear the roads.`
+                `The harbourmaster leans closer and speaks plainly. "The ships are guarded by hired marines. Stop the transfer before they clear the roads."`
                 choice
-                    `(Then I will see it done.)`
+                    `"Then let us stop talking and set sail."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"Not for me. Let another captain take the work."`
                         goto decline_job
             label accept_job
                 `Notary Bell sends a copy of the charter with you. “A paper trail is useful, captain, but sometimes a ship must be stopped before its cargo disappears.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `The harbourmaster draws a neat line through the posting. "I will not press you, captain. The offer can stand until another ship takes it."`
                 close
     on accept
         log "Accepted The Cane Wharf Raid. Sink the three Company transports at Sugarhook Roads, then return to Sugarhook and meet the island council."

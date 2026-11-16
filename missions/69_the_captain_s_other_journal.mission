@@ -11,28 +11,28 @@ mission "The Captain's Other Journal"
         has "The Wreck of the Saint Oria: done"
     on offer
         conversation
-            `Bring the logbook to a shipwright who can identify the strange timber and copper fastenings.`
-            `Master Shipwright Edda studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Master Shipwright Edda has cleared a bench for the Saint Oria's logbook. Beside it lie samples of unfamiliar timber and copper fastenings recovered from the wreck.`
+            `Edda turns one of the copper fittings over in a calloused hand. "I can tell you what wood a ship is built from by the smell when you cut it. This timber is not from any yard I know, and those fastenings follow a pattern I have never seen."`
             choice
-                `(I will help uncover what happened.)`
+                `"Let us see where this trail leads. I am in."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"You are choosing your words carefully. Why?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I cannot spare the risk or the men."`
                     close
             label details
-                `Master Shipwright Edda lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Edda clears a space beside the logbook. "Bring the book and the samples together. The repairs and materials may tell us where the ship was built—or what it carried."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"Then I will see it done. No more delays."`
                         accept
-                    `(Not today.)`
+                    `"I will not be persuaded. Farewell."`
                         close
     on accept
         log "Accepted The Captain's Other Journal. Bring the logbook to a shipwright who can identify the strange timber and copper fastenings."
     on visit
         conversation
-            `Master Shipwright Edda receives you at Port Azure. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Port Azure, Edda compares the logbook with the timber and fittings. The construction details point to a place absent from official charts. "This was no ordinary expedition ship," Edda says. "Someone built it for a journey they did not intend to record."`
     on complete
         conversation
-            `Master Shipwright Edda thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Edda wraps the samples in canvas. "I can identify the work, if not the yard. Keep these with the logbook. Together they may tell the next shipwright where the Saint Oria was meant to go."`
         log "Completed The Captain's Other Journal. Received 1850 gold. Bring the logbook to a shipwright who can identify the strange timber and copper fastenings."

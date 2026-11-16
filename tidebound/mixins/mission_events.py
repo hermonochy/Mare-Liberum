@@ -1,4 +1,5 @@
 from ..common import *
+from ..mission_expression import MissionExpression, MissionExpressionError
 
 
 class MissionEventsMixin:
@@ -7,6 +8,16 @@ class MissionEventsMixin:
     def initialise_mission_events(self):
         self.world_flags = {}
         self.mission_event_fleet_strength = {}
+        self.ambient_mission_states = {
+            mission.mission_id: {
+                "status": "waiting",
+                "trigger_count": 0,
+                "cooldown_remaining": 0.0,
+            }
+            for mission in self.missions
+            if getattr(mission, "ambient", False) or getattr(mission, "offer_at", "port") != "port"
+        }
+        self.dynamic_islands = []
         self.mission_event_states = {
             event["id"]: {
                 "status": "waiting",
@@ -25,12 +36,12 @@ class MissionEventsMixin:
             for event in self.mission_events
         }
 
-    def restore_mission_event_state(self, saved_states=None, saved_flags=None):
+    def restore_mission_event_state(self, saved_states=None, saved_flags=None, saved_ambient=None, saved_islands=None):
         self.initialise_mission_events()
         if isinstance(saved_flags, dict):
             self.world_flags.update(saved_flags)
         if not isinstance(saved_states, dict):
-            return
+            saved_states = {}
         for event_id, saved in saved_states.items():
             if event_id not in self.mission_event_states or not isinstance(saved, dict):
                 continue
@@ -51,11 +62,212 @@ class MissionEventsMixin:
             current["fleet_serial"] = max(0, int(saved.get("fleet_serial", 0)))
             rolls = saved.get("random_rolls", {})
             current["random_rolls"] = dict(rolls) if isinstance(rolls, dict) else {}
+        if isinstance(saved_ambient, dict):
+            for mission_id, saved in saved_ambient.items():
+                if mission_id not in self.ambient_mission_states or not isinstance(saved, dict):
+                    continue
+                current = self.ambient_mission_states[mission_id]
+                status = str(saved.get("status", "waiting"))
+                current["status"] = status if status in {"waiting", "active", "completed"} else "waiting"
+                current["trigger_count"] = max(0, int(saved.get("trigger_count", 0)))
+                current["cooldown_remaining"] = max(0.0, float(saved.get("cooldown_remaining", 0.0)))
+        if isinstance(saved_islands, list):
+            for island in saved_islands:
+                if not isinstance(island, dict) or not isinstance(island.get("polygon"), list):
+                    continue
+                polygon = [(float(point[0]), float(point[1])) for point in island["polygon"] if isinstance(point, (list, tuple)) and len(point) == 2]
+                if len(polygon) < 3:
+                    continue
+                record = {"name": str(island.get("name", "Uncharted Cay")), "polygon": polygon, "revealed": bool(island.get("revealed", True))}
+                if not any(item["name"] == record["name"] for item in self.dynamic_islands):
+                    self.dynamic_islands.append(record)
+                    self.land.append(polygon)
 
     def set_world_flag(self, key, value=True):
         key = str(key).strip()
         if key:
             self.world_flags[key] = value
+
+    def mission_expression_context(self):
+        def mission_state_value(target):
+            mission = self.find_event_mission(target)
+            return self.mission_state(mission) if mission else "missing"
+
+        def near_port(name, radius=1200.0):
+            port = self.ports_by_name.get(str(name))
+            return bool(port and math.hypot(port.x - self.ship_x, port.y - self.ship_y) <= float(radius))
+
+        def distance_to_port(name):
+            port = self.ports_by_name.get(str(name))
+            return math.hypot(port.x - self.ship_x, port.y - self.ship_y) if port else 1e12
+
+        def island_center(name):
+            for island in self.dynamic_islands:
+                if island["name"] == str(name):
+                    polygon = island["polygon"]
+                    return (sum(x for x, _ in polygon) / len(polygon), sum(y for _, y in polygon) / len(polygon))
+            for site in self.treasure_sites:
+                if site.island_name == str(name) or site.treasure_id == str(name):
+                    return (sum(x for x, _ in site.polygon) / len(site.polygon), sum(y for _, y in site.polygon) / len(site.polygon))
+            return None
+
+        def near_island(name):
+            center = island_center(name)
+            return bool(center and math.hypot(center[0] - self.ship_x, center[1] - self.ship_y) <= 900.0)
+
+        def island_known(name):
+            return bool(self.world_flags.get(f"island_discovered:{name}", False) or any(item["name"] == str(name) for item in self.dynamic_islands))
+
+        def wreck_named(name):
+            return next((item for item in self.shipwrecks if item.wreck_id == str(name) or item.name == str(name)), None)
+
+        def near_wreck(name):
+            wreck = wreck_named(name)
+            return bool(wreck and math.hypot(wreck.x - self.ship_x, wreck.y - self.ship_y) <= 800.0)
+
+        def wreck_known(name):
+            wreck = wreck_named(name)
+            return bool(wreck and wreck.discovered)
+
+        def ships_nearby(radius=1200.0, faction=""):
+            ships = [ship for ship in self.pirates if not ship.dead and ship.hull > 0]
+            ships.extend(ship for ship in self.traffic_ships if ship.hull > 0)
+            return sum(1 for ship in ships if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) <= float(radius) and (not faction or getattr(ship, "faction", "") == str(faction)))
+
+        variables = {
+            "gold": self.gold,
+            "time": self.world_time,
+            "world_time": self.world_time,
+            "at_sea": self.docked_port is None,
+            "docked": self.docked_port is not None,
+            "docked_port": self.docked_port or "",
+            "region": self.current_player_region(),
+            "ship_class": self.current_ship,
+            "hull": self.player_hull,
+            "hull_percent": 100.0 * self.player_hull / max(1, self.player_max_hull),
+            "wind_strength": float(self.wind_strength),
+            "wind_angle": float(self.wind_angle),
+            "sail_setting": float(self.sail_setting),
+            "sail_percent": float(self.sail_setting) * 100.0,
+            "oars_deployed": bool(self.oars_deployed),
+            "speed": math.hypot(self.ship_vx, self.ship_vy),
+            "fleet": sum(1 for ship in self.fleet if ship.hull > 0 and not ship.sinking),
+            "escorts": sum(1 for ship in self.fleet if ship.hull > 0 and not ship.sinking),
+            "fleet_power": self.player_fleet_power(),
+            "jobs": self.completed_day_jobs,
+            "relics": len(self.relics),
+            "unique_items": len(self.unique_items),
+            "cargo_load": self.cargo_load(),
+            "cargo_free_space": self.cargo_free_space(),
+            "nearby_ships": ships_nearby(),
+            "player_speed": math.hypot(self.ship_vx, self.ship_vy),
+            "random": lambda: self.rng.uniform(0.0, 100.0),
+        }
+        functions = {
+            "flag": lambda key: self.world_flags.get(str(key), False),
+            "visited": lambda name: bool(self.world_flags.get(f"visited_port:{name}", False)),
+            "visits": lambda name: int(self.world_flags.get(f"port_visits:{name}", 0)),
+            "mission": mission_state_value,
+            "event": lambda key: self.mission_event_states.get(str(key), {}).get("status", "missing"),
+            "standing": lambda faction: self.faction_standing(str(faction)),
+            "upgrade": lambda key: int(self.upgrades.get(str(key), 0)),
+            "cargo": lambda good: self.cargo_quantity(str(good)),
+            "near_port": near_port,
+            "distance_to_port": distance_to_port,
+            "near_island": near_island,
+            "island_known": island_known,
+            "near_wreck": near_wreck,
+            "wreck_known": wreck_known,
+            "ships_nearby": ships_nearby,
+            "has_mission": lambda target: mission_state_value(target) in {"active", "done"},
+            "has_flag": lambda key: bool(self.world_flags.get(str(key), False)),
+            "port_faction": lambda name: getattr(self.ports_by_name.get(str(name)), "faction", "") if self.ports_by_name.get(str(name)) else "",
+        }
+        return variables, functions
+
+    def evaluate_mission_script_expression(self, expression):
+        variables, functions = self.mission_expression_context()
+        return bool(MissionExpression(expression).evaluate(variables, functions))
+
+    def update_active_mission_encounters(self):
+        if self.conversation is not None:
+            return
+        mission = self.active_mission()
+        if mission is None or not mission.sections.get("encounter"):
+            return
+        vessels = [ship for ship in self.traffic_ships if ship.hull > 0]
+        vessels.extend(ship for ship in self.pirates if not ship.dead and ship.hull > 0)
+        nearby = sorted(
+            (ship for ship in vessels if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) <= 650.0),
+            key=lambda ship: math.hypot(ship.x - self.ship_x, ship.y - self.ship_y),
+        )
+        for vessel in nearby:
+            key = f"mission_encounter:{mission.mission_id}:{vessel.name}"
+            if self.world_flags.get(key):
+                continue
+            self.set_world_flag(key, True)
+            self.start_conversation(mission, "encounter")
+            return
+
+    def update_ambient_missions(self, dt):
+        if self.conversation is not None:
+            return
+        candidates = sorted(
+            (mission for mission in self.missions
+             if getattr(mission, "ambient", False) or getattr(mission, "offer_at", "port") != "port"),
+            key=lambda item: (-int(getattr(item, "priority", 0)), item.name),
+        )
+        for mission in candidates:
+            state = self.ambient_mission_states.setdefault(mission.mission_id, {
+                "status": "waiting", "trigger_count": 0, "cooldown_remaining": 0.0
+            })
+            if state["status"] == "active":
+                continue
+            if state["cooldown_remaining"] > 0.0:
+                state["cooldown_remaining"] = max(0.0, state["cooldown_remaining"] - dt)
+                continue
+            maximum = int(getattr(mission, "max_triggers", 0))
+            repeatable = bool(getattr(mission, "repeatable", False))
+            if state["status"] == "completed" and not repeatable:
+                continue
+            if maximum and state["trigger_count"] >= maximum:
+                state["status"] = "completed"
+                continue
+            if not getattr(mission, "ambient", False) and self.active_mission_id is not None:
+                continue
+            if not self.mission_offer_location_matches(mission):
+                continue
+            if not self.mission_is_visible(mission):
+                continue
+            if mission.source and self.docked_port and mission.source != self.docked_port and mission.offer_at == "port":
+                continue
+            expression = getattr(mission, "offer_expression", "")
+            try:
+                if expression and not self.evaluate_mission_script_expression(expression):
+                    continue
+            except MissionExpressionError as error:
+                self.add_journal(f"Mission scene '{mission.title}' has an invalid condition: {error}")
+                state["status"] = "completed"
+                continue
+            state["status"] = "active"
+
+            def finish_scene(record=mission, current=state):
+                current["trigger_count"] += 1
+                deferred = bool(self.world_flags.pop(f"mission_deferred:{record.mission_id}", False))
+                if deferred:
+                    current["status"] = "waiting"
+                    current["cooldown_remaining"] = max(30.0, float(record.cooldown_seconds))
+                elif self.mission_state(record) in {"active", "done"}:
+                    current["status"] = "completed"
+                elif record.repeatable and (not record.max_triggers or current["trigger_count"] < record.max_triggers):
+                    current["status"] = "waiting"
+                    current["cooldown_remaining"] = max(0.0, float(record.cooldown_seconds))
+                else:
+                    current["status"] = "completed"
+
+            self.start_conversation(mission, "offer", finish_scene)
+            if self.conversation is not None:
+                return
 
     @staticmethod
     def compare_event_value(current, expected, operator):
@@ -156,6 +368,39 @@ class MissionEventsMixin:
             return self.cargo_load()
         if kind == "cargo_free_space":
             return self.cargo_free_space()
+        if kind == "wind_strength":
+            return float(self.wind_strength)
+        if kind == "sail_setting":
+            return float(self.sail_setting)
+        if kind == "speed":
+            return math.hypot(self.ship_vx, self.ship_vy)
+        if kind == "current_port_faction":
+            port = self.ports_by_name.get(self.docked_port or "")
+            return port.faction if port else ""
+        if kind == "near_port":
+            name = str(condition.get("port", ""))
+            port = self.ports_by_name.get(name)
+            return bool(port and math.hypot(port.x - self.ship_x, port.y - self.ship_y) <= 1200.0)
+        if kind == "distance_to_port":
+            port = self.ports_by_name.get(str(condition.get("port", "")))
+            return math.hypot(port.x - self.ship_x, port.y - self.ship_y) if port else 1e12
+        if kind in {"near_island", "island_known", "near_wreck", "wreck_known"}:
+            variables, functions = self.mission_expression_context()
+            function = {
+                "near_island": functions["near_island"],
+                "island_known": functions["island_known"],
+                "near_wreck": functions["near_wreck"],
+                "wreck_known": functions["wreck_known"],
+            }[kind]
+            return function(condition.get("name", condition.get("key", "")))
+        if kind == "port_faction":
+            port = self.ports_by_name.get(str(condition.get("port", "")))
+            return port.faction if port else ""
+        if kind == "nearby_ships":
+            radius = float(condition.get("radius", 1200.0))
+            ships = [ship for ship in self.pirates if not ship.dead and ship.hull > 0]
+            ships.extend(ship for ship in self.traffic_ships if ship.hull > 0)
+            return sum(1 for ship in ships if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) <= radius)
         return None
 
     def evaluate_mission_event_condition(self, condition, random_rolls=None, ignore_random=False):
@@ -314,8 +559,8 @@ class MissionEventsMixin:
                 fleet_morale=1.0,
                 retreating=False,
                 fleet_size=len(selected_types),
-                player_attitude="hostile",
-                player_provoked=True,
+                player_attitude=str(action.get("attitude", "hostile")).lower(),
+                player_provoked=str(action.get("attitude", "hostile")).lower() == "hostile",
                 event_id=event_id,
                 gun_count=gun_count,
                 reload_seconds=max(1.2, float(stats["reload"])),
@@ -349,8 +594,12 @@ class MissionEventsMixin:
 
         for pirate in spawned:
             pirate.fleet_size = len(spawned)
-        self.commander_fleet_state(fleet_id, commander, "pirate", len(spawned))
-        self.ensure_commander_record(commander, "pirate")
+        faction = str(action.get("faction", "pirate"))
+        for ship in spawned:
+            ship.player_attitude = str(action.get("attitude", "hostile")).lower()
+            ship.player_provoked = ship.player_attitude == "hostile"
+        self.commander_fleet_state(fleet_id, commander, faction, len(spawned))
+        self.ensure_commander_record(commander, faction)
         self.mission_event_fleet_strength[fleet_id] = {
             "target_power": round(target_power, 3),
             "spawned_power": round(actual_power, 3),
@@ -358,6 +607,63 @@ class MissionEventsMixin:
             "ship_count": len(spawned),
         }
         return fleet_id
+
+    def spawn_event_island(self, action, event_id, trigger_count, action_index):
+        name = str(action.get("name", "Uncharted Cay"))
+        if any(item["name"] == name for item in self.dynamic_islands):
+            return False
+        offset_x = float(action.get("offset_x", 1800.0))
+        offset_y = float(action.get("offset_y", 900.0))
+        radius = max(150.0, min(900.0, float(action.get("radius", 360.0))))
+        center_x = self.ship_x + offset_x
+        center_y = self.ship_y + offset_y
+        if not (radius + 100.0 < center_x < WORLD_WIDTH - radius - 100.0 and radius + 100.0 < center_y < WORLD_HEIGHT - radius - 100.0):
+            return False
+        if any(math.hypot(port.x - center_x, port.y - center_y) < radius + 450.0 for port in self.ports):
+            return False
+        if not self.reef_clear_at(center_x, center_y, radius * 0.72):
+            return False
+        points = []
+        count = 16
+        phase = self.rng.random() * math.tau
+        for index in range(count):
+            angle = math.tau * index / count
+            irregularity = 0.78 + 0.18 * math.sin(angle * 3.0 + phase) + self.rng.uniform(-0.06, 0.06)
+            points.append((center_x + math.cos(angle) * radius * irregularity, center_y + math.sin(angle) * radius * irregularity * 0.72))
+        existing_polygons = list(self.land) + [site.polygon for site in self.treasure_sites]
+        for polygon in existing_polygons:
+            if any(point_in_polygon(point, polygon) for point in points):
+                return False
+            if any(point_in_polygon(point, points) for point in polygon):
+                return False
+            if any(nearest_polygon_edge(point[0], point[1], polygon)[1] < 70.0 for point in points):
+                return False
+            if any(nearest_polygon_edge(point[0], point[1], points)[1] < 70.0 for point in polygon):
+                return False
+        record = {"name": name, "polygon": points}
+        self.dynamic_islands.append(record)
+        self.land.append(points)
+        self.set_world_flag(f"island_discovered:{name}", True)
+        self.add_journal(f"A previously uncharted island has appeared on the chart: {name}.")
+        self.toast_message(f"UNCHARTED LAND SIGHTED · {name}", 6.0)
+        return True
+
+    def reveal_event_island(self, name):
+        name = str(name)
+        matched = False
+        for site in self.treasure_sites:
+            if site.island_name == name or site.treasure_id == name:
+                site.revealed = True
+                matched = True
+        for island in self.dynamic_islands:
+            if island["name"] == name:
+                island["revealed"] = True
+                matched = True
+        if matched:
+            self.set_world_flag(f"island_discovered:{name}", True)
+            self.add_journal(f"The island of {name} has been marked on your chart.")
+            self.toast_message(f"CHART UPDATED · {name}", 4.0)
+        return matched
 
     def format_mission_event_text(self, value, values=None):
         try:
@@ -515,6 +821,42 @@ class MissionEventsMixin:
                         pirate.retreating = True
                         heading = math.degrees(math.atan2(pirate.y - self.ship_y, pirate.x - self.ship_x))
                         pirate.heading = heading % 360.0
+            elif kind == "reveal_island":
+                if not self.reveal_event_island(action.get("name", "")):
+                    self.add_journal(f"The chart records no island named {action.get('name', 'unknown')}.")
+            elif kind == "spawn_island":
+                if not self.spawn_event_island(action, event["id"], state["trigger_count"], action_index):
+                    self.add_journal(f"The new island '{action.get('name', 'Uncharted Cay')}' could not be placed safely on the chart.")
+            elif kind == "reveal_wreck":
+                target = str(action.get("name", ""))
+                wreck = next((item for item in self.shipwrecks if item.wreck_id == target or item.name == target), None)
+                if wreck:
+                    wreck.discovered = True
+                    self.add_journal(f"A shipwreck has been marked on the chart: {wreck.name}.")
+                    self.toast_message(f"WRECK LOCATED · {wreck.name}", 4.0)
+            elif kind == "set_port_faction":
+                port = self.ports_by_name.get(str(action.get("port", "")))
+                if port:
+                    port.faction = str(action.get("faction", "Independent"))
+                    self.port_greetings[port.name] = f"The harbour office at {port.name} flies the colours of the {port.faction}."
+                    self.add_journal(f"Control of {port.name} has changed. The port now flies the colours of the {port.faction}.")
+            elif kind == "set_wind":
+                self.mission_wind_override = {
+                    "angle": float(action.get("angle", self.wind_angle)) % 360.0,
+                    "strength": max(0.0, min(1.0, float(action.get("strength", self.wind_strength)))),
+                    "remaining": max(1.0, float(action.get("duration", 240.0))),
+                }
+                self.toast_message("The wind has shifted across the water.", 3.5)
+            elif kind == "set_sea_state":
+                state_name = str(action.get("state", "calm"))
+                presets = {"calm": 0.16, "swell": 0.38, "rough": 0.68, "storm": 0.92}
+                self.mission_wind_override = {
+                    "angle": self.wind_angle,
+                    "strength": presets[state_name],
+                    "remaining": max(1.0, float(action.get("duration", 240.0))),
+                }
+                self.toast_message(f"The sea has turned {state_name}.", 4.0)
+                self.set_world_flag("sea_state", state_name)
 
     def schedule_mission_event(self, event_id, delay=None, force=False):
         event = next((item for item in self.mission_events if item["id"] == event_id), None)
@@ -648,3 +990,5 @@ class MissionEventsMixin:
                 state["random_rolls"] = {}
                 if self.evaluate_mission_event_condition(event["trigger"], state["random_rolls"]):
                     self.schedule_mission_event(event["id"])
+        self.update_ambient_missions(dt)
+        self.update_active_mission_encounters()

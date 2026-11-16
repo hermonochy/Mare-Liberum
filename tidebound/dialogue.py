@@ -1,6 +1,7 @@
 import pygame
+import shlex
 
-from .mission_system import ChoiceNode, CommandNode, GotoNode, LabelNode, TextNode
+from .mission_system import BranchNode, ChoiceNode, CommandNode, GotoNode, LabelNode, TextNode
 
 
 class Conversation:
@@ -44,16 +45,112 @@ class Conversation:
 
     def run_command(self, node):
         if node.command == "accept":
-            self.game.accept_mission(self.mission)
+            mission = self.mission
+            accepted = False
+            if mission is not None and not getattr(mission, "ambient", False):
+                accepted = self.game.accept_mission(mission, start_accept_dialogue=False)
             self.finish()
+            if accepted and mission.sections.get("accept"):
+                self.game.start_conversation(mission, "accept")
             return True
-        if node.command in {"close", "launch", "decline"}:
+        if node.command in {"close", "launch", "decline", "defer", "depart", "flee"}:
+            mission = self.mission
             if node.command == "decline":
                 self.game.toast_message("The offer remains open. Fair winds, captain.", 3.2)
+            if node.command == "defer" and mission is not None:
+                self.game.set_world_flag(f"mission_deferred:{mission.mission_id}", True)
             self.finish()
+            if mission is not None and node.command in {"decline", "defer"} and mission.sections.get(node.command):
+                self.game.start_conversation(mission, node.command)
+            return True
+        if node.command == "abort_mission":
+            mission = self.game.abort_active_mission(start_abort_dialogue=False)
+            self.finish()
+            if mission is not None and mission.sections.get("abort"):
+                self.game.start_conversation(mission, "abort")
             return True
         if node.command == "log":
             self.game.add_journal(node.value)
+            return False
+        if node.command in {"set_flag", "set"}:
+            parts = shlex.split(node.value)
+            if parts:
+                raw = parts[1].lower() if len(parts) > 1 else "true"
+                parsed = True if raw == "true" else False if raw == "false" else raw
+                try:
+                    numeric = float(raw)
+                    parsed = int(numeric) if numeric.is_integer() else numeric
+                except ValueError:
+                    pass
+                self.game.set_world_flag(parts[0], parsed)
+            return False
+        if node.command in {"clear_flag", "clear"}:
+            parts = shlex.split(node.value)
+            if parts:
+                self.game.world_flags.pop(parts[0], None)
+            return False
+        if node.command == "increment_flag":
+            parts = shlex.split(node.value)
+            if len(parts) >= 2:
+                key = parts[0]
+                try:
+                    amount = int(parts[1])
+                except ValueError:
+                    amount = 1
+                current = self.game.world_flags.get(key, 0)
+                try:
+                    current = int(current)
+                except (TypeError, ValueError):
+                    current = 0
+                self.game.set_world_flag(key, current + amount)
+            return False
+        if node.command == "give_gold":
+            amount = int(float(node.value.strip() or 0))
+            self.game.gold = max(0, self.game.gold + amount)
+            return False
+        if node.command == "adjust_relation":
+            parts = shlex.split(node.value)
+            if len(parts) >= 2:
+                self.game.adjust_faction_relation(parts[0], int(float(parts[1])), "A conversation changed your standing.")
+            return False
+        if node.command == "schedule_event":
+            parts = shlex.split(node.value)
+            if parts:
+                delay = float(parts[1]) if len(parts) > 1 else None
+                self.game.schedule_mission_event(parts[0], delay)
+            return False
+        if node.command == "reveal_island":
+            parts = shlex.split(node.value)
+            if parts:
+                self.game.reveal_event_island(parts[0])
+            return False
+        if node.command == "reveal_wreck":
+            parts = shlex.split(node.value)
+            target = parts[0] if parts else ""
+            wreck = next((item for item in self.game.shipwrecks if item.wreck_id == target or item.name == target), None)
+            if wreck:
+                wreck.discovered = True
+            return False
+        if node.command == "set_wind":
+            parts = node.value.split()
+            if len(parts) >= 2:
+                self.game.mission_wind_override = {
+                    "angle": float(parts[0]) % 360.0,
+                    "strength": max(0.0, min(1.0, float(parts[1]))),
+                    "remaining": float(parts[2]) if len(parts) > 2 else 240.0,
+                }
+            return False
+        if node.command == "set_sea_state":
+            parts = shlex.split(node.value)
+            state_name = parts[0] if parts else ""
+            strengths = {"calm": 0.16, "swell": 0.38, "rough": 0.68, "storm": 0.92}
+            if state_name in strengths:
+                self.game.mission_wind_override = {
+                    "angle": self.game.wind_angle,
+                    "strength": strengths[state_name],
+                    "remaining": float(parts[1]) if len(parts) > 1 else 240.0,
+                }
+                self.game.set_world_flag("sea_state", state_name)
             return False
         if node.command == "offers":
             self.finish()
@@ -136,6 +233,13 @@ class Conversation:
             if isinstance(node, GotoNode):
                 self.jump(node.label)
                 return
+            if isinstance(node, BranchNode):
+                try:
+                    if node.expression and self.game.evaluate_mission_script_expression(node.expression):
+                        self.jump(node.label)
+                        return
+                except (ValueError, TypeError) as error:
+                    self.game.add_journal(f"A conversation condition could not be evaluated: {error}")
             if isinstance(node, CommandNode) and self.run_command(node):
                 return
         self.finish()

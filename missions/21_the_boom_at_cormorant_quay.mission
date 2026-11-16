@@ -19,26 +19,26 @@ mission "The Boom at Cormorant Quay"
         conversation
             `The Company has stretched a chain boom across the western channel and stationed four gunboats to guard it.`
             `If the boom is raised, the free captains can reach the river ports. If it remains closed, Ashcombe can starve the Leeward Expanse into obedience.`
-            `The gunboats have been reinforced with swivel guns. Your escorts may help hold their attention, but the objective ships must all be sunk.`
+            `Calderon studies the chart. "I would rather tell you the uncomfortable part now than have you discover it at sea."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"Fair enough. Give me a heading and I will sail."`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"What would happen if we leave it alone?"`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"I have my own course to keep. Find another ship."`
                     goto decline_job
             label more_details
-                `The gunboats have been reinforced with swivel guns. Your escorts may help hold their attention, but the objective ships must all be sunk.`
+                `Captain Ines Calderon leans closer and speaks plainly. "The gunboats have been reinforced with swivel guns. Your escorts may help hold their attention, but the objective ships must all be sunk."`
                 choice
-                    `(Then I will see it done.)`
+                    `"That settles it. Let us be about it."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"I cannot take this on. Find another captain."`
                         goto decline_job
             label accept_job
                 `Mateo gives you the tide table. “The chain is heaviest at the centre. Clear the guards and I will have the harbour crews raise it before dawn.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Calderon tucks the chart beneath her arm. "I would rather you refused here than turned back when the guns came out. Good day."`
                 close
     on accept
         log "Accepted The Boom at Cormorant Quay. Break the four gunboats at the Western Boom and return to Cormorant Quay for the shipwright's report."

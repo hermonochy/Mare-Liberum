@@ -15,28 +15,28 @@ mission "The Chartless Light"
     enemy "Rook's Second"
     on offer
         conversation
-            `Silence a false lighthouse signal that has been drawing ships onto a reef at night.`
-            `Warden Sloane studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Warden Sloane has laid several wreck reports beside a chart of the reef. Every ship struck the same stretch of stone, and every master swore they had followed the lighthouse.`
+            `Sloane taps the lighthouse mark. "The light is false. Someone has been showing ships a safe channel that does not exist, and the reef has been collecting the wreckage. I want the signal stopped before another crew follows it."`
             choice
-                `(I will help uncover what happened.)`
+                `"I will take the job. Mark the place on my chart."`
                     accept
-                `(Tell me what you are not saying.)`
+                `"What exactly are you afraid will happen?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"Keep me out of it. I have other waters to sail."`
                     close
             label details
-                `Warden Sloane lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `Sloane opens an older chart. "The expedition's route passes close to this coast. If someone is altering lights as well as charts, the false beacon may be part of the same effort. Silence it and bring me the signal record."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"I will take the next leg. Give me the heading."`
                         accept
-                    `(Not today.)`
+                    `"I will keep clear of this matter. Good luck."`
                         close
     on accept
         log "Accepted The Chartless Light. Silence a false lighthouse signal that has been drawing ships onto a reef at night."
     on visit
         conversation
-            `Warden Sloane receives you at Last Light. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Last Light, Sloane compares the recovered signal with the proper sequence. The false beacon has been drawing ships onto the reef at night. "One more night and there would have been another wreck," Sloane says. "We have stopped it."`
     on complete
         conversation
-            `Warden Sloane thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Sloane checks the lamp before closing the logbook. "The light is true again, and the signal record is safe. The sea is dangerous enough without someone moving the shore with a lantern. You have done these waters a service."`
         log "Completed The Chartless Light. Received 1720 gold. Silence a false lighthouse signal that has been drawing ships onto a reef at night."

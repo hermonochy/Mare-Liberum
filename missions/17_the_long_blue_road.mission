@@ -13,26 +13,26 @@ mission "The Long Blue Road"
         conversation
             `The deserter will only testify before a magistrate beyond the Company patrols.`
             `Tomas recommends Blackwater Reach, a busy river port in the Leeward Expanse. Its magistrate once prosecuted illegal prize-taking and may still be trusted.`
-            `The voyage is long and crosses open water. There are no friendly islands between the Windward Reach and the Leeward Expanse; watch the weather and use the oars when the wind falls.`
+            `Bonny turns the paper so the light catches its marks. "The route is only part of it. I would rather you knew the risk before you take the work."`
             choice
-                `(I will take this voyage. Tell me the course.)`
+                `"You can count on my ship. What is the first step?"`
                     goto accept_job
-                `(What makes this business so important?)`
+                `"Before I agree, tell me what I might be sailing into."`
                     goto more_details
-                `(I have other waters to sail.)`
+                `"My crew did not sign on for this kind of trouble."`
                     goto decline_job
             label more_details
-                `The voyage is long and crosses open water. There are no friendly islands between the Windward Reach and the Leeward Expanse; watch the weather and use the oars when the wind falls.`
+                `Commodore Anne Bonny leans closer and speaks plainly. "The voyage is long and crosses open water. There are no friendly islands between the Windward Reach and the Leeward Expanse; watch the weather and use the oars when the wind falls."`
                 choice
-                    `(Then I will see it done.)`
+                    `"I will do what I can. We should get underway."`
                         goto accept_job
-                    `(Not this time.)`
+                    `"That risk is not mine to take."`
                         goto decline_job
             label accept_job
                 `The paymaster boards with a sea chest and two witnesses. “I sold powder to men who called themselves merchants. I would rather face a court than see another village burned.”`
                 accept
             label decline_job
-                `The officer nods and rolls the chart closed. The offer will remain here if you change your mind.`
+                `Bonny folds the chart and gives you a level look. "Fair enough, captain. I would rather have your ship on the course, but I will not press you."`
                 close
     on accept
         log "Accepted The Long Blue Road. Carry the deserter and his statement to Magistrate Ortez at Blackwater Reach."

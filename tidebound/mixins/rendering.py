@@ -42,6 +42,19 @@ class RenderingMixin:
             inner_deep = [(center_x + (x - center_x) * 0.73, center_y + (y - center_y) * 0.73) for x, y in polygon]
             pygame.draw.polygon(self.screen, (47, 99, 67), self.polygon_to_screen(inner_deep))
             pygame.draw.lines(self.screen, (222, 202, 148), True, points, max(1, int(2 * self.camera_zoom)))
+        for island in getattr(self, "dynamic_islands", []):
+            if not island.get("revealed", True):
+                continue
+            polygon = island.get("polygon", [])
+            if not polygon:
+                continue
+            center_x = sum(point[0] for point in polygon) / len(polygon)
+            center_y = sum(point[1] for point in polygon) / len(polygon)
+            sx, sy = self.world_to_screen(center_x, center_y)
+            if -100 <= sx <= self.screen.get_width() + 100 and -40 <= sy <= self.screen.get_height() + 40:
+                label = fit_text_surface(self.small_font, island.get("name", "Uncharted Cay"), (245, 229, 185), 180, 24)
+                label_rect = label.get_rect(center=(sx, sy + 22))
+                self.screen.blit(label, label_rect)
         visible_trees = self.tree_positions + [point for site in visible_sites for point in site.trees]
         for x, y in visible_trees:
             sx, sy = self.world_to_screen(x, y)
@@ -239,7 +252,7 @@ class RenderingMixin:
         pygame.draw.circle(self.screen, faction_color, (label_box.left - 3, label_box.centery), faction_dot)
         self.screen.blit(label, label_box)
 
-    def create_ship_surface(self, player=True, allied=False, rowing=False, ship_type="Sloop", faction="", customisation=None):
+    def create_ship_surface(self, player=True, allied=False, rowing=False, ship_type="Sloop", faction="", customisation=None, sail_setting=1.0, rower_count=None, cannon_loadout=None, cannon_upgrade=0):
         cache = getattr(self, "ship_surface_cache", None)
         if cache is None:
             cache = {}
@@ -248,21 +261,27 @@ class RenderingMixin:
             faction = "player" if player else "allied" if allied else "pirate"
         customisation = normalise_ship_customisation(customisation) if customisation and (player or allied) else None
         customisation_key = tuple(sorted(customisation.items())) if customisation else None
+        sail_frame = int(self.world_time * 8.0) % 16
         cache_key = (player, allied, rowing, ship_type, faction, self.player_livery if player else None,
-                     customisation_key, int(round(math.sin(self.world_time * 8.0) * 7)) if rowing else 0)
+                     customisation_key, int(round(float(sail_setting) * 100)),
+                     int(rower_count or 0), tuple(sorted((cannon_loadout or {}).items())), int(cannon_upgrade), sail_frame,
+                     int(round(math.sin(self.world_time * 8.0) * 7)) if rowing else 0)
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
-        surface = build_ship_surface(player, allied, rowing, ship_type, faction, self.player_livery, self.world_time, customisation)
+        animation_time = sail_frame / 8.0
+        surface = build_ship_surface(player, allied, rowing, ship_type, faction, self.player_livery,
+                                     animation_time, customisation, sail_setting, rower_count, cannon_loadout, cannon_upgrade)
         cache[cache_key] = surface
         if len(cache) > 160:
             cache.pop(next(iter(cache)))
         return surface
 
-    def draw_ship(self, x, y, heading, player=True, hull=None, max_hull=None, allied=False, rowing=False, ship_type="Sloop", faction="", hit_flash=0.0, sinking_progress=0.0, damage_marks=None, customisation=None):
+    def draw_ship(self, x, y, heading, player=True, hull=None, max_hull=None, allied=False, rowing=False, ship_type="Sloop", faction="", hit_flash=0.0, sinking_progress=0.0, damage_marks=None, customisation=None, sail_setting=1.0, rower_count=None, cannon_loadout=None, cannon_upgrade=0):
         """Render a vessel with progressive battle scars and a sinking animation."""
         progress = max(0.0, min(1.0, float(sinking_progress)))
-        base = self.create_ship_surface(player, allied, rowing, ship_type, faction, customisation)
+        base = self.create_ship_surface(player, allied, rowing, ship_type, faction, customisation,
+                                        sail_setting, rower_count, cannon_loadout, cannon_upgrade)
         sink_scale = 1.0 - 0.36 * progress
         scaled_w = max(22, int(base.get_width() * self.camera_zoom * sink_scale))
         scaled_h = max(18, int(base.get_height() * self.camera_zoom * sink_scale))
@@ -412,7 +431,9 @@ class RenderingMixin:
                 self.draw_ship(escort.x, escort.y, escort.heading, False, escort.hull, escort.max_hull,
                                allied=True, ship_type=escort.ship_type, hit_flash=getattr(escort, "hit_flash", 0.0),
                                sinking_progress=progress, damage_marks=getattr(escort, "damage_marks", []),
-                               customisation=getattr(escort, "customisation", None))
+                               customisation=getattr(escort, "customisation", None),
+                               cannon_loadout=getattr(escort, "cannon_loadout", None),
+                               cannon_upgrade=(getattr(escort, "upgrades", {}) or {}).get("cannons", 0))
                 if progress < 0.85:
                     label_pos = self.world_to_screen(escort.x, escort.y - 56)
                     label = self.tiny_font.render(escort.name, True, (210, 237, 220))
@@ -452,11 +473,15 @@ class RenderingMixin:
             self.draw_ship(self.ship_x, self.ship_y, self.ship_heading, True, self.player_hull, self.player_max_hull,
                            rowing=False, ship_type=self.current_ship,
                            sinking_progress=min(1.0, self.player_sink_elapsed / 5.4),
-                           damage_marks=self.player_damage_marks, customisation=self.ship_customisation)
+                           damage_marks=self.player_damage_marks, customisation=self.ship_customisation,
+                           sail_setting=self.sail_setting, rower_count=self.player_ship_stats()["rowers"],
+                           cannon_loadout=self.cannon_loadout, cannon_upgrade=self.upgrades.get("cannons", 0))
         elif not self.player_lost:
             self.draw_ship(self.ship_x, self.ship_y, self.ship_heading, True, self.player_hull, self.player_max_hull,
                            rowing=self.oars_deployed, ship_type=self.current_ship, hit_flash=self.player_hit_flash,
-                           damage_marks=self.player_damage_marks, customisation=self.ship_customisation)
+                           damage_marks=self.player_damage_marks, customisation=self.ship_customisation,
+                           sail_setting=self.sail_setting, rower_count=self.player_ship_stats()["rowers"],
+                           cannon_loadout=self.cannon_loadout, cannon_upgrade=self.upgrades.get("cannons", 0))
         self.draw_floating_debris()
         self.draw_cannon_smoke()
         self.draw_cannonballs()
@@ -895,8 +920,8 @@ class RenderingMixin:
         self.screen.blit(heading, heading.get_rect(center=(box.centerx, box.y + 18)))
         pygame.draw.line(self.screen, (130, 95, 61), (box.x + 14, box.y + 39), (box.right - 14, box.y + 39), 1)
         lines = [
-            "W / S  Set / reef sails", "A / D  Steer", "O  Deploy / stow oars",
-            "Hold Z / X  Port / starboard guns", "At sea: Q / E  Bow / stern chasers",
+            "Up / Down  Set / reef sails", "Left / Right  Steer", "O  Deploy / stow oars",
+            "Hold A / D  Port / starboard guns", "W / S  Bow / stern chasers",
             "E  Dock / cast off", "Q  Harbour office / jobs",
             "R  Interact / salvage / treasure", "B  Shipyard (in port)",
             "F / H / G / V  Escort orders", "M  Full sea chart", "C  Centre camera",

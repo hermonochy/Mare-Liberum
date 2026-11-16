@@ -11,28 +11,28 @@ mission "A Bargain with Black Jack"
         has "The Fleet at the Blue Line: done"
     on offer
         conversation
-            `Negotiate with a notorious pirate captain who claims to know a safe channel into the western shoals.`
-            `Black Jack Rourke studies you for a moment. "The old sea charter settled one war, but it did not settle the past. The lost expedition sailed west under a sealed order, and its wake is stirring every ambitious captain in these waters."`
+            `Black Jack Rourke is waiting in a room above the tavern. The shutters are closed, and the captain has placed a chart between two untouched glasses of rum.`
+            `Rourke taps the chart with one finger. "I know a safe channel through the western shoals. I also know what it is worth. Do not look at me like that, captain; a man can be a pirate and still understand arithmetic."`
             choice
-                `(I will help uncover what happened.)`
+                `"You have my attention. What needs doing first?"`
                     accept
-                `(Tell me what you are not saying.)`
+                `"Who stands to gain if the truth stays buried?"`
                     goto details
-                `(I have no wish to be drawn into another quarrel.)`
+                `"I have no wish to become a pawn in someone else's quarrel."`
                     close
             label details
-                `Black Jack Rourke lowers their voice. "The maps were altered, the convoy erased from the books, and someone has been buying witnesses. Follow the evidence, not the flags."`
+                `He turns the chart so you can see the soundings. "You want the passage, I want a price, and neither of us needs to pretend this is friendship. Hear my terms before you decide whether the chart is worth the gold."`
                 choice
-                    `(Then I will take the matter in hand.)`
+                    `"All right. I will follow the evidence."`
                         accept
-                    `(Not today.)`
+                    `"My answer has not changed. I will not sail."`
                         close
     on accept
         log "Accepted A Bargain with Black Jack. Negotiate with a notorious pirate captain who claims to know a safe channel into the western shoals."
     on visit
         conversation
-            `Black Jack Rourke receives you at Gallows Key. The evidence fits another piece into the puzzle: the expedition was not searching for gold alone, but for a place deliberately removed from every official chart.`
+            `At Gallows Key, Rourke shows you the marked channel and checks the depths against his own notes. "There. Safe enough for a careful ship, provided the tide is with you. I make no promises to fools who sail at low water."`
     on complete
         conversation
-            `Black Jack Rourke thanks you. "Every answer makes the sea less simple, captain. Yet the truth belongs to the people who live here, not to the first crown or company that can put a seal upon it."`
+            `Rourke pockets his share with a grin. "A bargain is a bargain. You have the channel, I have my money, and we can both go back to distrusting one another in peace."`
         log "Completed A Bargain with Black Jack. Received 1655 gold. Negotiate with a notorious pirate captain who claims to know a safe channel into the western shoals."

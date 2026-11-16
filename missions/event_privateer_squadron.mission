@@ -1,0 +1,12 @@
+mission "The Salt Crows"
+    category "event"
+    event at_sea and speed > 18 and flag('salt_crows_sighted') == false
+    event_delay 55 95
+    event_faction "Pirate Brotherhood"
+    event_attitude "hostile"
+    event_action spawn_fleet "The Salt Crows" "Captain Mara Vane" 2 4 7 0.78 950 "Sloop" "Schooner" "Brigantine" "Brig"
+    event_action set_flag "salt_crows_sighted" true
+    event_on_complete journal "The Salt Crows have been driven from these waters. Their captain's name is now known to the harbour authorities."
+    event_on_repelled journal "The Salt Crows withdrew under sail. Their captain may try these waters again."
+    event_max_triggers 1
+    event_pause_while_docked true

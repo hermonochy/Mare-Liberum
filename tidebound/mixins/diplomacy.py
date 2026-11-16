@@ -160,6 +160,7 @@ class DiplomacyMixin:
         pirate.player_provoked = True
         pirate.player_attitude = "hostile"
         self.add_journal(f"Your attack on {pirate.name} has been reported among the Pirate Brotherhood.")
+        self.start_active_mission_hook("provoke")
 
     def record_player_sunk_npc(self, ship):
         faction = self.faction_for_npc(ship)
