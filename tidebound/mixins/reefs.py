@@ -1,6 +1,25 @@
 from ..common import *
 
 
+REEF_TARGET_COUNT = 9
+REEF_SIZE_PROFILES = (
+    (58.0, 92.0, 26.0, 48.0),
+    (205.0, 285.0, 92.0, 142.0),
+    (118.0, 178.0, 52.0, 88.0),
+    (68.0, 105.0, 30.0, 54.0),
+    (220.0, 305.0, 100.0, 155.0),
+    (125.0, 188.0, 56.0, 94.0),
+    (52.0, 84.0, 24.0, 44.0),
+    (195.0, 270.0, 88.0, 132.0),
+    (112.0, 165.0, 48.0, 82.0),
+)
+
+
+def reef_dimensions(index, rng):
+    profile = REEF_SIZE_PROFILES[index % len(REEF_SIZE_PROFILES)]
+    return rng.uniform(profile[0], profile[1]), rng.uniform(profile[2], profile[3])
+
+
 class ReefsMixin:
     """Static navigational hazards with readable chart markings and NPC avoidance."""
 
@@ -50,6 +69,8 @@ class ReefsMixin:
             return True
 
         for index, (anchor_x, anchor_y) in enumerate(REEF_ANCHORS):
+            if len(accepted) >= REEF_TARGET_COUNT:
+                break
             chosen = None
             # Try the authored shoal location first, then move within its local
             # passage if the current island/port geometry leaves too little room.
@@ -64,8 +85,7 @@ class ReefsMixin:
                 if not (260.0 < cx < WORLD_WIDTH / WORLD_SCALE - 260.0 and
                         260.0 < cy < WORLD_HEIGHT / WORLD_SCALE - 260.0):
                     continue
-                rx = rng.uniform(128.0, 176.0)
-                ry = rng.uniform(54.0, 82.0)
+                rx, ry = reef_dimensions(len(accepted), rng)
                 rotation = rng.uniform(-0.42, 0.42)
                 polygon = self.make_reef_polygon(cx, cy, rx, ry, rotation, 1800 + index * 91 + attempt)
                 if not clear_candidate(polygon, cx, cy, rx, ry):
@@ -88,7 +108,7 @@ class ReefsMixin:
                     continue
                 bounds = (min(x for x, _ in polygon), min(y for _, y in polygon),
                           max(x for x, _ in polygon), max(y for _, y in polygon))
-                chosen = Reef(names[index], polygon, cx, cy, rx, ry, bounds)
+                chosen = Reef(names[len(accepted)], polygon, cx, cy, rx, ry, bounds)
                 break
             if chosen is not None:
                 accepted.append(chosen)
@@ -96,11 +116,11 @@ class ReefsMixin:
         # A second deterministic pass fills gaps if an authored point was too
         # close to a port. It still applies exactly the same coast/port checks.
         filler_attempt = 0
-        while len(accepted) < 14 and filler_attempt < 1800:
+        while len(accepted) < REEF_TARGET_COUNT and filler_attempt < 2400:
             filler_attempt += 1
             cx = rng.uniform(700.0, WORLD_WIDTH / WORLD_SCALE - 700.0)
             cy = rng.uniform(700.0, WORLD_HEIGHT / WORLD_SCALE - 700.0)
-            rx, ry = rng.uniform(128.0, 168.0), rng.uniform(54.0, 78.0)
+            rx, ry = reef_dimensions(len(accepted), rng)
             polygon = self.make_reef_polygon(cx, cy, rx, ry, rng.uniform(-0.5, 0.5), 90000 + filler_attempt)
             if not clear_candidate(polygon, cx, cy, rx, ry):
                 continue

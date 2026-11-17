@@ -59,13 +59,13 @@ There is no single way to spend your time. Follow the main story, accept optiona
 
 ### Sailing and navigation
 
-Your ship responds to wind, sail setting, momentum and steering. Use **W** to make sail and **S** to reduce sail. Turn with **A** and **D**. On oared craft such as launches, cutters, sloops, yawls and xebecs, deploy the oars with **O** when the wind is unfavourable. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches. Both banks row together in a synchronized stroke.
+Your ship responds to wind, sail setting, momentum and steering. Use **Up** to make sail and **Down** to reduce sail. Turn with **Left** and **Right**. Use **A / D** for port and starboard broadsides, and **W / S** for bow and stern chasers. On oared craft such as launches, cutters, sloops, yawls and xebecs, deploy the oars with **O** when the wind is unfavourable. Oars provide slower, steady propulsion and can help you manoeuvre in tight approaches. Both banks row together in a synchronized stroke.
 
-The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag inside the chart to pan, and press **Home** to reset the atlas. The bottom selector groups and colours ports by faction or your diplomatic hostility towards them. Your living escorts appear as blue diamond markers. Press **C** outside the atlas to centre the sailing camera on your ship.
+The compass points towards your current story objective or, when you have no active story mission, a useful nearby harbour task. Open the world atlas with **M** to inspect the chart. Use the mouse wheel or **+ / -** to zoom, drag inside the chart to pan, and press **Home** to reset the atlas. Port names and region labels use dark ink on parchment-backed markers for clear reading. The bottom selector groups and colours ports by faction or your diplomatic hostility towards them. Your living escorts appear as blue diamond markers. Press **C** outside the atlas to centre the sailing camera on your ship.
 
 Approach a harbour slowly and press **E** to take the nearest available berth. The nine quay slots are shared with visiting ships; no berth is permanently reserved for the player. If the harbour is full, wait for a vessel to leave and try again. Docking opens the port services screen automatically. Choose **Depart** to cast off; press **Esc** to close the screen and **E** to reopen it while still berthed.
 
-Watch for reefs. Their warning areas are marked in translucent red on the chart and in the world. Crossing a reef damages the hull, with greater danger at speed. NPC ships try to steer around reefs, but a battle or a poor approach can still put them in danger.
+Watch for reefs. Nine shoals of varied sizes are scattered through the navigable channels; their warning areas are marked in translucent red on the chart and in the world. Crossing a reef damages the hull, with greater danger at speed. NPC ships try to steer around reefs, but a battle or a poor approach can still put them in danger.
 
 ### Ports, people and local work
 
@@ -170,3 +170,9 @@ The dockside interface uses the same dark nautical palette as the rest of the ga
 ## Mission scripting
 
 See [docs/mission_scripting.md](docs/mission_scripting.md) for the expanded `.mission` authoring reference.
+
+## Harbours and island settlements
+
+Ports are built as protected top-down harbours with stone breakwaters, an open entrance channel, quay frontage, timber finger piers, mooring posts, cargo sheds, cranes, coastal guns and faction colours. Breakwaters are part of the world collision geometry: vessels that strike them are pushed clear and rebound instead of sailing through the walls.
+
+Every port also has a settlement on its associated island. Town layouts, building density, roof colours and civic structures vary by faction and by individual harbour. British Crown towns favour planned colonial streets and forts; Spanish ports use dense plaza-and-church layouts; French harbours use market quarters; Merchant League ports feature large warehouses; pirate havens use compact irregular timber settlements; and independent ports use mixed organic layouts. Towns are generated deterministically from the world layout, so they remain in the same place across new sessions and do not need separate save data.

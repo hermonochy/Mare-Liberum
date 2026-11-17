@@ -1,5 +1,7 @@
 from .common import *
 from .audio import AudioEngine
+from .harbour_geometry import harbour_layout, position_port_anchor
+from .settlements import build_port_settlements
 from .mixins import (
     TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
     VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin, PortMenuMixin,
@@ -102,6 +104,11 @@ class Game(
         self.add_faction_ports()
         self.add_reefs()
         self.expand_world_layout(WORLD_SCALE)
+        for port in self.ports:
+            position_port_anchor(port)
+        self.harbour_layouts = {port.name: harbour_layout(port, PORT_BERTH_COUNT, PORT_BERTH_SPACING, self.land) for port in self.ports}
+        self.harbour_wall_polygons = [polygon for layout in self.harbour_layouts.values() for polygon in layout["collision_polygons"]]
+        self.port_settlements = build_port_settlements(self.ports, self.land)
         self.shipwrecks = self.create_shipwreck_sites()
         self.tree_positions = self.make_tree_positions()
         for site in self.treasure_sites:
@@ -392,7 +399,7 @@ class Game(
         return positions
 
     def collision_land_polygons(self):
-        return self.land + [site.polygon for site in self.treasure_sites if site.revealed]
+        return self.land + [site.polygon for site in self.treasure_sites if site.revealed] + list(getattr(self, "harbour_wall_polygons", []))
 
     def run(self):
         while self.running:

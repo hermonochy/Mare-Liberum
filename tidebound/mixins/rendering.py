@@ -172,84 +172,176 @@ class RenderingMixin:
                 pygame.draw.rect(self.screen, (43, 35, 27), label_rect.inflate(8, 4), border_radius=3)
                 self.screen.blit(label, label_rect)
 
+    def draw_island_settlements(self):
+        screen_width, screen_height = self.screen.get_size()
+        for settlement in getattr(self, "port_settlements", {}).values():
+            town_sx, town_sy = self.world_to_screen(*settlement["center"])
+            margin = max(settlement["span"], settlement["depth"]) * self.camera_zoom * 0.9 + 170 * self.camera_zoom
+            if town_sx < -margin or town_sx > screen_width + margin or town_sy < -margin or town_sy > screen_height + margin:
+                continue
+            roads = settlement["roads"]
+            for road in roads:
+                points = self.polygon_to_screen(road)
+                if len(points) >= 2:
+                    pygame.draw.lines(self.screen, (76, 65, 48), False, points, max(2, int(11 * self.camera_zoom)))
+                    pygame.draw.lines(self.screen, (177, 151, 108), False, points, max(1, int(5 * self.camera_zoom)))
+            plaza = settlement.get("plaza", [])
+            if plaza:
+                plaza_points = self.polygon_to_screen(plaza)
+                pygame.draw.polygon(self.screen, (190, 171, 128), plaza_points)
+                pygame.draw.lines(self.screen, (117, 94, 66), True, plaza_points, max(1, int(2 * self.camera_zoom)))
+            town_wall = settlement.get("town_wall", [])
+            if town_wall and self.camera_zoom >= 0.48:
+                pygame.draw.lines(self.screen, (105, 94, 76), True, self.polygon_to_screen(town_wall), max(1, int(3 * self.camera_zoom)))
+            for building in settlement["buildings"]:
+                footprint = self.polygon_to_screen(building["footprint"])
+                cx = sum(point[0] for point in footprint) / len(footprint)
+                cy = sum(point[1] for point in footprint) / len(footprint)
+                shadow = [(int(x + max(1, 2 * self.camera_zoom)), int(y + max(1, 2 * self.camera_zoom))) for x, y in footprint]
+                pygame.draw.polygon(self.screen, (49, 54, 45), shadow)
+                pygame.draw.polygon(self.screen, building["facade"], footprint)
+                roof = [(int(cx + (x - cx) * 0.86), int(cy + (y - cy) * 0.86)) for x, y in footprint]
+                pygame.draw.polygon(self.screen, building["roof"], roof)
+                pygame.draw.lines(self.screen, (67, 56, 43), True, footprint, max(1, int(self.camera_zoom)))
+                kind = building["kind"]
+                if kind == "warehouse":
+                    pygame.draw.line(self.screen, (206, 174, 125), roof[0], roof[2], max(1, int(self.camera_zoom)))
+                    pygame.draw.line(self.screen, (75, 61, 46), roof[1], roof[3], max(1, int(self.camera_zoom)))
+                elif kind == "church":
+                    pygame.draw.circle(self.screen, (223, 205, 156), (int(cx), int(cy)), max(2, int(4 * self.camera_zoom)))
+                    pygame.draw.line(self.screen, (84, 60, 45), (int(cx), int(cy - 4 * self.camera_zoom)), (int(cx), int(cy + 4 * self.camera_zoom)), max(1, int(self.camera_zoom)))
+                    pygame.draw.line(self.screen, (84, 60, 45), (int(cx - 4 * self.camera_zoom), int(cy)), (int(cx + 4 * self.camera_zoom), int(cy)), max(1, int(self.camera_zoom)))
+                elif kind == "fort":
+                    pygame.draw.rect(self.screen, (173, 160, 128), (int(cx - 3 * self.camera_zoom), int(cy - 3 * self.camera_zoom), max(3, int(6 * self.camera_zoom)), max(3, int(6 * self.camera_zoom))))
+                elif kind == "tavern":
+                    pygame.draw.circle(self.screen, (224, 183, 94), (int(cx), int(cy)), max(1, int(3 * self.camera_zoom)))
+                elif kind == "shop":
+                    pygame.draw.line(self.screen, (226, 194, 132), (int(cx - 4 * self.camera_zoom), int(cy)),
+                                     (int(cx + 4 * self.camera_zoom), int(cy)), max(1, int(2 * self.camera_zoom)))
+                if self.camera_zoom >= 0.9:
+                    p1 = (int((footprint[0][0] + footprint[1][0]) * 0.5), int((footprint[0][1] + footprint[1][1]) * 0.5))
+                    p2 = (int((footprint[2][0] + footprint[3][0]) * 0.5), int((footprint[2][1] + footprint[3][1]) * 0.5))
+                    pygame.draw.line(self.screen, (220, 204, 164), p1, p2, 1)
+            if self.camera_zoom >= 1.0:
+                cx, cy = self.world_to_screen(*settlement["center"])
+                sign = fit_text_surface(self.tiny_font, settlement["style"].upper(), (49, 42, 33), 120, 18)
+                sign_rect = sign.get_rect(center=(cx, cy - max(28, int(settlement["depth"] * self.camera_zoom * 0.52))))
+                pygame.draw.rect(self.screen, (219, 202, 159), sign_rect.inflate(8, 4), border_radius=2)
+                pygame.draw.rect(self.screen, (104, 82, 57), sign_rect.inflate(8, 4), max(1, int(self.camera_zoom)))
+                self.screen.blit(sign, sign_rect)
+
+    def draw_harbour_wall(self, polygon, faction):
+        wood = {
+            "British Crown": ((48, 32, 21), (111, 69, 38), (176, 128, 74)),
+            "Spanish Crown": ((50, 32, 19), (121, 73, 38), (190, 137, 75)),
+            "French Crown": ((48, 34, 24), (116, 78, 48), (179, 135, 83)),
+            "Merchant League": ((47, 30, 19), (126, 79, 40), (196, 143, 77)),
+            "Pirate Brotherhood": ((36, 26, 19), (91, 56, 34), (150, 101, 57)),
+            "Independent": ((46, 32, 22), (112, 72, 42), (173, 125, 72)),
+        }
+        base, deck, highlight = wood.get(faction, wood["Independent"])
+        points = self.polygon_to_screen(polygon)
+        if len(points) != 4:
+            pygame.draw.polygon(self.screen, deck, points)
+            pygame.draw.lines(self.screen, base, True, points, max(1, int(3 * self.camera_zoom)))
+            return
+        pygame.draw.polygon(self.screen, base, points)
+        center_x = sum(x for x, _ in points) / 4.0
+        center_y = sum(y for _, y in points) / 4.0
+        inset = [(int(center_x + (x - center_x) * 0.82),
+                  int(center_y + (y - center_y) * 0.82)) for x, y in points]
+        pygame.draw.polygon(self.screen, deck, inset)
+        pygame.draw.lines(self.screen, (35, 25, 18), True, points, max(2, int(4 * self.camera_zoom)))
+        pygame.draw.lines(self.screen, highlight, False, [inset[0], inset[1]], max(1, int(2 * self.camera_zoom)))
+        pygame.draw.lines(self.screen, (70, 43, 26), False, [inset[2], inset[3]], max(1, int(2 * self.camera_zoom)))
+        length = math.hypot(points[1][0] - points[0][0], points[1][1] - points[0][1])
+        plank_count = max(1, min(48, int(length / max(16.0, 24.0 * self.camera_zoom))))
+        if self.camera_zoom >= 0.45:
+            for plank in range(1, plank_count):
+                amount = plank / plank_count
+                left = (int(points[0][0] + (points[1][0] - points[0][0]) * amount),
+                        int(points[0][1] + (points[1][1] - points[0][1]) * amount))
+                right = (int(points[3][0] + (points[2][0] - points[3][0]) * amount),
+                         int(points[3][1] + (points[2][1] - points[3][1]) * amount))
+                pygame.draw.line(self.screen, (78, 49, 29), left, right, max(1, int(self.camera_zoom)))
+                if self.camera_zoom >= 0.9:
+                    for nail in (left, right):
+                        pygame.draw.circle(self.screen, (45, 31, 21), nail, 1)
+
     def draw_port(self, port):
-        pier_start = self.world_to_screen(port.shore_x, port.shore_y)
-        pier_end = self.world_to_screen(port.x, port.y)
-        pygame.draw.line(self.screen, (76, 49, 33), pier_start, pier_end, max(5, int(14 * self.camera_zoom)))
-        pygame.draw.line(self.screen, (155, 112, 70), pier_start, pier_end, max(2, int(8 * self.camera_zoom)))
-        # A broad outer quay with nine alongside berths. Each finger pier
-        # has enough separation for a full-sized vessel and its rigging.
-        axis_x, axis_y = port.x - port.shore_x, port.y - port.shore_y
-        axis_len = max(1.0, math.hypot(axis_x, axis_y))
-        axis_x, axis_y = axis_x / axis_len, axis_y / axis_len
-        perp_x, perp_y = -axis_y, axis_x
-        for berth_slot in range(PORT_BERTH_COUNT):
-            offset = (berth_slot - PORT_BERTH_CENTER_SLOT) * PORT_BERTH_SPACING
-            bx = port.x + perp_x * offset
-            by = port.y + perp_y * offset
-            berth_start = self.world_to_screen(bx - axis_x * 45.0, by - axis_y * 45.0)
-            berth_end = self.world_to_screen(bx + axis_x * 100.0, by + axis_y * 100.0)
-            pygame.draw.line(self.screen, (76, 49, 33), berth_start, berth_end, max(4, int(10 * self.camera_zoom)))
-            pygame.draw.line(self.screen, (155, 112, 70), berth_start, berth_end, max(2, int(5 * self.camera_zoom)))
-            cleat = self.world_to_screen(bx + axis_x * 100.0, by + axis_y * 100.0)
-            pygame.draw.circle(self.screen, (213, 187, 139), cleat, max(2, int(3 * self.camera_zoom)))
-        if self.camera_zoom > 0.7:
-            dx = port.x - port.shore_x
-            dy = port.y - port.shore_y
-            length = max(1.0, math.hypot(dx, dy))
-            px = -dy / length
-            py = dx / length
-            for amount in (0.18, 0.36, 0.54, 0.72, 0.9):
-                cx = port.shore_x + dx * amount
-                cy = port.shore_y + dy * amount
-                a = self.world_to_screen(cx + px * 7, cy + py * 7)
-                b = self.world_to_screen(cx - px * 7, cy - py * 7)
-                pygame.draw.line(self.screen, (91, 62, 40), a, b, max(1, int(2 * self.camera_zoom)))
-        sx, sy = self.world_to_screen(port.shore_x, port.shore_y)
-        building_w = max(10, int(34 * self.camera_zoom))
-        building_h = max(8, int(25 * self.camera_zoom))
-        building = pygame.Rect(sx - building_w // 2, sy - building_h // 2, building_w, building_h)
-        pygame.draw.rect(self.screen, (91, 53, 39), building.inflate(3, 3))
-        pygame.draw.rect(self.screen, (191, 152, 99), building)
-        roof = [(building.left - 3, building.top + 2), (building.centerx, building.top - building_h // 2), (building.right + 3, building.top + 2)]
-        pygame.draw.polygon(self.screen, (105, 52, 43), roof)
-        # Small stone coastal battery: the dark barrels represent the harbour's
-        # automatic defensive guns which engage pirates in nearby waters.
-        battery_y = sy + int(18 * self.camera_zoom)
-        battery_x = sx - int(18 * self.camera_zoom)
-        pygame.draw.rect(self.screen, (111, 100, 80),
-                         (battery_x - max(4, int(8 * self.camera_zoom)), battery_y - max(3, int(5 * self.camera_zoom)),
-                          max(9, int(17 * self.camera_zoom)), max(7, int(10 * self.camera_zoom))), border_radius=2)
-        for barrel_offset in (-4, 4):
-            start = (battery_x + int(barrel_offset * self.camera_zoom), battery_y)
-            end = (start[0] + int(10 * self.camera_zoom), start[1] - int(7 * self.camera_zoom))
-            pygame.draw.line(self.screen, (42, 39, 34), start, end, max(2, int(3 * self.camera_zoom)))
-        crane_x = sx + int(33 * self.camera_zoom)
-        crane_y = sy + int(3 * self.camera_zoom)
-        crane_height = max(7, int(25 * self.camera_zoom))
-        pygame.draw.line(self.screen, (77, 48, 30), (crane_x, crane_y), (crane_x, crane_y - crane_height), max(2, int(3 * self.camera_zoom)))
-        pygame.draw.line(self.screen, (77, 48, 30), (crane_x - int(13 * self.camera_zoom), crane_y - crane_height), (crane_x + int(16 * self.camera_zoom), crane_y - crane_height), max(2, int(3 * self.camera_zoom)))
-        pygame.draw.line(self.screen, (77, 48, 30), (crane_x + int(12 * self.camera_zoom), crane_y - crane_height), (crane_x + int(12 * self.camera_zoom), crane_y + int(12 * self.camera_zoom)), max(1, int(2 * self.camera_zoom)))
-        if self.camera_zoom > 0.68:
-            yard_sign = self.tiny_font.render("YARD", True, (255, 225, 165))
-            yard_rect = yard_sign.get_rect(center=(crane_x + int(23 * self.camera_zoom), crane_y + int(18 * self.camera_zoom)))
-            pygame.draw.rect(self.screen, (57, 37, 27), yard_rect.inflate(8, 4), border_radius=2)
-            self.screen.blit(yard_sign, yard_rect)
-        flag_x = sx + int(23 * self.camera_zoom)
-        flag_y = sy - int(23 * self.camera_zoom)
-        pygame.draw.line(self.screen, (54, 39, 30), (flag_x, flag_y), (flag_x, flag_y - int(22 * self.camera_zoom)), max(1, int(2 * self.camera_zoom)))
+        layout = getattr(self, "harbour_layouts", {}).get(port.name)
+        if layout is None:
+            return
+        basin_points = self.polygon_to_screen(layout["basin"])
+        screen_width, screen_height = self.screen.get_size()
+        if (max(point[0] for point in basin_points) < -120 or min(point[0] for point in basin_points) > screen_width + 120
+                or max(point[1] for point in basin_points) < -120 or min(point[1] for point in basin_points) > screen_height + 120):
+            return
+        axis_x, axis_y = layout["axis"]
+        perp_x, perp_y = layout["perpendicular"]
+        shore_x, shore_y = port.shore_x, port.shore_y
+        sx, sy = self.world_to_screen(shore_x, shore_y)
+        wx, wy = self.world_to_screen(port.x, port.y)
+
+        apron_points = self.polygon_to_screen(layout["apron"])
+        pygame.draw.polygon(self.screen, (91, 67, 43), apron_points)
+        pygame.draw.lines(self.screen, (51, 35, 23), True, apron_points, max(1, int(2 * self.camera_zoom)))
+        if self.camera_zoom >= 0.48:
+            for seam in range(1, 8):
+                amount = seam / 8.0
+                a = layout["apron"][0]
+                b = layout["apron"][3]
+                c = layout["apron"][1]
+                d = layout["apron"][2]
+                p1 = self.world_to_screen(a[0] + (b[0] - a[0]) * amount, a[1] + (b[1] - a[1]) * amount)
+                p2 = self.world_to_screen(c[0] + (d[0] - c[0]) * amount, c[1] + (d[1] - c[1]) * amount)
+                pygame.draw.line(self.screen, (122, 84, 49), p1, p2, max(1, int(self.camera_zoom)))
+
+        for wall in layout["walls"]:
+            self.draw_harbour_wall(wall, port.faction)
+        self.draw_harbour_wall(layout["quay"], port.faction)
+        for dock in layout["docks"]:
+            self.draw_harbour_wall(dock, port.faction)
+
+        if self.camera_zoom >= 0.38:
+            for berth_x, berth_y in layout["berths"]:
+                for along_distance in (-61.0, 61.0):
+                    post_x = berth_x + axis_x * along_distance
+                    post_y = berth_y + axis_y * along_distance
+                    post = self.world_to_screen(post_x, post_y)
+                    pygame.draw.circle(self.screen, (40, 28, 19), post, max(2, int(4 * self.camera_zoom)))
+                    pygame.draw.circle(self.screen, (154, 99, 53), (post[0] - 1, post[1] - 1), max(1, int(2 * self.camera_zoom)))
+
         faction_color = FACTION_COLOURS.get(getattr(port, "faction", "Independent"), (35, 30, 28))
-        flag_points = [(flag_x, flag_y - int(22 * self.camera_zoom)),
-                       (flag_x + int(17 * self.camera_zoom), flag_y - int(17 * self.camera_zoom)),
-                       (flag_x, flag_y - int(12 * self.camera_zoom))]
+        flag_x = sx + int(22 * self.camera_zoom)
+        flag_y = sy - int(25 * self.camera_zoom)
+        pygame.draw.line(self.screen, (45, 31, 21), (flag_x, flag_y), (flag_x, flag_y - int(27 * self.camera_zoom)), max(1, int(2 * self.camera_zoom)))
+        flag_points = [(flag_x, flag_y - int(27 * self.camera_zoom)),
+                       (flag_x + int(19 * self.camera_zoom), flag_y - int(21 * self.camera_zoom)),
+                       (flag_x, flag_y - int(15 * self.camera_zoom))]
         pygame.draw.polygon(self.screen, faction_color, flag_points)
-        pygame.draw.lines(self.screen, (224, 203, 157), False, flag_points, max(1, int(self.camera_zoom)))
-        label_x, label_y = self.world_to_screen(port.x, port.y + 30)
+        pygame.draw.lines(self.screen, (225, 205, 164), False, flag_points, max(1, int(self.camera_zoom)))
+
+        for head_x, head_y in layout["heads"]:
+            hx, hy = self.world_to_screen(head_x, head_y)
+            radius = max(2, int(4 * self.camera_zoom))
+            pygame.draw.circle(self.screen, (40, 29, 20), (hx, hy), radius + 1)
+            pygame.draw.circle(self.screen, (220, 174, 87), (hx, hy), max(1, radius - 1))
+
+        crane_x = sx - int(axis_x * 23 * self.camera_zoom) + int(perp_x * 22 * self.camera_zoom)
+        crane_y = sy - int(axis_y * 23 * self.camera_zoom) + int(perp_y * 22 * self.camera_zoom)
+        crane_height = max(8, int(25 * self.camera_zoom))
+        pygame.draw.line(self.screen, (54, 36, 22), (crane_x, crane_y),
+                         (crane_x + int(perp_x * 16 * self.camera_zoom), crane_y + int(perp_y * 16 * self.camera_zoom) - crane_height),
+                         max(2, int(3 * self.camera_zoom)))
+        pygame.draw.line(self.screen, (133, 86, 47), (crane_x - int(perp_x * 14 * self.camera_zoom), crane_y - crane_height),
+                         (crane_x + int(perp_x * 21 * self.camera_zoom), crane_y - crane_height), max(1, int(2 * self.camera_zoom)))
+
+        label_x, label_y = self.world_to_screen(port.x, port.y + 42)
         label = fit_text_surface(self.small_font, port.name, (255, 236, 190), 170, 28)
-        faction_dot = max(3, int(4 * self.camera_zoom))
         label_box = label.get_rect(center=(label_x, label_y))
         pygame.draw.rect(self.screen, (28, 45, 42), label_box.inflate(12, 6), border_radius=4)
-        pygame.draw.circle(self.screen, faction_color, (label_box.left - 3, label_box.centery), faction_dot)
+        pygame.draw.circle(self.screen, faction_color, (label_box.left - 3, label_box.centery), max(3, int(4 * self.camera_zoom)))
         self.screen.blit(label, label_box)
 
     def create_ship_surface(self, player=True, allied=False, rowing=False, ship_type="Sloop", faction="", customisation=None, sail_setting=1.0, rower_count=None, cannon_loadout=None, cannon_upgrade=0):
@@ -418,6 +510,7 @@ class RenderingMixin:
         self.update_camera()
         self.draw_ocean()
         self.draw_islands()
+        self.draw_island_settlements()
         self.draw_reefs()
         self.draw_treasure_features()
         self.draw_shipwrecks()
@@ -796,8 +889,14 @@ class RenderingMixin:
         legend = pygame.Rect(chart.right + gap, content_top, box.right - chart.right - gap - 18, available_height)
         self.world_map_chart_rect = chart
 
-        pygame.draw.rect(self.screen, (23, 84, 105), chart, border_radius=4)
+        pygame.draw.rect(self.screen, (132, 174, 178), chart, border_radius=4)
         pygame.draw.rect(self.screen, (177, 146, 99), chart, 2, border_radius=4)
+
+        def draw_chart_label(text_surface, text_rect, fill=(237, 226, 198), border=(108, 83, 55), padding=(6, 3)):
+            backing = text_rect.inflate(padding[0] * 2, padding[1] * 2)
+            pygame.draw.rect(self.screen, fill, backing, border_radius=3)
+            pygame.draw.rect(self.screen, border, backing, 1, border_radius=3)
+            self.screen.blit(text_surface, text_rect)
         sx = chart.width / WORLD_WIDTH
         sy = chart.height / WORLD_HEIGHT
         zoom = float(getattr(self, "world_map_zoom", 1.0))
@@ -854,8 +953,8 @@ class RenderingMixin:
                 world_x, world_y = fallback
             offset_x, offset_y = label_offsets.get(region_name, (0, 0))
             pos = map_point(world_x + offset_x, world_y + offset_y)
-            label = fit_text_surface(self.map_heading_font, label_text, (239, 224, 179), 180, 26)
-            self.screen.blit(label, label.get_rect(center=pos))
+            label = fit_text_surface(self.map_heading_font, label_text, (43, 51, 43), 180, 26)
+            draw_chart_label(label, label.get_rect(center=pos), fill=(231, 221, 188), border=(128, 105, 72), padding=(8, 4))
 
         port_entries = [(index, port, map_point(port.x, port.y)) for index, port in enumerate(self.ports, start=1)]
         raw_port_points = [entry[2] for entry in port_entries]
@@ -871,14 +970,13 @@ class RenderingMixin:
             pygame.draw.circle(self.screen, (255, 239, 197), (px, py), 3)
             pygame.draw.circle(self.screen, (245, 226, 187), (px, py), marker_radius + 2, 1)
             if zoom >= 1.35:
-                label = fit_text_surface(self.map_font, port.name, (255, 246, 218), 145, 20)
+                label = fit_text_surface(self.map_font, port.name, (39, 43, 36), 145, 20)
                 label_rect = label.get_rect(midleft=(px + marker_radius + 5, py))
-                backing = label_rect.inflate(6, 3)
-                pygame.draw.rect(self.screen, (24, 37, 36), backing, border_radius=3)
-                self.screen.blit(label, label_rect)
+                draw_chart_label(label, label_rect, fill=(242, 232, 205), border=(111, 83, 53), padding=(5, 2))
             else:
-                number = fit_text_surface(self.tiny_font, f"{index:02d}", (255, 250, 224), 22, 15)
-                self.screen.blit(number, number.get_rect(midtop=(px, py + marker_radius + 2)))
+                number = fit_text_surface(self.tiny_font, f"{index:02d}", (42, 43, 35), 22, 15)
+                number_rect = number.get_rect(midtop=(px, py + marker_radius + 2))
+                draw_chart_label(number, number_rect, fill=(235, 226, 199), border=(125, 97, 65), padding=(3, 1))
 
         for wreck in getattr(self, "shipwrecks", []):
             if wreck.discovered:
@@ -908,8 +1006,9 @@ class RenderingMixin:
             pygame.draw.polygon(self.screen, (14, 35, 49), diamond)
             pygame.draw.polygon(self.screen, (107, 221, 229), diamond, 2)
             if zoom >= 1.2:
-                label = fit_text_surface(self.tiny_font, f"E{escort_index}", (206, 244, 237), 28, 16)
-                self.screen.blit(label, label.get_rect(midtop=(ex, ey + marker_size + 1)))
+                label = fit_text_surface(self.tiny_font, f"E{escort_index}", (31, 53, 57), 28, 16)
+                label_rect = label.get_rect(midtop=(ex, ey + marker_size + 1))
+                draw_chart_label(label, label_rect, fill=(207, 231, 222), border=(66, 113, 117), padding=(3, 1))
 
         navigation = self.mission_navigation_target()
         if navigation:
@@ -923,7 +1022,9 @@ class RenderingMixin:
 
         mode = getattr(self, "world_map_sort_mode", "faction")
         mode_label = "FACTION" if mode == "faction" else "HOSTILITY"
-        legend_title = fit_text_surface(self.map_heading_font, f"PORTS BY {mode_label}", (248, 224, 180), legend.width - 24, 23)
+        pygame.draw.rect(self.screen, (224, 213, 184), legend, border_radius=4)
+        pygame.draw.rect(self.screen, (128, 96, 61), legend, 1, border_radius=4)
+        legend_title = fit_text_surface(self.map_heading_font, f"PORTS BY {mode_label}", (43, 43, 34), legend.width - 24, 23)
         self.screen.blit(legend_title, (legend.x + 12, legend.y + 7))
         key_y = legend.y + 34
         if mode == "hostility":
@@ -933,7 +1034,7 @@ class RenderingMixin:
         key_x = legend.x + 12
         key_gap = 8
         for key_name, key_colour in key_items:
-            label = fit_text_surface(self.tiny_font, key_name, (239, 231, 207), 92, 16)
+            label = fit_text_surface(self.tiny_font, key_name, (49, 48, 39), 92, 16)
             item_width = label.get_width() + 18
             if key_x + item_width > legend.right - 8:
                 key_x = legend.x + 12
@@ -963,7 +1064,7 @@ class RenderingMixin:
             row_step = min(18, max(11, content_height // max(1, total_rows)))
             y = content_top_y
             for region_name, ports_in_region in sections:
-                heading_surf = fit_text_surface(self.map_heading_font, region_name.upper(), (238, 205, 145), col_width, row_step)
+                heading_surf = fit_text_surface(self.map_heading_font, region_name.upper(), (91, 66, 42), col_width, row_step)
                 self.screen.blit(heading_surf, (x, y))
                 y += row_step
                 for index, port in ports_in_region:
@@ -972,14 +1073,15 @@ class RenderingMixin:
                         label = "> " + label
                     pygame.draw.circle(self.screen, self.world_map_port_colour(port),
                                        (x + 4, y + max(3, row_step // 2)), max(2, min(4, row_step // 3)))
-                    entry = fit_text_surface(self.map_font, label, (246, 236, 210), col_width - 12, row_step)
+                    entry = fit_text_surface(self.map_font, label, (42, 44, 37), col_width - 12, row_step)
                     self.screen.blit(entry, (x + 12, y))
                     y += row_step
 
         escorts_text = f"ESCORTS: {len(living_escorts)}"
         status_text = "YOUR SHIP: ON CHART" if chart.collidepoint(player_point) else "YOUR SHIP: BEYOND THE CHART"
-        status = fit_text_surface(self.map_font, f"{status_text}  •  {escorts_text}", (255, 227, 172), chart.width - 16, 20)
-        self.screen.blit(status, (chart.x + 8, chart.bottom + 6))
+        status = fit_text_surface(self.map_font, f"{status_text}  •  {escorts_text}", (43, 48, 39), chart.width - 16, 20)
+        status_rect = status.get_rect(topleft=(chart.x + 8, chart.bottom + 6))
+        draw_chart_label(status, status_rect, fill=(233, 223, 194), border=(131, 105, 69), padding=(5, 2))
 
         selector = pygame.Rect(box.centerx - 118, box.bottom - 63, 236, 29)
         self.world_map_sort_selector_rect = selector
