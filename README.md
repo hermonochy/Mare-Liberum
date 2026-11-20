@@ -95,6 +95,8 @@ Hold **A** to fire the port-side battery or **D** to fire starboard. Standard ba
 
 Your escorts can fight alongside you. Give them orders with **F** to fight, **H** to hold fire, **G** to gather around the flagship, or **V** to follow in formation. Firing on a normally friendly vessel turns it hostile; its surviving squadron may join the fight, and the attack can damage your standing with its faction.
 
+Pirate bands now actively hunt the player and nearby escorts as well as merchant prizes and naval patrols. They manoeuvre to bring their broadsides to bear, lead moving targets, and can fire at longer range. Pirates may divide their attacks between your flagship and escort ships; hitting one member of a pirate band provokes its surviving companions. A friendly standing with the Pirate Brotherhood can discourage ordinary pirate crews, but provoked and scripted raiders will still fight. Hostile merchant or naval vessels also return fire when you enter their gun range.
+
 NPC fleets can form around named commanders. Merchant convoys, pirate bands and navy squadrons coordinate movement and attacks, may retreat when badly damaged, and build reputations through victories, losses and retreats. Pirates, merchants and naval ships can fight each other without the player's involvement. The world can also generate major scripted encounters independently of the main story. A growing escort fleet may attract a delayed, randomly timed armada whose ship count and combat strength scale against your own vessels.
 
 Ships show progressive battle damage. A vessel that loses all its hull sinks, leaving floating wreckage that eventually disperses. Losing your flagship ends the current voyage. After the sinking sequence, load a saved voyage to continue; progress made since that save is lost. The game does not create a rescue save when your ship sinks.
@@ -173,6 +175,6 @@ See [docs/mission_scripting.md](docs/mission_scripting.md) for the expanded `.mi
 
 ## Harbours and island settlements
 
-Ports are built as protected top-down harbours with stone breakwaters, an open entrance channel, quay frontage, timber finger piers, mooring posts, cargo sheds, cranes, coastal guns and faction colours. Breakwaters are part of the world collision geometry: vessels that strike them are pushed clear and rebound instead of sailing through the walls.
+Ports are built as compact, protected top-down harbours with shore-connected wooden fork breakwaters, an open entrance channel, timber quays and finger piers, mooring posts, cargo sheds, cranes, coastal guns and faction colours. Breakwaters are part of the world collision geometry: vessels that strike them are pushed clear and rebound instead of sailing through the walls.
 
 Every port also has a settlement on its associated island. Town layouts, building density, roof colours and civic structures vary by faction and by individual harbour. British Crown towns favour planned colonial streets and forts; Spanish ports use dense plaza-and-church layouts; French harbours use market quarters; Merchant League ports feature large warehouses; pirate havens use compact irregular timber settlements; and independent ports use mixed organic layouts. Towns are generated deterministically from the world layout, so they remain in the same place across new sessions and do not need separate save data.

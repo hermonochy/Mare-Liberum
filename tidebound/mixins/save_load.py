@@ -811,7 +811,8 @@ class SaveLoadMixin:
                 "Long Nines travel farther, Demi-cannons hit harder, Carronades devastate at close range and Swivel Guns reload rapidly. Each cannon type trades range, damage and reload speed.",
                 "Powder smoke, recoil and impact sounds help show when a broadside has fired or landed. Watch your hull indicator and repair at a shipyard.",
                 "Your escorts obey F (fight), H (hold fire), G (gather) and V (follow). Hold fire is useful around neutral traffic and friendly convoys.",
-                "A stray cannonball can turn a friendly ship hostile. Its faction and surviving squadron may remember the attack, so check your target before firing.",
+                "Pirate bands actively attack nearby flagships and escorts, manoeuvre to bring their broadsides to bear, and lead moving targets. Hitting one pirate provokes its surviving band; a friendly standing with the Pirate Brotherhood can discourage ordinary crews.",
+                "Hostile merchant or naval vessels can return fire when you enter their gun range. A stray cannonball can turn a friendly ship hostile, so check your target before firing.",
             ]),
             ("CHARTS & DISCOVERIES", [
                 "M opens the full atlas. Use the wheel or +/- to zoom, drag to pan, and Home to reset the chart. The bottom selector groups and colours ports by faction or hostility; blue diamonds mark your living escorts.",

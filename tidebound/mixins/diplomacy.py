@@ -148,19 +148,25 @@ class DiplomacyMixin:
         self.refresh_port_standings()
 
     def record_player_attack_on_pirate(self, pirate, source="your guns"):
-        if getattr(pirate, "player_incident_recorded", False):
-            return
-        self.adjust_faction_relation("Pirate Brotherhood", -10,
-            f"Your forces fired on {pirate.name}.")
-        commander = getattr(pirate, "commander_name", "")
-        if commander:
-            self.adjust_commander_relation(commander, -15,
-                f"{source} struck a vessel in their pirate band.")
-        pirate.player_incident_recorded = True
-        pirate.player_provoked = True
-        pirate.player_attitude = "hostile"
-        self.add_journal(f"Your attack on {pirate.name} has been reported among the Pirate Brotherhood.")
-        self.start_active_mission_hook("provoke")
+        group = [pirate]
+        fleet_id = getattr(pirate, "fleet_id", "")
+        if fleet_id:
+            group = [member for member in self.pirates
+                     if member.hull > 0 and not member.dead and member.fleet_id == fleet_id]
+        if not getattr(pirate, "player_incident_recorded", False):
+            self.adjust_faction_relation("Pirate Brotherhood", -10,
+                f"Your forces fired on {pirate.name}.")
+            commander = getattr(pirate, "commander_name", "")
+            if commander:
+                self.adjust_commander_relation(commander, -15,
+                    f"{source} struck a vessel in their pirate band.")
+            pirate.player_incident_recorded = True
+            self.add_journal(f"Your attack on {pirate.name} has been reported among the Pirate Brotherhood.")
+            self.start_active_mission_hook("provoke")
+        for member in group:
+            member.player_provoked = True
+            member.player_attitude = "hostile"
+            member.npc_target_name = "__player__"
 
     def record_player_sunk_npc(self, ship):
         faction = self.faction_for_npc(ship)

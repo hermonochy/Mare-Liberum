@@ -339,7 +339,7 @@ SHIPYARD_TABS = ("Flagship", "Refits", "Fleet", "Escort Refits", "Repairs", "Nam
 STARTING_CAMERA_ZOOM = 1.0
 STARTING_SAIL_SETTING = 0.72
 STARTING_WIND = (24.0, 1.0)
-STARTING_GOLD = 175
+STARTING_GOLD = 175000
 STARTING_JOURNAL = (
     "A battered sloop, a short purse, and a long stretch of blue water. Port Royal is your home for now.",
     "The harbourmaster may know who is hiring. Ask around before putting out to sea.",

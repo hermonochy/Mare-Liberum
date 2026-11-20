@@ -368,13 +368,14 @@ class VesselsMixin:
                 bearing = pirate.heading
                 desired = pirate.heading
                 thrust = 43.0
-            elif npc_target is not None and not pirate.objective_target:
-                dx = npc_target.x - pirate.x
-                dy = npc_target.y - pirate.y
+            elif npc_target is not None:
+                target_x, target_y = self._battle_target_position(npc_target)
+                dx = target_x - pirate.x
+                dy = target_y - pirate.y
                 distance = math.hypot(dx, dy)
                 bearing = math.degrees(math.atan2(dy, dx))
                 desired = self._broadside_course(bearing, pirate.heading, distance)
-                thrust = 39.0 if distance > 480.0 else (20.0 if distance > 285.0 else 27.0)
+                thrust = 46.0 if distance > 760.0 else (34.0 if distance > 480.0 else (22.0 if distance > 235.0 else 26.0))
             else:
                 distance = math.hypot(self.ship_x - pirate.x, self.ship_y - pirate.y)
                 dx = self.ship_x - pirate.x
@@ -746,7 +747,7 @@ class VesselsMixin:
                             self.toast_message(f"{traffic_hit.name} is going down under pirate fire!", 3.0)
                             self.npc_battle_notice_timer = 3.0
                     continue
-                if ball.owner == "event_pirate" and self.apply_enemy_projectile_to_player_fleet(ball):
+                if self.apply_enemy_projectile_to_player_fleet(ball):
                     continue
             elif self.apply_enemy_projectile_to_player_fleet(ball):
                 continue
