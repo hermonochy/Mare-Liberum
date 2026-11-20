@@ -819,6 +819,7 @@ class SaveLoadMixin:
                 "Up sets more sail; Down reefs it. Left and Right steer. O deploys oars when the wind is unhelpful. Momentum matters, so slow down before entering a harbour.",
                 "E casts off or takes the nearest available harbour berth. When close to a pier, the prompt tells you when docking is possible.",
                 "Use the mouse wheel to zoom around the pointer, drag the chart to look around, and press C to centre the view on your ship.",
+                "Double-click a port in the sailing view or atlas to let the first mate navigate and dock there. Any arrow key takes the helm back.",
             ]),
             ("COMBAT & YOUR FLEET", [
                 "Hold A to fire the port-side guns; hold D for starboard. Keep the enemy on the correct side of your ship and allow each gun time to reload.",

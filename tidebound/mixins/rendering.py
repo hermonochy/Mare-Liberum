@@ -756,6 +756,9 @@ class RenderingMixin:
         self.screen.blit(sails_text, (info.x + 14, info.y + 45))
         self.screen.blit(zoom_text, (info.x + 14, info.y + 78))
         self.screen.blit(oars_text, (info.x + 14, info.y + 109))
+        if getattr(self, "autopilot_port_name", None):
+            helm_text = fit_text_surface(self.tiny_font, f"FIRST MATE AT HELM: {self.autopilot_port_name}  ·  Arrow key to override", (255, 218, 145), info.width - 24, 19)
+            self.screen.blit(helm_text, (info.x + 12, info.y + 139))
         arrow_center = (info.x + 226, info.y + 64)
         pygame.draw.circle(self.screen, (225, 200, 153), arrow_center, 20, 2)
         direction = math.radians(self.wind_angle)
@@ -1050,8 +1053,7 @@ class RenderingMixin:
             draw_chart_label(label, label.get_rect(center=pos), fill=(231, 221, 188), border=(128, 105, 72), padding=(8, 4))
 
         port_entries = [(index, port, map_point(port.x, port.y)) for index, port in enumerate(self.ports, start=1)]
-        raw_port_points = [entry[2] for entry in port_entries]
-        display_port_points = self.spread_world_map_points(raw_port_points, 20) if zoom < 2.2 else raw_port_points
+        display_port_points = self.world_map_port_marker_positions()
         for (index, port, raw_point), (px, py) in zip(port_entries, display_port_points):
             colour = self.world_map_port_colour(port)
             if math.hypot(px - raw_point[0], py - raw_point[1]) > 3:

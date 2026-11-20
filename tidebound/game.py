@@ -3,13 +3,13 @@ from .audio import AudioEngine
 from .harbour_geometry import harbour_layout, position_port_anchor
 from .settlements import build_port_settlements
 from .mixins import (
-    TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
+    AutopilotMixin, TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
     VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin, PortMenuMixin,
 )
 
 
 class Game(
-    TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
+    AutopilotMixin, TreasureMixin, MissionMixin, MissionEventsMixin, DayJobsMixin, ShipyardFleetMixin, ControlsMixin,
     VesselsMixin, CameraMixin, RenderingMixin, TrafficMixin, SaveLoadMixin, DiplomacyMixin, ReefsMixin, ShipwreckMixin, TradeMixin, PortMenuMixin,
 ):
     def __init__(self):
@@ -41,6 +41,11 @@ class Game(
         self.world_map_sort_option_rects = {}
         self.camera_dragging = False
         self.camera_drag_last = (0, 0)
+        self.autopilot_port_name = None
+        self.autopilot_previous_oars = None
+        self.autopilot_repath_timer = 0.0
+        self.autopilot_course_heading = STARTING_SHIP_HEADING
+        self.autopilot_last_port_click = None
         self.toast = "Port Royal. Set sail with the arrow keys, or use the oars when the wind turns against you."
         self.toast_time = 6.0
         self.show_help = True

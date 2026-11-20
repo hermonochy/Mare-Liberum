@@ -4,6 +4,8 @@ from ..common import *
 class ControlsMixin:
     def handle_keydown(self, event):
         key = event.key
+        if getattr(self, "autopilot_port_name", None) and key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT):
+            self.cancel_port_autopilot()
         if self.menu_mode or self.save_dialog_open:
             self.handle_menu_key(key)
             return
@@ -205,10 +207,11 @@ class ControlsMixin:
             if event.type == pygame.KEYDOWN:
                 self.handle_keydown(event)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2, 3):
-                self.handle_world_map_click(event.pos)
+                self.handle_world_map_click(event.pos, button=event.button)
             elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2, 3):
                 self.world_map_dragging = False
             elif event.type == pygame.MOUSEMOTION and self.world_map_dragging:
+                self.clear_autopilot_click_if_dragged(event.pos)
                 dx = event.pos[0] - self.world_map_drag_last[0]
                 dy = event.pos[1] - self.world_map_drag_last[1]
                 self.pan_world_map(dx, dy)
@@ -245,12 +248,21 @@ class ControlsMixin:
             self.handle_day_job_board_click(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 2, 3):
             if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open and not self.market_open:
+                if event.button == 1:
+                    port = self.simulation_port_at_screen(event.pos)
+                    if port is not None:
+                        if self.register_port_double_click(port, event.pos, "sailing"):
+                            self.start_port_autopilot(port)
+                            return
+                    else:
+                        self.autopilot_last_port_click = None
                 self.camera_dragging = True
                 self.camera_drag_last = event.pos
         elif event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2, 3):
             self.camera_dragging = False
         elif event.type == pygame.MOUSEMOTION and self.camera_dragging:
             if not self.menu_mode and not self.save_dialog_open and not self.conversation and not self.journal_open and not self.treasure_chart_open and not self.shipyard_open and not self.job_board_open and not self.world_map_open and not self.market_open:
+                self.clear_autopilot_click_if_dragged(event.pos)
                 dx = event.pos[0] - self.camera_drag_last[0]
                 dy = event.pos[1] - self.camera_drag_last[1]
                 self.camera_x -= dx / self.camera_zoom

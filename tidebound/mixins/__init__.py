@@ -1,3 +1,4 @@
+from .autopilot import AutopilotMixin
 from .camera import CameraMixin
 from .controls import ControlsMixin
 from .day_jobs import DayJobsMixin
@@ -16,6 +17,7 @@ from .treasure import TreasureMixin
 from .vessels import VesselsMixin
 
 __all__ = [
+    "AutopilotMixin",
     "CameraMixin",
     "ControlsMixin",
     "DayJobsMixin",

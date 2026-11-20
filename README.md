@@ -137,6 +137,7 @@ The journal, opened with **J**, records story leads, discoveries and important e
 | Zoom sailing view in / out | Mouse wheel (up to 480%) |
 | Zoom in / out on world atlas | Mouse wheel or **+ / -** |
 | Pan world atlas | Drag inside the chart |
+| First-mate autopilot to a port | Double-click its harbour marker or map icon; any arrow key takes back control |
 | Reset world atlas view | **Home** |
 | Open captain's journal | **J** |
 | Open Admirals' & Captains' Ledger | **N** |

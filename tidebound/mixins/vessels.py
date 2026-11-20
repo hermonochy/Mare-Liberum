@@ -188,16 +188,24 @@ class VesselsMixin:
     def update_player_sailing(self, dt):
         if self.docked_port or self.player_sinking_active or self.player_lost:
             return
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP]:
-            self.sail_setting = clamp(self.sail_setting + 0.58 * dt, 0.0, 1.0)
-        if keys[pygame.K_DOWN]:
-            self.sail_setting = clamp(self.sail_setting - 0.75 * dt, 0.0, 1.0)
-        rudder = 0.0
-        if keys[pygame.K_LEFT]:
-            rudder -= 1.0
-        if keys[pygame.K_RIGHT]:
-            rudder += 1.0
+        autopilot_controls = self.autopilot_control_inputs(dt) if getattr(self, "autopilot_port_name", None) else None
+        if self.docked_port:
+            return
+        keys = pygame.key.get_pressed() if autopilot_controls is None else None
+        if autopilot_controls is None:
+            if keys[pygame.K_UP]:
+                self.sail_setting = clamp(self.sail_setting + 0.58 * dt, 0.0, 1.0)
+            if keys[pygame.K_DOWN]:
+                self.sail_setting = clamp(self.sail_setting - 0.75 * dt, 0.0, 1.0)
+            rudder = 0.0
+            if keys[pygame.K_LEFT]:
+                rudder -= 1.0
+            if keys[pygame.K_RIGHT]:
+                rudder += 1.0
+        else:
+            if autopilot_controls.get("docked"):
+                return
+            rudder = autopilot_controls["rudder"]
         speed = math.hypot(self.ship_vx, self.ship_vy)
         stats = self.player_ship_stats()
         turn_rate = (7.0 + min(speed, 170.0) * 0.19) * stats["turn"] * (1.0 + self.upgrades["rudder"] * 0.12)
@@ -222,6 +230,13 @@ class VesselsMixin:
         lateral_speed = self.ship_vx * side[0] + self.ship_vy * side[1]
         lateral_speed *= math.exp(-0.92 * dt)
         forward_speed *= math.exp(-0.115 * dt)
+        if autopilot_controls is not None:
+            current_speed = math.hypot(self.ship_vx, self.ship_vy)
+            target_speed = autopilot_controls["target_speed"]
+            if current_speed > target_speed:
+                damping = math.exp(-autopilot_controls["extra_drag"] * dt)
+                forward_speed *= damping
+                lateral_speed *= damping
         self.ship_vx = forward[0] * forward_speed + side[0] * lateral_speed
         self.ship_vy = forward[1] * forward_speed + side[1] * lateral_speed
         current_speed = math.hypot(self.ship_vx, self.ship_vy)

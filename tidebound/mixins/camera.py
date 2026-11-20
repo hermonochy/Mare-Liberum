@@ -82,6 +82,12 @@ class CameraMixin:
         y = chart.centery + (world_y * sy - chart.height / 2) * zoom + pan_y
         return int(x), int(y)
 
+    def world_map_port_marker_positions(self):
+        points = [self.world_map_point(port.x, port.y) for port in getattr(self, "ports", [])]
+        if float(getattr(self, "world_map_zoom", 1.0)) < 2.2:
+            return self.spread_world_map_points(points, 20)
+        return points
+
     def zoom_world_map(self, amount, anchor=None):
         chart = getattr(self, "world_map_chart_rect", None)
         if chart is None:
@@ -142,13 +148,17 @@ class CameraMixin:
             for faction in FACTION_COLOURS
         ]
 
-    def handle_world_map_click(self, position):
+    def handle_world_map_click(self, position, button=1):
         selector = getattr(self, "world_map_sort_selector_rect", None)
         if selector and selector.collidepoint(position):
+            if hasattr(self, "autopilot_last_port_click"):
+                self.autopilot_last_port_click = None
             self.world_map_sort_menu_open = not self.world_map_sort_menu_open
             return
         for mode, rect in getattr(self, "world_map_sort_option_rects", {}).items():
             if rect.collidepoint(position):
+                if hasattr(self, "autopilot_last_port_click"):
+                    self.autopilot_last_port_click = None
                 self.world_map_sort_mode = mode
                 self.world_map_sort_menu_open = False
                 return
@@ -156,8 +166,20 @@ class CameraMixin:
             self.world_map_sort_menu_open = False
         chart = getattr(self, "world_map_chart_rect", None)
         if chart and chart.collidepoint(position):
+            if button != 1 and hasattr(self, "autopilot_last_port_click"):
+                self.autopilot_last_port_click = None
+            if button == 1 and hasattr(self, "world_map_port_at_screen"):
+                port = self.world_map_port_at_screen(position)
+                if port is not None:
+                    if self.register_port_double_click(port, position, "atlas"):
+                        self.start_port_autopilot(port)
+                        return
+                elif hasattr(self, "autopilot_last_port_click"):
+                    self.autopilot_last_port_click = None
             self.world_map_dragging = True
             self.world_map_drag_last = position
+        elif hasattr(self, "autopilot_last_port_click"):
+            self.autopilot_last_port_click = None
 
     def update_camera(self):
         if self.camera_follow:
