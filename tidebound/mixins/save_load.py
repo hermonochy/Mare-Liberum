@@ -127,6 +127,7 @@ class SaveLoadMixin:
                 "class": self.current_ship,
                 "livery": self.player_livery,
                 "customisation": dict(self.ship_customisation),
+                "quality": normalise_ship_quality(getattr(self, "ship_quality", None)),
                 "cannon_loadout": dict(self.cannon_loadout),
                 "upgrades": dict(self.upgrades),
                 "hull": self.player_hull,
@@ -273,6 +274,7 @@ class SaveLoadMixin:
             self.current_ship = "Sloop"
         self.player_livery = max(0, min(len(SHIP_LIVERIES) - 1, int(ship.get("livery", 0))))
         self.ship_customisation = normalise_ship_customisation(ship.get("customisation"))
+        self.ship_quality = normalise_ship_quality(ship.get("quality"))
         self.upgrades = {key: max(0, int(value)) for key, value in ship.get("upgrades", {}).items()}
         for key in ("cannons", "hull", "rigging", "rudder", "cargo", "rowers"):
             self.upgrades.setdefault(key, 0)
@@ -282,10 +284,10 @@ class SaveLoadMixin:
             self.ship_customisation.get("cannon_type", "Standard Culverins"), self.upgrades.get("cannons", 0),
         )
         saved_max_hull = max(1, int(ship.get("maximum_hull", PLAYER_HULL)))
-        saved_hull = max(1, min(saved_max_hull, int(ship.get("hull", saved_max_hull))))
+        saved_hull = max(1.0, min(float(saved_max_hull), float(ship.get("hull", saved_max_hull))))
         saved_hull_ratio = saved_hull / saved_max_hull
         self.player_max_hull = self.player_ship_stats()["hull"]
-        self.player_hull = max(1, min(self.player_max_hull, int(round(self.player_max_hull * saved_hull_ratio))))
+        self.player_hull = max(1.0, min(float(self.player_max_hull), self.player_max_hull * saved_hull_ratio))
         self.sail_setting = max(0.0, min(1.0, float(ship.get("sail_setting", 0.72))))
         self.oars_deployed = False
         self.fleet_order = ship.get("fleet_order", "follow")
@@ -372,6 +374,7 @@ class SaveLoadMixin:
             entry = dict(entry)
             entry.setdefault("upgrades", {"cannons": 0, "hull": 0, "rigging": 0, "rudder": 0, "rowers": 0})
             entry["customisation"] = normalise_ship_customisation(entry.get("customisation"))
+            entry["quality"] = normalise_ship_quality(entry.get("quality"))
             entry["cannon_loadout"] = normalise_cannon_loadout(
                 entry.get("cannon_loadout"), entry.get("ship_type", "Sloop"),
                 entry["customisation"].get("cannon_type", "Standard Culverins"),
@@ -388,8 +391,20 @@ class SaveLoadMixin:
             escort.x, escort.y = self.fleet_formation_target(index, len(self.fleet), formation)
             escort.vx = escort.vy = 0.0
             escort.anchor_x, escort.anchor_y = escort.x, escort.y
-        self.pirates = [PirateShip(**entry) for entry in data["pirate_ships"]]
-        self.traffic_ships = [TrafficShip(**entry) for entry in data["other_ships"]]
+        self.pirates = []
+        for entry in data["pirate_ships"]:
+            entry = dict(entry)
+            entry["quality"] = normalise_ship_quality(entry.get("quality"))
+            if entry.get("cannon_type") not in CANNON_TYPES:
+                entry["cannon_type"] = "Standard Culverins"
+            self.pirates.append(PirateShip(**entry))
+        self.traffic_ships = []
+        for entry in data["other_ships"]:
+            entry = dict(entry)
+            entry["quality"] = normalise_ship_quality(entry.get("quality"))
+            if entry.get("cannon_type") not in CANNON_TYPES:
+                entry["cannon_type"] = "Standard Culverins"
+            self.traffic_ships.append(TrafficShip(**entry))
         self.used_ship_names.update(ship.name for ship in self.pirates)
         self.used_ship_names.update(ship.name for ship in self.traffic_ships)
         # Re-seat traffic ships using the current quay geometry and keep the
@@ -480,7 +495,7 @@ class SaveLoadMixin:
             for port in self.ports
         }
         self.port_defence_notice_timer = 0.0
-        self.camera_zoom = max(0.30, min(2.4, float(world.get("camera_zoom", 1.0))))
+        self.camera_zoom = max(CAMERA_ZOOM_MIN, min(CAMERA_ZOOM_MAX, float(world.get("camera_zoom", 1.0))))
         def restore_tuple(value):
             if isinstance(value, list):
                 return tuple(restore_tuple(item) for item in value)
@@ -807,7 +822,7 @@ class SaveLoadMixin:
             ]),
             ("COMBAT & YOUR FLEET", [
                 "Hold A to fire the port-side guns; hold D for starboard. Keep the enemy on the correct side of your ship and allow each gun time to reload.",
-                "A bow-and-stern chaser refit fires forward with W and aft with S while at sea. Rotating turrets automatically track the nearest hostile vessel when you fire with A or D.",
+                "A bow-and-stern chaser refit fires forward with W and aft with S while at sea. Traditional broadsides fire to port with A and starboard with D.",
                 "Long Nines travel farther, Demi-cannons hit harder, Carronades devastate at close range and Swivel Guns reload rapidly. Each cannon type trades range, damage and reload speed.",
                 "Powder smoke, recoil and impact sounds help show when a broadside has fired or landed. Watch your hull indicator and repair at a shipyard.",
                 "Your escorts obey F (fight), H (hold fire), G (gather) and V (follow). Hold fire is useful around neutral traffic and friendly convoys.",

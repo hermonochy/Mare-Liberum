@@ -1,4 +1,5 @@
 from .ship_fittings import default_ship_customisation
+from .ship_quality import default_ship_quality
 
 from dataclasses import dataclass, field
 
@@ -61,6 +62,8 @@ class PirateShip:
     event_id: str = ""
     gun_count: int = 3
     reload_seconds: float = 2.8
+    cannon_type: str = "Standard Culverins"
+    quality: dict = field(default_factory=default_ship_quality)
 
 @dataclass
 class FleetShip:
@@ -84,6 +87,7 @@ class FleetShip:
     damage_marks: list = field(default_factory=list)
     customisation: dict = field(default_factory=default_ship_customisation)
     cannon_loadout: dict = field(default_factory=dict)
+    quality: dict = field(default_factory=default_ship_quality)
 
 
 @dataclass
@@ -123,6 +127,8 @@ class TrafficShip:
     sink_cause: str = ""
     hit_flash: float = 0.0
     damage_marks: list = field(default_factory=list)
+    cannon_type: str = "Standard Culverins"
+    quality: dict = field(default_factory=default_ship_quality)
 
 @dataclass
 class Cannonball:
@@ -135,7 +141,7 @@ class Cannonball:
     source_commander: str = ""
     source_faction: str = ""
     source_fleet_id: str = ""
-    damage: int = 1
+    damage: float = 1.0
 
 @dataclass
 class TreasureSite:

@@ -94,7 +94,8 @@ class TrafficMixin:
         name = generate_ship_name(self.rng, self.used_ship_names)
         ship_type = self.rng.choice(profile["types"])
         ship_stats = SHIP_CLASSES[ship_type]
-        ship_hull = max(int(profile["hull"]), int(round(ship_stats["hull"] / 35.0)))
+        quality = roll_ship_quality(self.rng)
+        ship_hull = max(1, int(round(max(int(profile["hull"]), int(round(ship_stats["hull"] / 35.0))) * ship_hull_quality(quality))))
         faction_weights = {
             "naval patrol": [("British Crown", 48), ("Spanish Crown", 32), ("French Crown", 20)],
             "merchant": [("Merchant League", 58), ("Independent", 20), ("British Crown", 8), ("Spanish Crown", 8), ("French Crown", 6)],
@@ -121,6 +122,8 @@ class TrafficMixin:
                 faction=ship_faction,
                 player_attitude=attitude.lower(),
                 hostile_to_player=(attitude == "HOSTILE"),
+                cannon_type=roll_npc_cannon_type(self.rng, ship_type, role),
+                quality=quality,
             )
         )
         self.traffic_serial += 1
@@ -518,16 +521,22 @@ class TrafficMixin:
         choices = ((bearing - 90.0) % 360.0, (bearing + 90.0) % 360.0)
         return min(choices, key=lambda course: abs(angle_difference(course, current_heading)))
 
-    def fire_npc_broadside(self, attacker, target, owner, shot_count=3, speed=455.0):
+    def fire_npc_broadside(self, attacker, target, owner, shot_count=3):
+        cannon_type = getattr(attacker, "cannon_type", "Standard Culverins")
+        profile = CANNON_TYPES.get(cannon_type, CANNON_TYPES["Standard Culverins"])
+        quality = normalise_ship_quality(getattr(attacker, "quality", None))
+        projectile_speed = float(profile["speed"])
+        projectile_life = float(profile["life"])
+        range_limit = min(1080.0, max(300.0, projectile_speed * projectile_life))
         target_x, target_y = self._battle_target_position(target)
         target_vx = self.ship_vx if target is self else float(getattr(target, "vx", 0.0))
         target_vy = self.ship_vy if target is self else float(getattr(target, "vy", 0.0))
         dx = target_x - attacker.x
         dy = target_y - attacker.y
         distance = math.hypot(dx, dy)
-        if distance < 105.0 or distance > 900.0:
+        if distance < 105.0 or distance > range_limit:
             return False
-        lead_time = min(1.85, distance / max(1.0, speed))
+        lead_time = min(2.1, distance / max(1.0, projectile_speed))
         aim_x = target_x + target_vx * lead_time - attacker.x
         aim_y = target_y + target_vy * lead_time - attacker.y
         bearing = math.degrees(math.atan2(aim_y, aim_x))
@@ -536,25 +545,28 @@ class TrafficMixin:
         if min(port_alignment, starboard_alignment) > 42.0:
             return False
 
-        angle = math.radians(bearing)
         side = -1.0 if port_alignment <= starboard_alignment else 1.0
         forward = math.radians(attacker.heading)
         broadside = forward + side * math.pi / 2.0
+        shot_count = max(1, int(shot_count))
+        volley_error = math.radians(self.rng.gauss(0.0, 2.1 / max(0.84, ship_aim_quality(quality))))
+        damage = float(profile["damage"]) * ship_damage_quality(quality)
         for index in range(shot_count):
             offset = (index - (shot_count - 1) / 2.0) * 12.0
-            spread = (index - (shot_count - 1) / 2.0) * 0.018
-            aim = angle + spread
+            spread = (index - (shot_count - 1) / 2.0) * 0.012
             muzzle_x = attacker.x + math.cos(forward) * offset + math.cos(broadside) * CANNON_MUZZLE_OFFSET
             muzzle_y = attacker.y + math.sin(forward) * offset + math.sin(broadside) * CANNON_MUZZLE_OFFSET
+            aim = math.atan2(aim_y + attacker.y - muzzle_y, aim_x + attacker.x - muzzle_x) + volley_error + spread
             self.projectiles.append(Cannonball(
                 muzzle_x, muzzle_y,
-                math.cos(aim) * speed + attacker.vx * 0.12,
-                math.sin(aim) * speed + attacker.vy * 0.12,
-                2.0,
+                math.cos(aim) * projectile_speed + attacker.vx * 0.12,
+                math.sin(aim) * projectile_speed + attacker.vy * 0.12,
+                projectile_life,
                 owner,
                 getattr(attacker, "commander_name", ""),
                 "pirate" if isinstance(attacker, PirateShip) else getattr(attacker, "role", ""),
                 getattr(attacker, "fleet_id", ""),
+                damage=damage,
             ))
             self.spawn_cannon_smoke(muzzle_x, muzzle_y, math.cos(broadside), math.sin(broadside), amount=1)
         self.apply_cannon_recoil(attacker, math.cos(broadside), math.sin(broadside), 8.5)
@@ -572,19 +584,14 @@ class TrafficMixin:
             target = self._combat_target_for_pirate(pirate)
             if target is None:
                 continue
-            distance = math.hypot(self._battle_target_position(target)[0] - pirate.x,
-                                  self._battle_target_position(target)[1] - pirate.y)
             is_event_ship = bool(getattr(pirate, "event_id", ""))
             pirate_shots = max(3, min(10, int(getattr(pirate, "gun_count", 3))))
             projectile_owner = "event_pirate" if is_event_ship else "npc_pirate"
-            projectile_speed = 475.0 if is_event_ship else 455.0
             if pirate.cooldown <= 0.0 and self.fire_npc_broadside(
-                    pirate, target, projectile_owner, shot_count=pirate_shots, speed=projectile_speed):
-                reload_seconds = max(0.8, float(getattr(pirate, "reload_seconds", 2.8)))
-                if is_event_ship:
-                    pirate.cooldown = max(0.72, reload_seconds * 0.54) + self.rng.uniform(0.04, 0.14)
-                else:
-                    pirate.cooldown = max(0.85, reload_seconds * 0.58) + self.rng.uniform(0.06, 0.18)
+                    pirate, target, projectile_owner, shot_count=pirate_shots):
+                profile = CANNON_TYPES.get(getattr(pirate, "cannon_type", "Standard Culverins"), CANNON_TYPES["Standard Culverins"])
+                reload_seconds = max(0.95, float(getattr(pirate, "reload_seconds", 2.8)) * profile["reload"] * ship_reload_quality(getattr(pirate, "quality", None)))
+                pirate.cooldown = reload_seconds + self.rng.uniform(0.08, 0.28)
                 if math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y) < 1500.0 and self.npc_battle_notice_timer <= 0.0:
                     target_name = "your flagship" if target is self else getattr(target, "name", "your escort")
                     self.toast_message(f"{pirate.name} opens fire on {target_name}.", 2.6)
@@ -608,10 +615,11 @@ class TrafficMixin:
             if distance <= shot_limit and ship.combat_cooldown <= 0.0:
                 base_guns = SHIP_CLASSES.get(ship.ship_type, SHIP_CLASSES["Sloop"])["guns"]
                 shots = min(max_broadside_guns(ship.ship_type), max(2, int(base_guns * (0.78 if ship.role == "naval patrol" else 0.48))))
-                speed = 470.0 if ship.role == "naval patrol" else 415.0
                 owner = "npc_traffic_hostile" if target is self else ("npc_navy" if ship.role == "naval patrol" else "npc_merchant")
-                if self.fire_npc_broadside(ship, target, owner, shot_count=shots, speed=speed):
-                    ship.combat_cooldown = (1.2 if ship.role == "naval patrol" else 1.55) + self.rng.uniform(0.05, 0.25)
+                if self.fire_npc_broadside(ship, target, owner, shot_count=shots):
+                    profile = CANNON_TYPES.get(getattr(ship, "cannon_type", "Standard Culverins"), CANNON_TYPES["Standard Culverins"])
+                    base_reload = SHIP_CLASSES.get(ship.ship_type, SHIP_CLASSES["Sloop"])["reload"]
+                    ship.combat_cooldown = max(1.0, base_reload * profile["reload"] * ship_reload_quality(getattr(ship, "quality", None))) + self.rng.uniform(0.08, 0.30)
                     if math.hypot(ship.x - self.ship_x, ship.y - self.ship_y) < 1500.0 and self.npc_battle_notice_timer <= 0.0:
                         target_name = "your flagship" if target is self else target.name
                         self.toast_message(f"{ship.name} opens fire on {target_name}.", 2.6)

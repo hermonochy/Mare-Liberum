@@ -63,6 +63,7 @@ class Game(
         self.wind_angle = STARTING_WIND[0]
         self.wind_strength = STARTING_WIND[1]
         self.current_ship = STARTING_SHIP_CLASS
+        self.ship_quality = roll_ship_quality(self.rng)
         self.player_ship_name = STARTING_SHIP_NAME
         self.used_ship_names = {STARTING_SHIP_NAME}
         self.player_livery = STARTING_SHIP_LIVERY
@@ -70,8 +71,8 @@ class Game(
         self.ship_surface_cache = {}
         self.upgrades = dict(STARTING_SHIP_UPGRADES)
         self.cannon_loadout = default_cannon_loadout(self.current_ship, self.ship_customisation["cannon_type"], self.upgrades["cannons"])
-        self.player_max_hull = PLAYER_HULL
-        self.player_hull = PLAYER_HULL
+        self.player_max_hull = self.player_ship_stats()["hull"]
+        self.player_hull = self.player_max_hull
         self.player_hit_flash = 0.0
         self.player_damage_marks = []
         self.player_sinking_active = False
@@ -108,6 +109,7 @@ class Game(
             position_port_anchor(port)
         self.harbour_layouts = {port.name: harbour_layout(port, PORT_BERTH_COUNT, PORT_BERTH_SPACING, self.land) for port in self.ports}
         self.harbour_wall_polygons = [polygon for layout in self.harbour_layouts.values() for polygon in layout["collision_polygons"]]
+        self.position_treasure_bottles()
         self.port_settlements = build_port_settlements(self.ports, self.land)
         self.shipwrecks = self.create_shipwreck_sites()
         self.tree_positions = self.make_tree_positions()
@@ -141,6 +143,11 @@ class Game(
         self.initialise_mission_events()
         self.initialise_day_jobs()
         self.pirates = [PirateShip(*args, **kwargs) for args, kwargs in INITIAL_PIRATE_DATA]
+        for pirate in self.pirates:
+            pirate.quality = roll_ship_quality(self.rng)
+            pirate.cannon_type = roll_npc_cannon_type(self.rng, pirate.ship_type, "pirate")
+            pirate.max_hull = max(1, int(round(pirate.max_hull * ship_hull_quality(pirate.quality))))
+            pirate.hull = min(pirate.max_hull, max(1, int(round(pirate.hull * ship_hull_quality(pirate.quality)))))
         self.reinforcement_number = 1
         self.reinforcement_timer = self.pirate_reinforcement_interval()
         self.pirate_collision_notice_timer = 0.0

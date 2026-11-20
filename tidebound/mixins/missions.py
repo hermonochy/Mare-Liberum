@@ -162,7 +162,8 @@ class MissionMixin:
             heading = math.degrees(math.atan2(self.ship_y - y, self.ship_x - x)) % 360.0
             ship_type = self.rng.choice(["Cutter", "Sloop", "Xebec", "Schooner", "Brigantine", "Brig", "Corvette", "Frigate"])
             stats = SHIP_CLASSES[ship_type]
-            hull = max(6, int(round(stats["hull"] / 17.0)))
+            quality = roll_ship_quality(self.rng)
+            hull = max(6, int(round(stats["hull"] / 17.0 * ship_hull_quality(quality))))
             pirate = PirateShip(
                 name,
                 x,
@@ -177,6 +178,8 @@ class MissionMixin:
                 ship_type=ship_type,
                 gun_count=min(10, max_broadside_guns(ship_type)),
                 reload_seconds=float(stats["reload"]),
+                cannon_type=roll_npc_cannon_type(self.rng, ship_type, "pirate"),
+                quality=quality,
             )
             self.pirates.append(pirate)
             spawned.append(pirate)
@@ -557,7 +560,7 @@ class MissionMixin:
             self.toast_message(f"You already own {item}.", 3.5)
             return
         if self.gold < price:
-            self.toast_message(f"You need {price} gold to buy {item}; you have {self.gold}.", 4.0)
+            self.toast_message(f"You need {format_gold(price)} gold to buy {item}; you have {format_gold(self.gold)}.", 4.0)
             return
         self.gold -= price
         self.unique_items = getattr(self, "unique_items", [])

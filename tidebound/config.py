@@ -12,7 +12,14 @@ WORLD_HEIGHT = int(MAP_DESIGN_HEIGHT * WORLD_SCALE)
 PORT_BERTH_COUNT = 9
 PORT_BERTH_CENTER_SLOT = PORT_BERTH_COUNT // 2
 PORT_BERTH_SPACING = 78.0
-PLAYER_RADIUS = 36
+PLAYER_RADIUS = 18
+SHIP_COLLISION_SCALE = 0.5
+WORLD_SHIP_RENDER_SCALE = 0.5
+NPC_SINK_DURATION = 8.0
+PLAYER_SINK_DURATION = 9.0
+SINK_DEBRIS_DELAY = 2.1
+CAMERA_ZOOM_MIN = 0.30
+CAMERA_ZOOM_MAX = 4.8
 MAX_PLAYER_SPEED = 205.0
 PLAYER_HULL = 100
 SHIP_LIVERIES = [
@@ -339,7 +346,7 @@ SHIPYARD_TABS = ("Flagship", "Refits", "Fleet", "Escort Refits", "Repairs", "Nam
 STARTING_CAMERA_ZOOM = 1.0
 STARTING_SAIL_SETTING = 0.72
 STARTING_WIND = (24.0, 1.0)
-STARTING_GOLD = 175000
+STARTING_GOLD = 175
 STARTING_JOURNAL = (
     "A battered sloop, a short purse, and a long stretch of blue water. Port Royal is your home for now.",
     "The harbourmaster may know who is hiring. Ask around before putting out to sea.",
@@ -501,7 +508,7 @@ TRAFFIC_ROLES = {
         },
     }
 
-SHIP_COLLISION_RADII = {name: stats["collision_radius"] for name, stats in SHIP_CLASSES.items()}
+SHIP_COLLISION_RADII = {name: stats["collision_radius"] * SHIP_COLLISION_SCALE for name, stats in SHIP_CLASSES.items()}
 
 ADMIRAL_NAMES = {
         "naval patrol": ["Admiral Horatio Vale", "Commodore Anne Wycliffe", "Captain-General Mateo Ruiz"],
@@ -513,7 +520,7 @@ TRADE_GOODS_BY_ID = {good["id"]: good for good in TRADE_GOODS}
 
 
 AUTOSAVE_SLOT_NAME = "Autosave"
-CANNON_MUZZLE_OFFSET = 27.0
+CANNON_MUZZLE_OFFSET = 14.0
 CANNON_SMOKE_LIFE_RANGE = (0.62, 0.88)
 CANNON_SMOKE_RADIUS_RANGE = (7.0, 10.0)
 CANNON_SMOKE_GROWTH_RANGE = (4.0, 6.5)

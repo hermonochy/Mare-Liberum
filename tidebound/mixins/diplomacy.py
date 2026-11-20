@@ -226,7 +226,7 @@ class DiplomacyMixin:
         required_gain = -20 - standing
         cost = 100 + required_gain * 2
         if self.gold < cost:
-            self.toast_message(f"The harbour demands {cost} gold in reparations; you have only {self.gold}.", 4.0)
+            self.toast_message(f"The harbour demands {format_gold(cost)} gold in reparations; you have only {format_gold(self.gold)}.", 4.0)
             return False
         self.gold -= cost
         self.adjust_faction_relation(faction, required_gain, "You paid reparations and requested safe conduct.")

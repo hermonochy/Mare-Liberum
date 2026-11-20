@@ -5,7 +5,7 @@ class ShipyardFleetMixin:
     def player_ship_stats(self):
         stats = dict(SHIP_CLASSES[self.current_ship])
         fitting_effects = ship_customisation_effects(getattr(self, "ship_customisation", None))
-        stats["hull"] = int(round(stats["hull"] * fitting_effects["hull"])) + self.upgrades["hull"] * 25
+        stats["hull"] = int(round(stats["hull"] * fitting_effects["hull"] * ship_hull_quality(getattr(self, "ship_quality", None)))) + self.upgrades["hull"] * 25
         stats["speed"] *= fitting_effects["speed"]
         stats["turn"] *= fitting_effects["turn"]
         stats["cargo"] *= fitting_effects["cargo"]
@@ -41,7 +41,7 @@ class ShipyardFleetMixin:
             return
         cost = max(0, int(cost))
         if self.gold < cost:
-            self.toast_message(f"One pair of {cannon_type} costs {cost:,} gold. You have {self.gold:,}.", 3.3)
+            self.toast_message(f"One pair of {cannon_type} costs {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.3)
             return
         loadout[source_type] -= 1
         if loadout[source_type] <= 0:
@@ -85,7 +85,7 @@ class ShipyardFleetMixin:
             return
         cost = ship_customisation_price(category, option)
         if self.gold < cost:
-            self.toast_message(f"The {option} fitting costs {cost:,} gold. You have {self.gold:,}.", 3.2)
+            self.toast_message(f"The {option} fitting costs {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.2)
             return
         self.gold -= cost
         customisation[category] = option
@@ -100,7 +100,7 @@ class ShipyardFleetMixin:
             if category == "cannon_type":
                 escort.cannon_loadout = default_cannon_loadout(escort.ship_type, option, (getattr(escort, "upgrades", {}) or {}).get("cannons", 0))
             effects = ship_customisation_effects(escort.customisation)
-            base_hull = SHIP_CLASSES[escort.ship_type]["hull"]
+            base_hull = SHIP_CLASSES[escort.ship_type]["hull"] * ship_hull_quality(getattr(escort, "quality", None))
             hull_upgrade = int((getattr(escort, "upgrades", {}) or {}).get("hull", 0)) * ESCORT_HULL_UPGRADE_AMOUNT
             escort.max_hull = max(1, int(round(base_hull * effects["hull"])) + hull_upgrade)
             escort.hull = max(1, min(escort.max_hull, int(round(escort.max_hull * old_ratio))))
@@ -255,7 +255,7 @@ class ShipyardFleetMixin:
             stats = SHIP_CLASSES[key]
             cost = int(item.get("cost", stats["cost"]))
             if self.gold < cost:
-                self.toast_message(f"The {key} costs {cost} gold. You have {self.gold}.", 3.5)
+                self.toast_message(f"The {key} costs {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.5)
                 return
             if self.cargo_load() > self.cargo_capacity_for_ship(key, self.upgrades) + 0.001:
                 self.toast_message(f"Your current cargo will not fit aboard a {key}. Sell some cargo or choose a larger ship first.", 4.0)
@@ -263,6 +263,7 @@ class ShipyardFleetMixin:
             old_name = self.player_ship_name
             self.gold -= cost
             self.current_ship = key
+            self.ship_quality = roll_ship_quality(self.rng)
             self.ship_customisation = default_ship_customisation()
             for upgrade_key in ("cannons", "hull", "rigging", "rudder", "cargo", "rowers"):
                 self.upgrades.setdefault(upgrade_key, 0)
@@ -286,7 +287,7 @@ class ShipyardFleetMixin:
             if self.upgrades[key] >= ship_upgrade_limit(self.current_ship, key):
                 self.toast_message("This vessel cannot take another level of that fitting.", 2.5)
             elif self.gold < cost:
-                self.toast_message(f"The refit costs {cost} gold. You have {self.gold}.", 3.0)
+                self.toast_message(f"The refit costs {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.0)
             else:
                 self.gold -= cost
                 old_max = self.player_max_hull
@@ -309,7 +310,7 @@ class ShipyardFleetMixin:
         elif action == "hire":
             cost = item["cost"]
             if self.gold < cost:
-                self.toast_message(f"Hiring this escort costs {cost} gold. You have {self.gold}.", 3.0)
+                self.toast_message(f"Hiring this escort costs {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.0)
                 return
             stats = SHIP_CLASSES[key]
             self.gold -= cost
@@ -324,7 +325,10 @@ class ShipyardFleetMixin:
                 existing.vx = 0.0
                 existing.vy = 0.0
             spawn_x, spawn_y = self.fleet_formation_target(new_fleet_count - 1, new_fleet_count, "follow")
-            escort = FleetShip(name, key, spawn_x, spawn_y, self.ship_heading, stats["hull"], stats["hull"])
+            quality = roll_ship_quality(self.rng)
+            fitted_hull = max(1, int(round(stats["hull"] * ship_hull_quality(quality))))
+            escort = FleetShip(name, key, spawn_x, spawn_y, self.ship_heading, fitted_hull, fitted_hull, quality=quality)
+            escort.customisation["cannon_type"] = roll_npc_cannon_type(self.rng, key, "merchant")
             escort.cannon_loadout = default_cannon_loadout(key, escort.customisation["cannon_type"], escort.upgrades.get("cannons", 0))
             escort.anchor_x = escort.x
             escort.anchor_y = escort.y
@@ -348,7 +352,7 @@ class ShipyardFleetMixin:
             if level >= ship_upgrade_limit(escort.ship_type, upgrade_key):
                 self.toast_message("That escort cannot take another level of this fitting.", 3.0)
             elif self.gold < cost:
-                self.toast_message(f"The escort refit costs {cost} gold. You have {self.gold}.", 3.2)
+                self.toast_message(f"The escort refit costs {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.2)
             else:
                 self.gold -= cost
                 levels[upgrade_key] = level + 1
@@ -381,7 +385,7 @@ class ShipyardFleetMixin:
                 self.player_hull = self.player_max_hull
                 self.toast_message(f"Flagship repaired. {cost} gold paid.", 3.0)
             else:
-                self.toast_message(f"Repairs cost {cost} gold. You have {self.gold}.", 3.0)
+                self.toast_message(f"Repairs cost {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.0)
         elif action == "repair_fleet":
             missing = sum(max(0, escort.max_hull - escort.hull) for escort in self.fleet)
             cost = missing * 2
@@ -393,7 +397,7 @@ class ShipyardFleetMixin:
                     escort.hull = escort.max_hull
                 self.toast_message(f"Fleet repaired. {cost} gold paid.", 3.0)
             else:
-                self.toast_message(f"Fleet repairs cost {cost} gold. You have {self.gold}.", 3.0)
+                self.toast_message(f"Fleet repairs cost {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.0)
         elif action == "rename":
             self.ship_name_input = self.player_ship_name
             self.ship_rename_mode = True
@@ -450,7 +454,9 @@ class ShipyardFleetMixin:
     def steer_escort_toward(self, escort, target_x, target_y, dt, turn_rate=54.0, thrust=58.0):
         fitting_effects = ship_customisation_effects(getattr(escort, "customisation", None))
         turn_rate *= fitting_effects["turn"]
-        thrust *= fitting_effects["sail_force"]
+        quality = normalise_ship_quality(getattr(escort, "quality", None))
+        turn_rate *= 0.96 + quality["crew"] * 0.04
+        thrust *= fitting_effects["sail_force"] * (0.97 + quality["maintenance"] * 0.03)
         dx = target_x - escort.x
         dy = target_y - escort.y
         distance = math.hypot(dx, dy)
@@ -468,10 +474,6 @@ class ShipyardFleetMixin:
         customisation = normalise_ship_customisation(getattr(escort, "customisation", None))
         mount_mode = CANNON_MOUNTS[customisation["cannon_mount"]]["mode"]
         bearing = math.degrees(math.atan2(target.y - escort.y, target.x - escort.x))
-        if mount_mode == "turrets":
-            if escort.cooldown <= 0:
-                self.fire_fleet_broadside(escort, target)
-            return
         if mount_mode == "chasers":
             desired_heading = bearing % 360.0
         else:
@@ -487,33 +489,63 @@ class ShipyardFleetMixin:
     def update_fleet(self, dt):
         if self.docked_port or self.conversation or self.shipyard_open:
             return
-        nearby_pirates = [pirate for pirate in self.pirates if not pirate.dead]
+        nearby_pirates = [pirate for pirate in self.pirates if not pirate.dead and pirate.hull > 0 and not pirate.sinking and not pirate.retreating]
         fleet_count = len(self.fleet)
         land_polygons = self.collision_land_polygons()
+        target_load = {}
         for index, escort in enumerate(self.fleet):
             if escort.hull <= 0:
                 continue
             escort.cooldown = max(0.0, escort.cooldown - dt)
             target_pirate = None
-            if nearby_pirates:
-                target_pirate = min(nearby_pirates, key=lambda pirate: math.hypot(pirate.x - escort.x, pirate.y - escort.y))
+            target_score = float("inf")
+            engage_radius = 1600.0 if self.fleet_order == "fight" else (980.0 if self.fleet_order == "follow" else 660.0)
+            if self.fleet_order != "hold_fire":
+                for pirate in nearby_pirates:
+                    distance = math.hypot(pirate.x - escort.x, pirate.y - escort.y)
+                    if distance > engage_radius:
+                        continue
+                    score = distance + target_load.get(pirate.name, 0) * 310.0
+                    if getattr(pirate, "npc_target_name", "") == escort.name:
+                        score -= 560.0
+                    elif getattr(pirate, "npc_target_name", "") == "__player__":
+                        score -= 245.0
+                    if getattr(pirate, "objective_target", False):
+                        score -= 85.0
+                    if score < target_score:
+                        target_score = score
+                        target_pirate = pirate
             enemy_distance = math.hypot(target_pirate.x - escort.x, target_pirate.y - escort.y) if target_pirate else float("inf")
+            if target_pirate:
+                target_load[target_pirate.name] = target_load.get(target_pirate.name, 0) + 1
 
+            escort_rudder = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
             if self.fleet_order == "fight" and target_pirate:
-                dx = target_pirate.x - escort.x
-                dy = target_pirate.y - escort.y
-                distance = max(1.0, math.hypot(dx, dy))
-                if distance > 335.0:
-                    escort_rudder = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
-                    self.steer_escort_toward(escort, target_pirate.x, target_pirate.y, dt, 54.0 * (1.0 + escort_rudder * ESCORT_RUDDER_TURN_PER_LEVEL), 62.0)
-                if 145.0 < distance < 650.0:
+                if enemy_distance > 455.0:
+                    self.steer_escort_toward(
+                        escort, target_pirate.x, target_pirate.y, dt,
+                        54.0 * (1.0 + escort_rudder * ESCORT_RUDDER_TURN_PER_LEVEL), 62.0,
+                    )
+                elif enemy_distance < 145.0:
+                    dx = escort.x - target_pirate.x
+                    dy = escort.y - target_pirate.y
+                    distance = max(1.0, math.hypot(dx, dy))
+                    self.steer_escort_toward(
+                        escort, escort.x + dx / distance * 260.0, escort.y + dy / distance * 260.0,
+                        dt, 48.0, 52.0,
+                    )
+                if 105.0 < enemy_distance < 1080.0:
                     self.aim_and_fire_fleet_broadside(escort, target_pirate, dt)
             else:
                 formation_order = "gather" if self.fleet_order == "gather" else "follow"
                 target_x, target_y = self.fleet_formation_target(index, fleet_count, formation_order)
-                escort_rudder = (getattr(escort, "upgrades", {}) or {}).get("rudder", 0)
-                self.steer_escort_toward(escort, target_x, target_y, dt, 58.0 * (1.0 + escort_rudder * ESCORT_RUDDER_TURN_PER_LEVEL), 64.0)
-                if self.fleet_order == "follow" and target_pirate and 145.0 < enemy_distance < 560.0:
+                self.steer_escort_toward(
+                    escort, target_x, target_y, dt,
+                    58.0 * (1.0 + escort_rudder * ESCORT_RUDDER_TURN_PER_LEVEL), 64.0,
+                )
+                if target_pirate and self.fleet_order == "follow" and 105.0 < enemy_distance < 920.0:
+                    self.aim_and_fire_fleet_broadside(escort, target_pirate, dt)
+                elif target_pirate and self.fleet_order == "gather" and getattr(target_pirate, "npc_target_name", "") in {escort.name, "__player__"} and 105.0 < enemy_distance < 690.0:
                     self.aim_and_fire_fleet_broadside(escort, target_pirate, dt)
 
             escort.heading = self.reef_avoidance_heading(
@@ -524,61 +556,57 @@ class ShipyardFleetMixin:
             speed = math.hypot(escort.vx, escort.vy)
             escort_upgrades = getattr(escort, "upgrades", {}) or {}
             customisation_effects = ship_customisation_effects(getattr(escort, "customisation", None))
-            max_speed = SHIP_CLASSES[escort.ship_type]["speed"] * customisation_effects["speed"] * 0.68 * (1.0 + escort_upgrades.get("rigging", 0) * ESCORT_RIGGING_SPEED_PER_LEVEL)
+            quality = normalise_ship_quality(getattr(escort, "quality", None))
+            max_speed = SHIP_CLASSES[escort.ship_type]["speed"] * customisation_effects["speed"] * quality["maintenance"] * 0.68 * (1.0 + escort_upgrades.get("rigging", 0) * ESCORT_RIGGING_SPEED_PER_LEVEL)
             if speed > max_speed:
                 escort.vx *= max_speed / speed
                 escort.vy *= max_speed / speed
             escort.x += escort.vx * dt
             escort.y += escort.vy * dt
+            escort_radius = SHIP_COLLISION_RADII.get(escort.ship_type, 21.0)
             escort.x, escort.y, escort.vx, escort.vy, _ = resolve_land_collision(
-                escort.x, escort.y, escort.vx, escort.vy, 29, land_polygons
+                escort.x, escort.y, escort.vx, escort.vy, escort_radius, land_polygons
             )
-            self.apply_reef_damage(escort, dt, kind="npc", ship_radius=29.0)
+            self.apply_reef_damage(escort, dt, kind="npc", ship_radius=SHIP_COLLISION_RADII.get(escort.ship_type, 21.0))
 
     def fire_fleet_broadside(self, escort, target):
         customisation = normalise_ship_customisation(getattr(escort, "customisation", None))
         mount_mode = CANNON_MOUNTS[customisation["cannon_mount"]]["mode"]
         escort_upgrades = getattr(escort, "upgrades", {}) or {}
+        quality = normalise_ship_quality(getattr(escort, "quality", None))
         sequence = cannon_loadout_sequence(
             normalise_cannon_loadout(getattr(escort, "cannon_loadout", None), escort.ship_type,
                                      customisation["cannon_type"], escort_upgrades.get("cannons", 0)),
             escort.ship_type, customisation["cannon_type"], escort_upgrades.get("cannons", 0),
         )
-        bearing = math.degrees(math.atan2(target.y - escort.y, target.x - escort.x))
+        target_vx = float(getattr(target, "vx", 0.0))
+        target_vy = float(getattr(target, "vy", 0.0))
+        initial_distance = math.hypot(target.x - escort.x, target.y - escort.y)
+        average_speed = sum(CANNON_TYPES[name]["speed"] for name in sequence) / max(1, len(sequence))
+        lead_time = min(1.75, initial_distance / max(1.0, average_speed))
+        predicted_x = target.x + target_vx * lead_time
+        predicted_y = target.y + target_vy * lead_time
+        bearing = math.degrees(math.atan2(predicted_y - escort.y, predicted_x - escort.x))
         angle = math.radians(escort.heading)
         forward = (math.cos(angle), math.sin(angle))
         fired_profiles = []
-        if mount_mode == "turrets":
-            firing_angle = math.radians(bearing)
-            firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
-            ship_stats = SHIP_CLASSES[escort.ship_type]
-            total_guns = cannon_pair_capacity(escort.ship_type, escort_upgrades.get("cannons", 0))
-            turret_count = max(1, min(4, total_guns // 12))
-            for index in range(turret_count):
-                profile = CANNON_TYPES[sequence[min(index, len(sequence) - 1)]]
-                fired_profiles.append(profile)
-                offset = (index - (turret_count - 1) / 2) * 16.0
-                x = escort.x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
-                y = escort.y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
-                vx = firing_direction[0] * profile["speed"] + escort.vx * 0.14
-                vy = firing_direction[1] * profile["speed"] + escort.vy * 0.14
-                self.projectiles.append(Cannonball(x, y, vx, vy, profile["life"], "fleet", damage=profile["damage"]))
-                self.spawn_cannon_smoke(x, y, firing_direction[0], firing_direction[1], amount=1)
-            self.apply_cannon_recoil(escort, firing_direction[0], firing_direction[1], 8.0)
-        elif mount_mode == "chasers":
+        volley_error = math.radians(self.rng.gauss(0.0, 1.7 / max(0.84, ship_aim_quality(quality))))
+        if mount_mode == "chasers":
             difference = abs(angle_difference(bearing, escort.heading))
             if difference > 30.0:
                 return
             profile = CANNON_TYPES[sequence[-1]]
             fired_profiles.append(profile)
-            firing_direction = forward
             x = escort.x + forward[0] * CANNON_MUZZLE_OFFSET
             y = escort.y + forward[1] * CANNON_MUZZLE_OFFSET
-            vx = forward[0] * profile["speed"] + escort.vx * 0.14
-            vy = forward[1] * profile["speed"] + escort.vy * 0.14
-            self.projectiles.append(Cannonball(x, y, vx, vy, profile["life"], "fleet", damage=profile["damage"]))
-            self.spawn_cannon_smoke(x, y, forward[0], forward[1], amount=1)
-            self.apply_cannon_recoil(escort, forward[0], forward[1], 8.0)
+            projectile_angle = math.atan2(predicted_y - y, predicted_x - x) + volley_error
+            firing_direction = (math.cos(projectile_angle), math.sin(projectile_angle))
+            vx = firing_direction[0] * profile["speed"] + escort.vx * 0.14
+            vy = firing_direction[1] * profile["speed"] + escort.vy * 0.14
+            damage = profile["damage"] * ship_damage_quality(quality)
+            self.projectiles.append(Cannonball(x, y, vx, vy, profile["life"], "fleet", damage=damage))
+            self.spawn_cannon_smoke(x, y, firing_direction[0], firing_direction[1], amount=1)
+            self.apply_cannon_recoil(escort, firing_direction[0], firing_direction[1], 8.0)
         else:
             options = []
             for side in (-1, 1):
@@ -596,9 +624,11 @@ class ShipyardFleetMixin:
                 offset = (index - (gun_count - 1) / 2) * 14
                 x = escort.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
                 y = escort.y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
-                vx = broadside[0] * profile["speed"] + escort.vx * 0.14
-                vy = broadside[1] * profile["speed"] + escort.vy * 0.14
-                self.projectiles.append(Cannonball(x, y, vx, vy, profile["life"], "fleet", damage=profile["damage"]))
+                projectile_angle = math.atan2(predicted_y - y, predicted_x - x) + volley_error + (index - (gun_count - 1) / 2) * 0.010
+                vx = math.cos(projectile_angle) * profile["speed"] + escort.vx * 0.14
+                vy = math.sin(projectile_angle) * profile["speed"] + escort.vy * 0.14
+                damage = profile["damage"] * ship_damage_quality(quality)
+                self.projectiles.append(Cannonball(x, y, vx, vy, profile["life"], "fleet", damage=damage))
                 self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
             self.apply_cannon_recoil(escort, broadside[0], broadside[1], 8.0)
         if not fired_profiles:
@@ -607,7 +637,7 @@ class ShipyardFleetMixin:
         self.audio.play("cannon_fire", volume=max(0.04, 0.25 * (1.0 - distance_to_player / 2700.0)))
         reload_base = SHIP_CLASSES[escort.ship_type]["reload"]
         reload_factor = sum(profile["reload"] for profile in fired_profiles) / len(fired_profiles)
-        escort.cooldown = reload_base * reload_factor * max(0.72, 1.0 - escort_upgrades.get("cannons", 0) * ESCORT_CANNON_RELOAD_PER_LEVEL) + 0.25
+        escort.cooldown = reload_base * reload_factor * ship_reload_quality(quality) * max(0.72, 1.0 - escort_upgrades.get("cannons", 0) * ESCORT_CANNON_RELOAD_PER_LEVEL) * self.rng.uniform(0.92, 1.10) + 0.18
 
     def draw_shipyard(self):
         width, height = self.screen.get_size()
@@ -624,7 +654,7 @@ class ShipyardFleetMixin:
         self.screen.set_clip(box.inflate(-8, -8))
         title = fit_text_surface(self.big_font, "THE SHIPWRIGHT'S YARD", (77, 43, 25), box.width - 50, 42)
         self.screen.blit(title, title.get_rect(midtop=(box.centerx, box.y + 13)))
-        sub = fit_text_surface(self.small_font, f"{self.docked_port}  |  Pieces of eight: {self.gold} g  |  Flagship: {self.player_ship_name}", (87, 60, 38), box.width - 54, 25)
+        sub = fit_text_surface(self.small_font, f"{self.docked_port}  |  Pieces of eight: {format_gold(self.gold)} g  |  Flagship: {self.player_ship_name}", (87, 60, 38), box.width - 54, 25)
         self.screen.blit(sub, sub.get_rect(midtop=(box.centerx, box.y + 67)))
         tab_y = box.y + 111
         tab_width = (box.width - 42) // len(self.shipyard_tabs)

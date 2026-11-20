@@ -143,14 +143,16 @@ class PortMenuMixin:
         records = [{"kind": "flagship", "index": -1, "name": self.player_ship_name,
                     "type": self.current_ship, "hull": self.player_hull,
                     "max_hull": self.player_max_hull, "upgrades": self.upgrades,
-                    "customisation": self.ship_customisation, "cannon_loadout": self.cannon_loadout}]
+                    "customisation": self.ship_customisation, "cannon_loadout": self.cannon_loadout,
+                    "quality": normalise_ship_quality(getattr(self, "ship_quality", None))}]
         for index, escort in enumerate(self.fleet):
             records.append({"kind": "escort", "index": index, "name": escort.name,
                             "type": escort.ship_type, "hull": escort.hull,
                             "max_hull": escort.max_hull,
                             "upgrades": getattr(escort, "upgrades", {}) or {},
                             "customisation": normalise_ship_customisation(getattr(escort, "customisation", None)),
-                            "cannon_loadout": getattr(escort, "cannon_loadout", {}) or {}})
+                            "cannon_loadout": getattr(escort, "cannon_loadout", {}) or {},
+                            "quality": normalise_ship_quality(getattr(escort, "quality", None))})
         return records
 
     def port_menu_selected_ship(self):
@@ -406,7 +408,7 @@ class PortMenuMixin:
                 if not missing:
                     self.toast_message(f"{ship['name']} is already shipshape.", 2.7)
                 elif self.gold < cost:
-                    self.toast_message(f"Repairs cost {cost} gold. You have {self.gold}.", 3.2)
+                    self.toast_message(f"Repairs cost {format_gold(cost)} gold. You have {format_gold(self.gold)}.", 3.2)
                 elif ship["kind"] == "flagship":
                     self.execute_shipyard_item({"action": "repair_flagship", "key": ""})
                 else:
@@ -422,7 +424,7 @@ class PortMenuMixin:
                 if total_cost == 0:
                     self.toast_message("Your entire fleet is already shipshape.", 2.8)
                 elif self.gold < total_cost:
-                    self.toast_message(f"Fleet-wide repairs cost {total_cost:,} gold. You have {self.gold:,}.", 3.4)
+                    self.toast_message(f"Fleet-wide repairs cost {format_gold(total_cost)} gold. You have {format_gold(self.gold)}.", 3.4)
                 else:
                     self.gold -= total_cost
                     self.player_hull = self.player_max_hull
@@ -724,7 +726,7 @@ class PortMenuMixin:
             f"{port.region}  ·  {faction}  ·  {self.relation_label(standing)} ({standing:+d})",
             (97, 66, 42), header.width * 0.58, 26)
         self.screen.blit(subtitle, (header.x + 10, header.y + 48))
-        balance = fit_text_surface(self.font, f"{self.gold:,} gold", (73, 47, 31), 230, 30)
+        balance = fit_text_surface(self.font, f"{format_gold(self.gold)} gold", (73, 47, 31), 230, 30)
         self.screen.blit(balance, balance.get_rect(topright=(header.right - 9, header.y + 10)))
         cargo_line = fit_text_surface(self.small_font,
             f"Cargo {self.cargo_load():.1f}/{self.cargo_capacity():.0f}  ·  Escorts {sum(1 for ship in self.fleet if ship.hull > 0)}  ·  Hull {self.player_hull:.0f}/{self.player_max_hull}",
@@ -823,6 +825,8 @@ class PortMenuMixin:
             active = self.active_mission()
             objective = self.mission_guidance_text(active) if active else "No active story voyage."
             lines = [f"Flagship: {self.player_ship_name} ({self.current_ship})", f"Hull: {self.player_hull:.0f}/{self.player_max_hull}",
+                     f"Vessel quality: {ship_quality_description(getattr(self, 'ship_quality', None))}",
+                     f"Armament: {self.ship_customisation.get('cannon_type', 'Standard Culverins')}",
                      f"Crew: {self.player_ship_stats().get('crew', 0)}", f"Fleet size: {len(self.fleet)} escorts",
                      f"Cargo: {self.cargo_load():.1f}/{self.cargo_capacity():.0f}", f"Current voyage: {active.name if active else 'None'}",
                      f"Objective: {objective}", f"Completed day jobs: {self.completed_day_jobs}"]
@@ -1005,7 +1009,7 @@ class PortMenuMixin:
         pygame.draw.line(self.screen, (177, 143, 96), (rect.x + 5, info_y - 9),
                          (rect.right - 5, info_y - 9), 1)
         selected_label = (f"Rename vessel: {self.ship_name_input or selected['name']}  ·  Enter to confirm" if self.ship_rename_mode
-                          else f"{selected['type']}  ·  {selected['hull']:.0f}/{selected['max_hull']:.0f} hull")
+                          else f"{selected['type']}  ·  {selected['hull']:.0f}/{selected['max_hull']:.0f} hull  ·  {ship_quality_description(selected.get('quality'))}  ·  {selected.get('customisation', {}).get('cannon_type', 'Standard Culverins')}")
         selected_text = fit_text_surface(self.tiny_font, selected_label,
                                           (104, 74, 48), rect.width - 20, 20)
         self.screen.blit(selected_text, (rect.x + 8, info_y))

@@ -2,6 +2,75 @@ from ..common import *
 
 
 class TreasureMixin:
+    def position_treasure_bottles(self):
+        sites = list(getattr(self, "treasure_sites", []))
+        if not sites:
+            return
+        fixed_blockers = list(getattr(self, "land", []))
+        fixed_blockers.extend(reef.polygon for reef in getattr(self, "reefs", []))
+        fixed_blockers.extend(getattr(self, "harbour_wall_polygons", []))
+        fixed_blockers.extend(
+            island.get("polygon", []) for island in getattr(self, "dynamic_islands", [])
+            if island.get("polygon")
+        )
+        for site in sites:
+            original = (float(site.bottle_x), float(site.bottle_y))
+            polygon = site.polygon
+            center = (
+                sum(point[0] for point in polygon) / len(polygon),
+                sum(point[1] for point in polygon) / len(polygon),
+            )
+            blockers = fixed_blockers + [other.polygon for other in sites if other is not site]
+            candidates = []
+            for index, start in enumerate(polygon):
+                end = polygon[(index + 1) % len(polygon)]
+                for fraction in (0.2, 0.5, 0.8):
+                    edge_x = start[0] + (end[0] - start[0]) * fraction
+                    edge_y = start[1] + (end[1] - start[1]) * fraction
+                    dx, dy = edge_x - center[0], edge_y - center[1]
+                    length = math.hypot(dx, dy)
+                    if length < 0.001:
+                        dx, dy = -(end[1] - start[1]), end[0] - start[0]
+                        length = max(0.001, math.hypot(dx, dy))
+                    dx, dy = dx / length, dy / length
+                    for gap in (52.0, 68.0, 86.0, 108.0, 132.0):
+                        point = (edge_x + dx * gap, edge_y + dy * gap)
+                        own_distance = nearest_polygon_edge(point[0], point[1], polygon)[1]
+                        if point_in_polygon(point, polygon) or not 42.0 <= own_distance <= 138.0:
+                            continue
+                        blocked = False
+                        for other in blockers:
+                            if not other:
+                                continue
+                            if point_in_polygon(point, other) or nearest_polygon_edge(point[0], point[1], other)[1] < 34.0:
+                                blocked = True
+                                break
+                        if blocked:
+                            continue
+                        score = math.hypot(point[0] - original[0], point[1] - original[1]) * 0.08 + abs(own_distance - 72.0) * 4.0
+                        candidates.append((score, point))
+            if not candidates:
+                for radius in (55.0, 80.0, 110.0, 145.0, 190.0, 250.0, 330.0, 430.0, 540.0):
+                    for step in range(48):
+                        angle = math.tau * step / 48.0
+                        point = (original[0] + math.cos(angle) * radius, original[1] + math.sin(angle) * radius)
+                        if point_in_polygon(point, polygon):
+                            continue
+                        own_distance = nearest_polygon_edge(point[0], point[1], polygon)[1]
+                        if own_distance < 34.0:
+                            continue
+                        if any(
+                            point_in_polygon(point, other) or nearest_polygon_edge(point[0], point[1], other)[1] < 34.0
+                            for other in blockers if other
+                        ):
+                            continue
+                        candidates.append((math.hypot(point[0] - original[0], point[1] - original[1]), point))
+                    if candidates:
+                        break
+            if candidates:
+                _, chosen = min(candidates, key=lambda item: item[0])
+                site.bottle_x, site.bottle_y = chosen
+
     def nearest_unfound_bottle(self, maximum_distance=115.0):
         candidates = [
             (math.hypot(self.ship_x - site.bottle_x, self.ship_y - site.bottle_y), site)

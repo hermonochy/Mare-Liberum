@@ -250,38 +250,26 @@ def build_ship_surface(player, allied, rowing, ship_type, faction, player_livery
     }
     default_cannon_type = selected["cannon_type"] if selected else cannon_type
     cannon_sequence = cannon_loadout_sequence(cannon_loadout, ship_type, default_cannon_type, cannon_upgrade)
-    if mount_mode == "turrets":
-        turret_count = max(2, min(5, int(stats["max_cannons"]) // 6))
-        for index in range(turret_count):
-            ratio = 0.20 + (0.61 * index / max(1, turret_count - 1))
-            turret_x = int(start_x + length * ratio)
-            turret_radius = max(3, int(beam * 0.075))
-            cannon_type_for_turret = cannon_sequence[min(index, len(cannon_sequence) - 1)] if cannon_sequence else default_cannon_type
-            cannon_color = cannon_detail.get(cannon_type_for_turret, cannon_detail["Standard Culverins"])
-            pygame.draw.circle(surface, (31, 28, 25), (turret_x, center_y), turret_radius + 2)
-            pygame.draw.circle(surface, (176, 142, 92), (turret_x, center_y), turret_radius)
-            _line(surface, cannon_color, (turret_x, center_y), (turret_x + turret_radius * 2, center_y), max(2, turret_radius // 2))
-    else:
-        gun_count = max(1, len(cannon_sequence) if cannon_sequence else int(stats["guns"]))
-        gun_start = start_x + length * 0.25
-        gun_end = end_x - length * 0.15
-        if mount_mode == "chasers":
-            gun_count = max(1, gun_count - 1)
-        for index in range(gun_count):
-            ratio = index / max(1, gun_count - 1)
-            gun_x = int(gun_start + (gun_end - gun_start) * ratio)
-            cannon_type_for_gun = cannon_sequence[min(index, len(cannon_sequence) - 1)] if cannon_sequence else default_cannon_type
-            cannon_color = cannon_detail.get(cannon_type_for_gun, cannon_detail["Standard Culverins"])
-            for side in (-1, 1):
-                gun_y = int(center_y + side * half_beam * 0.39)
-                pygame.draw.circle(surface, cannon_color, (gun_x, gun_y), max(2, int(beam * 0.052)))
-                pygame.draw.circle(surface, (194, 153, 99), (gun_x, gun_y), max(1, int(beam * 0.026)), 1)
-        if mount_mode == "chasers":
-            for gun_x, direction in ((end_x + 1, 1), (start_x + 2, -1)):
-                selected_type = cannon_sequence[-1] if cannon_sequence else default_cannon_type
-                cannon_color = cannon_detail.get(selected_type, cannon_detail["Standard Culverins"])
-                pygame.draw.circle(surface, (37, 30, 25), (gun_x, center_y), max(3, int(beam * 0.065)))
-                _line(surface, cannon_color, (gun_x, center_y), (gun_x + direction * max(7, int(beam * 0.24)), center_y), 3)
+    gun_count = max(1, len(cannon_sequence) if cannon_sequence else int(stats["guns"]))
+    gun_start = start_x + length * 0.25
+    gun_end = end_x - length * 0.15
+    if mount_mode == "chasers":
+        gun_count = max(1, gun_count - 1)
+    for index in range(gun_count):
+        ratio = index / max(1, gun_count - 1)
+        gun_x = int(gun_start + (gun_end - gun_start) * ratio)
+        cannon_type_for_gun = cannon_sequence[min(index, len(cannon_sequence) - 1)] if cannon_sequence else default_cannon_type
+        cannon_color = cannon_detail.get(cannon_type_for_gun, cannon_detail["Standard Culverins"])
+        for side in (-1, 1):
+            gun_y = int(center_y + side * half_beam * 0.39)
+            pygame.draw.circle(surface, cannon_color, (gun_x, gun_y), max(2, int(beam * 0.052)))
+            pygame.draw.circle(surface, (194, 153, 99), (gun_x, gun_y), max(1, int(beam * 0.026)), 1)
+    if mount_mode == "chasers":
+        for gun_x, direction in ((end_x + 1, 1), (start_x + 2, -1)):
+            selected_type = cannon_sequence[-1] if cannon_sequence else default_cannon_type
+            cannon_color = cannon_detail.get(selected_type, cannon_detail["Standard Culverins"])
+            pygame.draw.circle(surface, (37, 30, 25), (gun_x, center_y), max(3, int(beam * 0.065)))
+            _line(surface, cannon_color, (gun_x, center_y), (gun_x + direction * max(7, int(beam * 0.24)), center_y), 3)
 
     _draw_visual_fittings(surface, visual_style, start_x, end_x, center_y, beam, trim_color)
     flag_x = mast_positions[0] if mast_positions else start_x + length * 0.5

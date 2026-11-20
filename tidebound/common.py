@@ -17,6 +17,7 @@ from .models import *
 from .mission_system import ChoiceNode, CommandNode, GotoNode, LabelNode, TextNode, OptionNode, load_missions
 from .mission_events import load_mission_events
 from .ship_armament import cannon_pair_capacity, cannon_loadout_sequence, cannon_replacement_type, cannon_type_for_gun, default_cannon_loadout, normalise_cannon_loadout
+from .ship_quality import NPC_TO_PLAYER_DAMAGE_SCALE, default_ship_quality, normalise_ship_quality, roll_ship_quality, roll_npc_cannon_type, ship_damage_quality, ship_reload_quality, ship_aim_quality, ship_hull_quality, ship_quality_description
 from .dialogue import Conversation
 
 
@@ -30,3 +31,11 @@ def fit_text_surface(font, value, color, max_width, max_height):
     ratio = min(max_width / max(1, rendered.get_width()), max_height / max(1, rendered.get_height()), 1.0)
     size = (max(1, int(rendered.get_width() * ratio)), max(1, int(rendered.get_height() * ratio)))
     return pygame.transform.smoothscale(rendered, size)
+
+
+def format_gold(value):
+    try:
+        amount = int(round(float(value)))
+    except (TypeError, ValueError, OverflowError):
+        amount = 0
+    return f"{max(0, amount):,}"

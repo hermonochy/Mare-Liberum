@@ -78,19 +78,13 @@ class VesselsMixin:
             gun_index = len(timers)
             profile = CANNON_TYPES[sequence[min(gun_index, len(sequence) - 1)]]
             base_reload = stats["reload"] * profile["reload"] * max(0.72, 1.0 - self.upgrades["cannons"] * 0.07)
-            rate = base_reload * self.rng.uniform(0.84, 1.16)
+            rate = base_reload * ship_reload_quality(getattr(self, "ship_quality", None)) * self.rng.uniform(0.90, 1.10)
             rates.append(rate)
             timers.append(self.rng.uniform(0.4, 1.2) * rate if self.cannon_first_volley_fired[side] else 0.0)
         if len(timers) > gun_count:
             del timers[gun_count:]
             del rates[gun_count:]
         return gun_count
-
-    def nearest_turret_target(self):
-        candidates = [pirate for pirate in self.pirates if not pirate.dead and pirate.hull > 0 and not pirate.sinking]
-        candidates.extend(ship for ship in self.traffic_ships if ship.hull > 0 and not ship.sinking and
-                          (getattr(ship, "hostile_to_player", False) or getattr(ship, "under_attack", False)))
-        return min(candidates, key=lambda target: math.hypot(target.x - self.ship_x, target.y - self.ship_y), default=None)
 
     def player_cannon_loadout(self):
         selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
@@ -111,38 +105,27 @@ class VesselsMixin:
     def fire_single_cannon(self, side, gun_index, gun_count, show_effect=False):
         heading = math.radians(self.ship_heading)
         forward = (math.cos(heading), math.sin(heading))
-        _, mount_mode = self.player_cannon_profile()
         selected = normalise_ship_customisation(getattr(self, "ship_customisation", None))
         cannon_type = cannon_type_for_gun(
             self.player_cannon_loadout(), self.current_ship, gun_index,
             selected["cannon_type"], self.upgrades.get("cannons", 0),
         )
         cannon_profile = CANNON_TYPES[cannon_type]
-        if mount_mode == "turrets":
-            target = self.nearest_turret_target()
-            if target is None:
-                return
-            firing_angle = math.atan2(target.y - self.ship_y, target.x - self.ship_x)
-            firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
-            spacing = 13.0
-            offset = (gun_index - (gun_count - 1) / 2) * spacing
-            x = self.ship_x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
-            y = self.ship_y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
-        else:
-            firing_angle = heading + side * math.pi / 2
-            firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
-            spacing = 13.0
-            offset = (gun_index - (gun_count - 1) / 2) * spacing
-            x = self.ship_x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
-            y = self.ship_y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
+        firing_angle = heading + side * math.pi / 2
+        firing_direction = (math.cos(firing_angle), math.sin(firing_angle))
+        spacing = 13.0
+        offset = (gun_index - (gun_count - 1) / 2) * spacing
+        x = self.ship_x + forward[0] * offset + firing_direction[0] * CANNON_MUZZLE_OFFSET
+        y = self.ship_y + forward[1] * offset + firing_direction[1] * CANNON_MUZZLE_OFFSET
         vx = firing_direction[0] * cannon_profile["speed"] + self.ship_vx * 0.18
         vy = firing_direction[1] * cannon_profile["speed"] + self.ship_vy * 0.18
-        self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "player", damage=cannon_profile["damage"]))
+        damage = cannon_profile["damage"] * ship_damage_quality(getattr(self, "ship_quality", None))
+        self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "player", damage=damage))
         self.apply_cannon_recoil(self, firing_direction[0], firing_direction[1], 12.0 / max(1, gun_count))
         self.spawn_cannon_smoke(x, y, firing_direction[0], firing_direction[1], amount=1)
         self.audio.play("cannon_fire", volume=0.30)
         if show_effect:
-            self.toast_message("The turret battery fires!" if mount_mode == "turrets" else "The broadside fires!", 1.2)
+            self.toast_message("The broadside fires!", 1.2)
 
     def fire_chaser_battery(self, end):
         if self.docked_port or self.player_sinking_active or self.player_lost or self.conversation or self.journal_open or self.shipyard_open or self.job_board_open or self.world_map_open or getattr(self, "market_open", False) or getattr(self, "diplomacy_open", False):
@@ -163,17 +146,18 @@ class VesselsMixin:
         cannon_profile = CANNON_TYPES[cannon_type]
         angle = math.radians(self.ship_heading + (180.0 if end == "stern" else 0.0))
         direction = (math.cos(angle), math.sin(angle))
-        hull_length = SHIP_CLASSES[self.current_ship]["length"] * ship_customisation_effects(self.ship_customisation)["length"]
+        hull_length = SHIP_CLASSES[self.current_ship]["length"] * ship_customisation_effects(self.ship_customisation)["length"] * WORLD_SHIP_RENDER_SCALE
         offset = max(CANNON_MUZZLE_OFFSET + 8.0, hull_length * 0.45)
         x = self.ship_x + direction[0] * offset
         y = self.ship_y + direction[1] * offset
         vx = direction[0] * cannon_profile["speed"] + self.ship_vx * 0.18
         vy = direction[1] * cannon_profile["speed"] + self.ship_vy * 0.18
-        self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "player", damage=cannon_profile["damage"]))
+        damage = cannon_profile["damage"] * ship_damage_quality(getattr(self, "ship_quality", None))
+        self.projectiles.append(Cannonball(x, y, vx, vy, cannon_profile["life"], "player", damage=damage))
         self.apply_cannon_recoil(self, direction[0], direction[1], 8.0)
         self.spawn_cannon_smoke(x, y, direction[0], direction[1], amount=1)
         self.audio.play("cannon_fire", volume=0.30)
-        self.chaser_cooldowns[end] = stats["reload"] * cannon_profile["reload"] * 1.15
+        self.chaser_cooldowns[end] = stats["reload"] * cannon_profile["reload"] * ship_reload_quality(getattr(self, "ship_quality", None)) * 1.15
         self.toast_message("Bow chaser fired!" if end == "bow" else "Stern chaser fired!", 1.4)
 
     def fire_broadside(self, side):
@@ -184,11 +168,7 @@ class VesselsMixin:
             self.fire_single_cannon(side, index, gun_count, show_effect=False)
             self.cannon_battery_timers[side][index] = self.cannon_battery_rates[side][index] * self.rng.uniform(0.72, 1.28)
         self.cannon_first_volley_fired[side] = True
-        _, mount_mode = self.player_cannon_profile()
-        if mount_mode == "turrets":
-            self.toast_message("The rotating turret battery fires!", 1.3)
-        else:
-            self.toast_message("BOOM! The whole port battery fires!" if side < 0 else "BOOM! The whole starboard battery fires!", 1.3)
+        self.toast_message("BOOM! The whole port battery fires!" if side < 0 else "BOOM! The whole starboard battery fires!", 1.3)
 
     def update_player_cannons(self, dt):
         if self.player_sinking_active or self.player_lost:
@@ -319,7 +299,8 @@ class VesselsMixin:
             name = generate_ship_name(self.rng, self.used_ship_names)
             ship_type = self.rng.choice(["Cutter", "Sloop", "Xebec", "Schooner", "Brigantine", "Brig", "Corvette"])
             stats = SHIP_CLASSES[ship_type]
-            hull = max(5, int(round(stats["hull"] / 20.0)))
+            quality = roll_ship_quality(self.rng)
+            hull = max(5, int(round(stats["hull"] / 20.0 * ship_hull_quality(quality))))
             new_pirate = PirateShip(
                 name,
                 x,
@@ -332,6 +313,8 @@ class VesselsMixin:
                 ship_type=ship_type,
                 gun_count=min(10, max_broadside_guns(ship_type)),
                 reload_seconds=float(stats["reload"]),
+                cannon_type=roll_npc_cannon_type(self.rng, ship_type, "pirate"),
+                quality=quality,
             )
             new_pirate.player_attitude = self.npc_relation_label(new_pirate).lower()
             self.pirates.append(new_pirate)
@@ -425,10 +408,11 @@ class VesselsMixin:
                 pirate.vy *= 135 / speed
             pirate.x += pirate.vx * dt
             pirate.y += pirate.vy * dt
+            pirate_radius = SHIP_COLLISION_RADII.get(getattr(pirate, "ship_type", "Sloop"), 21.0)
             pirate.x, pirate.y, pirate.vx, pirate.vy, _ = resolve_land_collision(
-                pirate.x, pirate.y, pirate.vx, pirate.vy, 30, self.collision_land_polygons()
+                pirate.x, pirate.y, pirate.vx, pirate.vy, pirate_radius, self.collision_land_polygons()
             )
-            self.apply_reef_damage(pirate, dt, kind="npc", ship_radius=30.0)
+            self.apply_reef_damage(pirate, dt, kind="npc", ship_radius=SHIP_COLLISION_RADII.get(getattr(pirate, "ship_type", "Sloop"), 21.0))
             if pirate.dead:
                 continue
             if (npc_target is None and not pirate.retreating and not self.docked_port
@@ -498,6 +482,11 @@ class VesselsMixin:
                 self.port_defence_notice_timer = 4.0
 
     def enemy_fire_if_aligned(self, pirate, bearing, distance):
+        cannon_type = getattr(pirate, "cannon_type", "Standard Culverins")
+        profile = CANNON_TYPES.get(cannon_type, CANNON_TYPES["Standard Culverins"])
+        quality = normalise_ship_quality(getattr(pirate, "quality", None))
+        if distance > min(1080.0, profile["speed"] * profile["life"]):
+            return
         choices = []
         for side in (-1, 1):
             aim = (pirate.heading + side * 90.0) % 360.0
@@ -510,18 +499,22 @@ class VesselsMixin:
         broadside_angle = angle + side * math.pi / 2
         broadside = (math.cos(broadside_angle), math.sin(broadside_angle))
         shot_count = max(1, int(getattr(pirate, "gun_count", 3)))
+        volley_error = math.radians(self.rng.gauss(0.0, 2.1 / max(0.84, ship_aim_quality(quality))))
+        damage = profile["damage"] * ship_damage_quality(quality)
         for index in range(shot_count):
             offset = (index - (shot_count - 1) / 2.0) * 13.0
+            spread = (index - (shot_count - 1) / 2.0) * 0.012
             x = pirate.x + forward[0] * offset + broadside[0] * CANNON_MUZZLE_OFFSET
             y = pirate.y + forward[1] * offset + broadside[1] * CANNON_MUZZLE_OFFSET
-            vx = broadside[0] * 370 + pirate.vx * 0.14
-            vy = broadside[1] * 370 + pirate.vy * 0.14
-            self.projectiles.append(Cannonball(x, y, vx, vy, 1.45, "enemy"))
+            aim_angle = math.atan2(math.sin(broadside_angle + volley_error + spread), math.cos(broadside_angle + volley_error + spread))
+            vx = math.cos(aim_angle) * profile["speed"] + pirate.vx * 0.14
+            vy = math.sin(aim_angle) * profile["speed"] + pirate.vy * 0.14
+            self.projectiles.append(Cannonball(x, y, vx, vy, profile["life"], "enemy", damage=damage))
             self.spawn_cannon_smoke(x, y, broadside[0], broadside[1], amount=1)
         self.apply_cannon_recoil(pirate, broadside[0], broadside[1], 8.0)
         distance_to_player = math.hypot(pirate.x - self.ship_x, pirate.y - self.ship_y)
         self.audio.play("cannon_fire", volume=max(0.04, 0.27 * (1.0 - distance_to_player / 3000.0)))
-        pirate.cooldown = max(0.85, float(getattr(pirate, "reload_seconds", 2.8)) * 0.58) + self.rng.uniform(0.06, 0.18)
+        pirate.cooldown = max(0.95, float(getattr(pirate, "reload_seconds", 2.8)) * profile["reload"] * ship_reload_quality(quality)) + self.rng.uniform(0.08, 0.28)
 
     def record_ship_damage_mark(self, vessel, hit_x, hit_y, player=False):
         """Keep a small, persistent splinter/scorch mark at every cannon impact."""
@@ -554,7 +547,6 @@ class VesselsMixin:
         del marks[:-18]
 
     def start_ship_sinking(self, vessel, cause="combat"):
-        """Mark an NPC vessel as lost while retaining it for a visible sinking animation."""
         if vessel is None or getattr(vessel, "sinking", False):
             return False
         vessel.hull = 0
@@ -562,36 +554,56 @@ class VesselsMixin:
         vessel.sink_elapsed = 0.0
         vessel.sink_cause = str(cause)
         vessel.hit_flash = 0.0
-        vessel.vx = float(getattr(vessel, "vx", 0.0)) * 0.35
-        vessel.vy = float(getattr(vessel, "vy", 0.0)) * 0.35
+        vessel.sink_list_direction = self.rng.choice((-1.0, 1.0))
+        vessel.sink_spin = self.rng.uniform(-3.8, 3.8)
+        vessel.sink_debris_spawned = False
+        vessel.sink_drift_x = float(getattr(vessel, "vx", 0.0))
+        vessel.sink_drift_y = float(getattr(vessel, "vy", 0.0))
+        vessel.vx = float(getattr(vessel, "vx", 0.0)) * 0.48
+        vessel.vy = float(getattr(vessel, "vy", 0.0)) * 0.48
         if isinstance(vessel, PirateShip):
             vessel.dead = True
         return True
 
     def spawn_floating_debris(self, x, y, heading=0.0, vx=0.0, vy=0.0, ship_type="Sloop"):
-        """Leave a short-lived scatter of planks and sailcloth where a vessel sank."""
         if not hasattr(self, "floating_debris"):
             self.floating_debris = []
-        count = self.rng.randint(6, 10)
+        count = self.rng.randint(13, 18)
+        ship_length = SHIP_CLASSES.get(ship_type, SHIP_CLASSES["Sloop"]).get("length", 90.0) * WORLD_SHIP_RENDER_SCALE
         for index in range(count):
             angle = self.rng.uniform(0.0, math.tau)
-            speed = self.rng.uniform(5.0, 19.0)
-            size = self.rng.uniform(9.0, 25.0)
-            cloth = index == count - 1 and self.rng.random() < 0.55
+            speed = self.rng.uniform(7.0, 25.0)
+            if index < 2:
+                shape = "mast"
+                length = ship_length * self.rng.uniform(0.25, 0.46)
+                width = self.rng.uniform(3.0, 5.5)
+                life = self.rng.uniform(48.0, 76.0)
+            elif index < 5:
+                shape = "sail"
+                length = self.rng.uniform(16.0, 32.0)
+                width = self.rng.uniform(13.0, 25.0)
+                life = self.rng.uniform(34.0, 58.0)
+            else:
+                shape = "plank"
+                length = self.rng.uniform(10.0, 29.0)
+                width = self.rng.uniform(3.0, 7.0)
+                life = self.rng.uniform(38.0, 64.0)
             self.floating_debris.append({
-                "x": float(x) + self.rng.uniform(-22.0, 22.0),
-                "y": float(y) + self.rng.uniform(-22.0, 22.0),
-                "vx": float(vx) * 0.12 + math.cos(angle) * speed,
-                "vy": float(vy) * 0.12 + math.sin(angle) * speed,
+                "x": float(x) + self.rng.uniform(-24.0, 24.0),
+                "y": float(y) + self.rng.uniform(-24.0, 24.0),
+                "vx": float(vx) * 0.18 + math.cos(angle) * speed,
+                "vy": float(vy) * 0.18 + math.sin(angle) * speed,
                 "angle": self.rng.uniform(0.0, math.tau),
-                "spin": self.rng.uniform(-0.7, 0.7),
-                "length": size * (1.6 if not cloth else 1.0),
-                "width": size * (0.34 if not cloth else 0.9),
-                "cloth": cloth,
-                "life": self.rng.uniform(38.0, 58.0),
-                "max_life": 58.0,
+                "spin": self.rng.uniform(-0.55, 0.55),
+                "length": length,
+                "width": width,
+                "shape": shape,
+                "cloth": shape == "sail",
+                "life": life,
+                "max_life": life,
+                "bob_phase": self.rng.uniform(0.0, math.tau),
             })
-        self.floating_debris = self.floating_debris[-260:]
+        self.floating_debris = self.floating_debris[-320:]
 
     def update_floating_debris(self, dt):
         remaining = []
@@ -602,36 +614,44 @@ class VesselsMixin:
             piece["x"] += float(piece.get("vx", 0.0)) * dt
             piece["y"] += float(piece.get("vy", 0.0)) * dt
             piece["angle"] = (float(piece.get("angle", 0.0)) + float(piece.get("spin", 0.0)) * dt) % math.tau
+            piece["bob_phase"] = float(piece.get("bob_phase", 0.0)) + dt * 1.6
+            piece["y"] += math.sin(piece["bob_phase"]) * 0.22 * dt
             piece["vx"] *= math.exp(-0.045 * dt)
             piece["vy"] *= math.exp(-0.045 * dt)
             remaining.append(piece)
         self.floating_debris = remaining
 
     def update_sinking_visuals(self, dt):
-        """Advance sinking ships and remove them only after their animation finishes."""
         for collection in (self.pirates, self.traffic_ships, self.fleet):
             for vessel in list(collection):
                 if not getattr(vessel, "sinking", False):
                     vessel.hit_flash = max(0.0, float(getattr(vessel, "hit_flash", 0.0)) - dt)
                     continue
                 vessel.sink_elapsed = float(getattr(vessel, "sink_elapsed", 0.0)) + dt
-                if vessel.sink_elapsed >= 5.0:
+                if vessel.sink_elapsed >= SINK_DEBRIS_DELAY and not getattr(vessel, "sink_debris_spawned", False):
                     self.spawn_floating_debris(
                         vessel.x, vessel.y, vessel.heading,
-                        getattr(vessel, "vx", 0.0), getattr(vessel, "vy", 0.0),
+                        getattr(vessel, "sink_drift_x", getattr(vessel, "vx", 0.0)),
+                        getattr(vessel, "sink_drift_y", getattr(vessel, "vy", 0.0)),
                         getattr(vessel, "ship_type", "Sloop"),
                     )
+                    vessel.sink_debris_spawned = True
+                if vessel.sink_elapsed >= NPC_SINK_DURATION:
                     if vessel in collection:
                         collection.remove(vessel)
 
         self.player_hit_flash = max(0.0, float(getattr(self, "player_hit_flash", 0.0)) - dt)
         if self.player_sinking_active:
             self.player_sink_elapsed += dt
-            if self.player_sink_elapsed + 1e-6 >= 5.4:
+            if self.player_sink_elapsed >= SINK_DEBRIS_DELAY and not getattr(self, "player_sink_debris_spawned", False):
                 self.spawn_floating_debris(
                     self.ship_x, self.ship_y, self.ship_heading,
-                    self.ship_vx, self.ship_vy, self.current_ship,
+                    getattr(self, "player_sink_drift_x", self.ship_vx),
+                    getattr(self, "player_sink_drift_y", self.ship_vy),
+                    self.current_ship,
                 )
+                self.player_sink_debris_spawned = True
+            if self.player_sink_elapsed + 1e-6 >= PLAYER_SINK_DURATION:
                 self.player_sinking_active = False
                 self.player_lost = True
                 self.docked_port = None
@@ -649,7 +669,8 @@ class VesselsMixin:
             return False
         if math.hypot(ball.x - self.ship_x, ball.y - self.ship_y) < 23:
             self.audio.play("cannon_impact", volume=0.36)
-            self.player_hull = max(0, self.player_hull - 11)
+            damage = max(0.25, float(getattr(ball, "damage", 1.0))) * NPC_TO_PLAYER_DAMAGE_SCALE
+            self.player_hull = max(0.0, self.player_hull - damage)
             self.player_hit_flash = 0.38
             self.record_ship_damage_mark(None, ball.x, ball.y, player=True)
             self.toast_message(f"Enemy broadside hit! Hull: {int(100 * self.player_hull / max(1, self.player_max_hull))}%", 1.4)
@@ -659,7 +680,8 @@ class VesselsMixin:
         escort_hit = next((escort for escort in self.fleet if escort.hull > 0 and not escort.sinking and math.hypot(ball.x - escort.x, ball.y - escort.y) < 23), None)
         if escort_hit:
             self.audio.play("cannon_impact", volume=0.28)
-            escort_hit.hull = max(0, escort_hit.hull - 11)
+            damage = max(0.25, float(getattr(ball, "damage", 1.0))) * NPC_TO_PLAYER_DAMAGE_SCALE
+            escort_hit.hull = max(0.0, escort_hit.hull - damage)
             escort_hit.hit_flash = 0.34
             self.record_ship_damage_mark(escort_hit, ball.x, ball.y)
             if escort_hit.hull == 0:
@@ -689,7 +711,7 @@ class VesselsMixin:
                         if ball.owner in {"player", "fleet"}:
                             source = "your flagship" if ball.owner == "player" else "your escort fleet"
                             self.record_player_attack_on_pirate(pirate, source)
-                        pirate.hull = max(0, pirate.hull - max(1, int(getattr(ball, "damage", 1))))
+                        pirate.hull = max(0.0, pirate.hull - max(0.25, float(getattr(ball, "damage", 1.0))))
                         pirate.hit_flash = 0.34
                         self.record_ship_damage_mark(pirate, ball.x, ball.y)
                         self.audio.play("cannon_impact", volume=0.25)
@@ -721,7 +743,7 @@ class VesselsMixin:
                         self.audio.play("cannon_impact", volume=0.26)
                         source = "Your broadside" if ball.owner == "player" else "Your escort fleet"
                         self.provoke_traffic_ship(traffic_hit, source)
-                        traffic_hit.hull = max(0, traffic_hit.hull - max(1, int(getattr(ball, "damage", 1))))
+                        traffic_hit.hull = max(0.0, traffic_hit.hull - max(0.25, float(getattr(ball, "damage", 1.0))))
                         traffic_hit.hit_flash = 0.34
                         self.record_ship_damage_mark(traffic_hit, ball.x, ball.y)
                         if traffic_hit.hull <= 0:
@@ -736,7 +758,7 @@ class VesselsMixin:
                 traffic_hit = next((ship for ship in self.traffic_ships if ship.hull > 0 and not ship.sinking and math.hypot(ball.x - ship.x, ball.y - ship.y) < 29), None)
                 if traffic_hit:
                     self.audio.play("cannon_impact", volume=0.24)
-                    traffic_hit.hull = max(0, traffic_hit.hull - 1)
+                    traffic_hit.hull = max(0.0, traffic_hit.hull - max(0.25, float(getattr(ball, "damage", 1.0))))
                     traffic_hit.hit_flash = 0.34
                     self.record_ship_damage_mark(traffic_hit, ball.x, ball.y)
                     if traffic_hit.hull <= 0:
@@ -761,9 +783,14 @@ class VesselsMixin:
         self.player_hull = 0
         self.player_sinking_active = True
         self.player_sink_elapsed = 0.0
+        self.player_sink_direction = self.rng.choice((-1.0, 1.0))
+        self.player_sink_spin = self.rng.uniform(-3.8, 3.8)
+        self.player_sink_debris_spawned = False
+        self.player_sink_drift_x = self.ship_vx
+        self.player_sink_drift_y = self.ship_vy
         self.player_hit_flash = 0.0
-        self.ship_vx *= 0.22
-        self.ship_vy *= 0.22
+        self.ship_vx *= 0.48
+        self.ship_vy *= 0.48
         self.sail_setting = 0.0
         self.oars_deployed = False
         self.cannon_held[-1] = False

@@ -533,7 +533,8 @@ class MissionEventsMixin:
                 continue
             x, y = position
             stats = SHIP_CLASSES[ship_type]
-            hull = max(1, int(stats["hull"]))
+            quality = roll_ship_quality(self.rng)
+            hull = max(1, int(round(stats["hull"] * ship_hull_quality(quality))))
             gun_count = min(max_broadside_guns(ship_type), max(1, int(stats["guns"])))
             name_pool = action.get("ship_names", [])
             if index < len(name_pool):
@@ -564,6 +565,8 @@ class MissionEventsMixin:
                 event_id=event_id,
                 gun_count=gun_count,
                 reload_seconds=max(1.2, float(stats["reload"])),
+                cannon_type=roll_npc_cannon_type(self.rng, ship_type, str(action.get("faction", "pirate"))),
+                quality=quality,
             )
             self.pirates.append(pirate)
             occupied.append(pirate)

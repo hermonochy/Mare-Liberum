@@ -69,7 +69,6 @@ CANNON_TYPES = {
 CANNON_MOUNTS = {
     "Broadside Batteries": {"price": 0, "mode": "broadside", "detail": "Traditional port and starboard batteries. Hold A and D to fire."},
     "Bow & Stern Chasers": {"price": 1950, "mode": "chasers", "detail": "One gun is reassigned to each end of the ship. Fire forward with W and aft with S."},
-    "Rotating Turrets": {"price": 4250, "mode": "turrets", "detail": "Deck turrets rotate to track nearby hostile vessels. Hold A or D to engage the nearest target."},
 }
 
 VISUAL_UPGRADES = {
@@ -102,6 +101,8 @@ def normalise_ship_customisation(value=None):
     if isinstance(value, dict):
         for key, _, options in CUSTOMISATION_CATEGORIES:
             selected = value.get(key)
+            if key == "cannon_mount" and selected == "Rotating Turrets":
+                selected = "Broadside Batteries"
             if selected in options:
                 result[key] = selected
     return result
@@ -131,8 +132,6 @@ def ship_fitting_available(ship_type, category, option):
         mode = CANNON_MOUNTS[option]["mode"]
         cannon_limit = int(stats["max_cannons"])
         if mode == "chasers" and cannon_limit < 8:
-            return False
-        if mode == "turrets" and cannon_limit < 16:
             return False
     return True
 
